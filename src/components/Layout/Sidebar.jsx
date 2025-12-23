@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, CheckSquare, Utensils, List, Settings } from 'lucide-react';
+import { Calendar, CheckSquare, Utensils, List, Settings, CloudSun } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const NAV_ITEMS = [
@@ -7,6 +7,7 @@ const NAV_ITEMS = [
     { id: 'chores', label: 'Chores', icon: CheckSquare },
     { id: 'meals', label: 'Meal Plan', icon: Utensils },
     { id: 'lists', label: 'Lists', icon: List },
+    { id: 'weather', label: 'Weather', icon: CloudSun },
     { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -54,14 +55,7 @@ export function Sidebar({ activeTab, onTabChange }) {
             </nav>
 
             <div className="mt-auto px-4">
-                {/* Sync Status */}
-                <div className="hidden lg:flex items-center gap-2 text-xs text-gray-400 justify-center">
-                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                    <span>Synced</span>
-                </div>
-                <div className="lg:hidden flex justify-center text-green-400">
-                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                </div>
+                {/* Footer content if needed */}
             </div>
         </aside>
     );

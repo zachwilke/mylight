@@ -1,6 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, CheckSquare, Plus, Trash2, Check, List as ListIcon } from 'lucide-react';
+import { ShoppingCart, CheckSquare, Plus, Trash2, List as ListIcon, Loader2, Share2, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { UserAvatar } from '../../components/UserAvatar';
+
+const LIST_COLORS = {
+    'shopping-cart': 'bg-orange-400 text-white',
+    'check-square': 'bg-blue-500 text-white',
+    'list': 'bg-green-500 text-white',
+    'default': 'bg-gray-400 text-white'
+};
+
+const TEXT_COLORS = {
+    'shopping-cart': 'text-orange-400',
+    'check-square': 'text-blue-500',
+    'list': 'text-green-500',
+    'default': 'text-gray-400'
+};
 
 export function Lists() {
     const [lists, setLists] = useState([]);
@@ -10,6 +25,11 @@ export function Lists() {
     const [newItemText, setNewItemText] = useState('');
     const [showNewListInput, setShowNewListInput] = useState(false);
     const [newListTitle, setNewListTitle] = useState('');
+    const [showCompleted, setShowCompleted] = useState(false);
+
+    // Chat Features
+    const [sendingChat, setSendingChat] = useState(false);
+    const [chatStatus, setChatStatus] = useState(null);
 
     // Fetch Lists
     useEffect(() => {
@@ -50,7 +70,6 @@ export function Lists() {
     };
 
     const toggleItem = async (id, currentStatus) => {
-        // Optimistic update
         const updatedItems = items.map(i => i.id === id ? { ...i, completed: !currentStatus } : i);
         setItems(updatedItems);
 
@@ -95,175 +114,201 @@ export function Lists() {
         }
     };
 
-    const getIcon = (iconName) => {
-        if (iconName === 'shopping-cart') return <ShoppingCart size={20} />;
-        if (iconName === 'check-square') return <CheckSquare size={20} />;
-        return <ListIcon size={20} />;
+    const sendToChat = async () => {
+        setSendingChat(true);
+        setChatStatus(null);
+
+        const incompleteItems = items.filter(i => !i.completed).map(i => `- ${i.text}`);
+        const text = `*${activeList.title} List from MyLight:*\n\n${incompleteItems.join('\n')}`;
+
+        try {
+            const res = await fetch('/api/chat/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setChatStatus('success');
+                setTimeout(() => setChatStatus(null), 3000);
+            } else {
+                setChatStatus('error');
+            }
+        } catch (err) {
+            console.error(err);
+            setChatStatus('error');
+        } finally {
+            setSendingChat(false);
+        }
     };
+
+    const getIcon = (iconName) => {
+        if (iconName === 'shopping-cart') return <ShoppingCart size={16} strokeWidth={2.5} />;
+        if (iconName === 'check-square') return <CheckSquare size={16} strokeWidth={2.5} />;
+        return <ListIcon size={16} strokeWidth={2.5} />;
+    };
+
+    const getColorClass = (iconName) => LIST_COLORS[iconName] || LIST_COLORS['default'];
+    const getTextColorClass = (iconName) => TEXT_COLORS[iconName] || TEXT_COLORS['default'];
 
     if (loading) return <div className="p-8">Loading lists...</div>;
 
-    return (
-        <div className="flex flex-col md:flex-row h-full bg-white divide-y md:divide-y-0 md:divide-x divide-gray-100">
-            {/* Sidebar / Top Bar */}
-            <div className="w-full md:w-1/4 md:min-w-[250px] bg-gray-50 p-4 md:p-6 flex flex-col shrink-0 max-h-[200px] md:max-h-none">
-                <h2 className="text-xl font-bold text-gray-800 mb-4 px-2 hidden md:block">My Lists</h2>
+    const incompleteItems = items.filter(i => !i.completed);
+    const completedItems = items.filter(i => i.completed);
 
-                <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto pb-4 md:pb-0 scrollbar-hide">
+    return (
+        <div className="flex flex-col md:flex-row h-full bg-[#F2F2F7] md:bg-[#F2F2F7] relative">
+            {/* Sidebar */}
+            <div className="w-full md:w-[280px] bg-[#F2F2F7] flex flex-col pt-6 md:pt-8 md:h-full border-r border-gray-300/50 shrink-0">
+                <div className="px-4 mb-2">
+                    <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide px-2 mb-2">My Lists</h2>
+                </div>
+
+                <div className="flex md:flex-col overflow-x-auto md:overflow-visible px-4 gap-1 pb-4 md:pb-0 scrollbar-hide">
                     {lists.map(list => (
                         <button
                             key={list.id}
                             onClick={() => setActiveList(list)}
                             className={cn(
-                                "flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 rounded-xl transition-all text-left whitespace-nowrap md:whitespace-normal shrink-0",
-                                activeList?.id === list.id
-                                    ? "bg-white shadow-sm ring-1 ring-gray-100 text-charcoal font-semibold"
-                                    : "text-gray-500 hover:bg-gray-100/50 hover:text-gray-700 md:bg-transparent bg-white/50 border border-transparent md:border-0"
+                                "flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left shrink-0 group relative",
+                                activeList?.id === list.id ? "bg-[#dcdce1]" : "hover:bg-[#eaeaee]"
                             )}
                         >
-                            <span className={activeList?.id === list.id ? "text-sky-blue shrink-0" : "text-gray-400 shrink-0"}>
+                            <div className={cn(
+                                "w-7 h-7 rounded-full flex items-center justify-center shadow-sm",
+                                getColorClass(list.icon)
+                            )}>
                                 {getIcon(list.icon)}
-                            </span>
-                            <span className="text-sm md:text-base">{list.title}</span>
+                            </div>
+                            <span className="text-[15px] font-medium text-gray-700 flex-1 truncate">{list.title}</span>
                         </button>
                     ))}
 
-                    {/* Tiny 'New List' button for mobile scroll row */}
-                    {!showNewListInput && (
+                    {!showNewListInput ? (
                         <button
                             onClick={() => setShowNewListInput(true)}
-                            className="md:hidden flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-gray-400 border border-gray-200 hover:text-sky-blue hover:border-sky-blue transition-all whitespace-nowrap shrink-0 bg-white/50"
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#eaeaee] text-gray-500 transition-all shrink-0"
                         >
-                            <Plus size={14} />
-                            New
-                        </button>
-                    )}
-                </div>
-
-                <div className="hidden md:block pt-4 border-t border-gray-100 mt-auto">
-                    {showNewListInput ? (
-                        <form onSubmit={createList} className="space-y-2">
-                            <input
-                                type="text"
-                                placeholder="List Name"
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-sky-blue"
-                                value={newListTitle}
-                                onChange={e => setNewListTitle(e.target.value)}
-                                autoFocus
-                            />
-                            <div className="flex gap-2">
-                                <button type="submit" className="flex-1 bg-charcoal text-white text-xs py-2 rounded-lg font-bold">Add</button>
-                                <button type="button" onClick={() => setShowNewListInput(false)} className="flex-1 bg-gray-100 text-gray-500 text-xs py-2 rounded-lg font-bold">Cancel</button>
+                            <div className="w-7 h-7 rounded-full bg-gray-300 text-white flex items-center justify-center">
+                                <Plus size={16} strokeWidth={3} />
                             </div>
-                        </form>
-                    ) : (
-                        <button
-                            onClick={() => setShowNewListInput(true)}
-                            className="w-full flex items-center justify-center gap-2 text-sm font-bold text-gray-500 hover:text-sky-blue bg-white border border-gray-200 hover:border-sky-blue py-3 rounded-xl transition-all"
-                        >
-                            <Plus size={16} />
-                            New List
+                            <span className="text-[15px] font-medium">Add List</span>
                         </button>
-                    )}
-                </div>
-
-                {/* Mobile New List Modal/Input (Simplification: Just showing basic input if toggled on mobile, ideally a modal) */}
-                {showNewListInput && (
-                    <div className="md:hidden mt-2 p-2 bg-white rounded-lg border border-gray-100 shadow-sm animate-in slide-in-from-top-2">
-                        <form onSubmit={createList} className="flex gap-2">
+                    ) : (
+                        <form onSubmit={createList} className="px-3 bg-white rounded-lg shadow-sm p-2 animate-in zoom-in-95">
                             <input
-                                type="text"
+                                autoFocus
+                                className="w-full text-sm outline-none bg-transparent"
                                 placeholder="List Name"
-                                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-sky-blue"
                                 value={newListTitle}
                                 onChange={e => setNewListTitle(e.target.value)}
-                                autoFocus
+                                onBlur={() => !newListTitle && setShowNewListInput(false)}
                             />
-                            <button type="submit" className="bg-charcoal text-white px-3 py-2 rounded-lg font-bold text-xs">Add</button>
-                            <button type="button" onClick={() => setShowNewListInput(false)} className="bg-gray-100 text-gray-500 px-3 py-2 rounded-lg font-bold text-xs">X</button>
                         </form>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col h-full bg-white">
+            <div className="flex-1 flex flex-col h-full bg-white relative">
                 {activeList ? (
-                    <>
-                        <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
-                            <h2 className="text-2xl font-bold text-charcoal flex items-center gap-3">
-                                <span className="text-sky-blue">{getIcon(activeList.icon)}</span>
+                    <div className="flex flex-col h-full max-w-4xl mx-auto w-full">
+                        {/* Header */}
+                        <div className="p-8 pb-4 flex items-center justify-between shrink-0">
+                            <h1 className={cn("text-3xl font-bold tracking-tight", getTextColorClass(activeList.icon))}>
                                 {activeList.title}
-                            </h2>
+                            </h1>
+                            <div className="flex items-center gap-2">
+                                {chatStatus === 'success' && <span className="text-sm text-green-500 font-medium animate-in fade-in">Sent!</span>}
+                                {chatStatus === 'error' && <span className="text-sm text-red-500 font-medium animate-in fade-in">Failed</span>}
+                                {chatStatus !== 'success' && (
+                                    <button
+                                        onClick={sendToChat}
+                                        disabled={sendingChat}
+                                        className="text-blue-500 hover:bg-blue-50 rounded-full p-2 transition-colors disabled:opacity-50"
+                                        title="Share to Google Chat"
+                                    >
+                                        {sendingChat ? <Loader2 size={24} className="animate-spin" /> : <Share2 size={24} />}
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="flex-1 p-8 overflow-y-auto">
-                            <div className="max-w-3xl mx-auto space-y-3">
-                                {/* Add Item Input */}
-                                <form onSubmit={addItem} className="relative mb-6">
-                                    <input
-                                        type="text"
-                                        className="w-full pl-5 pr-14 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-sky-blue/30 focus:bg-white transition-all placeholder:text-gray-400"
-                                        placeholder={`Add to ${activeList.title}...`}
-                                        value={newItemText}
-                                        onChange={e => setNewItemText(e.target.value)}
-                                    />
-                                    <button
-                                        type="submit"
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-sky-blue text-charcoal rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md shadow-sky-blue/20"
-                                        disabled={!newItemText.trim()}
-                                    >
-                                        <Plus size={20} />
-                                    </button>
-                                </form>
-
-                                {/* Items List */}
-                                <div className="space-y-2">
-                                    {items.map(item => (
-                                        <div
-                                            key={item.id}
-                                            className="group flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl hover:border-gray-200 hover:shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2 duration-200"
+                        {/* List Items */}
+                        <div className="flex-1 overflow-y-auto px-8 pb-32">
+                            {/* Incomplete */}
+                            <div className="space-y-0.5">
+                                {incompleteItems.map(item => (
+                                    <div key={item.id} className="group flex items-start gap-4 py-3 border-b border-gray-100 items-center">
+                                        <button
+                                            onClick={() => toggleItem(item.id, item.completed)}
+                                            className={cn(
+                                                "w-5 h-5 rounded-full border-[1.5px] transition-all flex items-center justify-center shrink-0 mt-0.5",
+                                                "border-gray-300 hover:border-gray-400 text-transparent"
+                                            )}
                                         >
-                                            <button
-                                                onClick={() => toggleItem(item.id, item.completed)}
-                                                className={cn(
-                                                    "w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all",
-                                                    item.completed ? "bg-sage-green border-sage-green text-white" : "border-gray-200 text-transparent hover:border-sage-green"
-                                                )}
-                                            >
-                                                <Check size={16} strokeWidth={3} />
-                                            </button>
+                                            {/* Empty Circle usually for incomplete */}
+                                        </button>
+                                        <span className="text-[17px] text-gray-800 flex-1 leading-snug">{item.text}</span>
+                                        <button onClick={() => deleteItem(item.id)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
 
-                                            <span className={cn(
-                                                "flex-1 text-lg font-medium transition-all select-none",
-                                                item.completed ? "text-gray-300 line-through decoration-2 decoration-gray-200" : "text-gray-700"
-                                            )}>
-                                                {item.text}
-                                            </span>
+                            {/* New Item Input (Inline Style) */}
+                            <form onSubmit={addItem} className="flex items-center gap-4 py-3 border-b border-transparent">
+                                <Plus size={20} className="text-gray-300" />
+                                <input
+                                    className="flex-1 text-[17px] outline-none placeholder:text-gray-400"
+                                    placeholder="New Item"
+                                    value={newItemText}
+                                    onChange={e => setNewItemText(e.target.value)}
+                                />
+                            </form>
 
-                                            <button
-                                                onClick={() => deleteItem(item.id)}
-                                                className="p-2 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all font-bold"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
-                                    ))}
+                            {/* Completed Section */}
+                            {completedItems.length > 0 && (
+                                <div className="mt-8">
+                                    <button
+                                        onClick={() => setShowCompleted(!showCompleted)}
+                                        className="flex items-center gap-1 text-sm font-medium text-gray-400 mb-2 uppercase tracking-wide hover:text-gray-600 transition-colors"
+                                    >
+                                        {showCompleted ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                        {completedItems.length} Completed
+                                    </button>
 
-                                    {items.length === 0 && (
-                                        <div className="text-center py-20 text-gray-300">
-                                            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-                                                <ListIcon size={32} />
-                                            </div>
-                                            <p>Your list is empty. Add something above!</p>
+                                    {showCompleted && (
+                                        <div className="space-y-0.5 animate-in slide-in-from-top-2 fade-in duration-200">
+                                            {completedItems.map(item => (
+                                                <div key={item.id} className="group flex items-center gap-4 py-3 border-b border-gray-50 opacity-60">
+                                                    <button
+                                                        onClick={() => toggleItem(item.id, item.completed)}
+                                                        className={cn(
+                                                            "w-5 h-5 rounded-full border-[1.5px] transition-all flex items-center justify-center shrink-0",
+                                                            getColorClass(activeList.icon).replace('text-white', ''), // Keep bg color
+                                                            "border-transparent text-white"
+                                                        )}
+                                                    >
+                                                        <Check size={12} strokeWidth={4} />
+                                                    </button>
+                                                    <span className="text-[17px] text-gray-500 line-through flex-1 leading-snug">{item.text}</span>
+                                                    <button onClick={() => deleteItem(item.id)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            )}
                         </div>
-                    </>
+                    </div>
                 ) : (
-                    <div className="flex-1 flex items-center justify-center text-gray-400">Select a list to view items</div>
+                    <div className="flex-1 flex items-center justify-center text-gray-300">
+                        Select a list
+                    </div>
                 )}
             </div>
         </div>

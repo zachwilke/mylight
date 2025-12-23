@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar as CalendarIcon, Clock, User } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Clock, User, Share } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { format } from 'date-fns';
+import { downloadICS } from '../../../lib/icsUtils';
 
 export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete }) {
     const [title, setTitle] = useState('');
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [time, setTime] = useState('12:00');
     const [memberId, setMemberId] = useState('');
+    const [recurrence, setRecurrence] = useState('');
     const [members, setMembers] = useState([]);
 
     useEffect(() => {
@@ -18,10 +20,12 @@ export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete }) 
                 setDate(format(evtDate, 'yyyy-MM-dd'));
                 setTime(format(evtDate, 'HH:mm'));
                 setMemberId(currentEvent.member_id);
+                setRecurrence(currentEvent.recurrence || '');
             } else {
                 setTitle('');
                 setDate(format(new Date(), 'yyyy-MM-dd'));
                 setTime('12:00');
+                setRecurrence('');
                 if (members.length > 0) setMemberId(members[0].id);
             }
 
@@ -37,7 +41,7 @@ export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete }) 
     const handleSubmit = (e) => {
         e.preventDefault();
         const fullDate = time ? new Date(`${date}T${time}`) : new Date(date);
-        onSave({ title, date: fullDate.toISOString(), member_id: Number(memberId) });
+        onSave({ title, date: fullDate.toISOString(), member_id: Number(memberId), recurrence });
         onClose();
     };
 
@@ -48,13 +52,23 @@ export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete }) 
             <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="text-xl font-bold text-gray-800">{currentEvent ? 'Edit Event' : 'New Event'}</h3>
-                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-colors">
-                        <X size={20} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {currentEvent && (
+                            <button
+                                onClick={() => downloadICS(currentEvent)}
+                                className="p-2 text-sky-500 hover:text-sky-600 hover:bg-sky-50 rounded-full transition-colors"
+                                title="Download Invite (ICS)"
+                            >
+                                <Share size={20} />
+                            </button>
+                        )}
+                        <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-colors">
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                    {/* ... (inputs same as before) ... */}
                     <div className="space-y-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Event Title</label>
@@ -97,18 +111,34 @@ export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete }) 
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Assign To</label>
-                            <div className="relative">
-                                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Assign To</label>
+                                <div className="relative">
+                                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <select
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sky-blue/50 appearance-none"
+                                        value={memberId}
+                                        onChange={e => setMemberId(e.target.value)}
+                                    >
+                                        {members.map(m => (
+                                            <option key={m.id} value={m.id}>{m.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Repeats</label>
                                 <select
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sky-blue/50 appearance-none"
-                                    value={memberId}
-                                    onChange={e => setMemberId(e.target.value)}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sky-blue/50 appearance-none"
+                                    value={recurrence}
+                                    onChange={e => setRecurrence(e.target.value)}
                                 >
-                                    {members.map(m => (
-                                        <option key={m.id} value={m.id}>{m.name}</option>
-                                    ))}
+                                    <option value="">Never</option>
+                                    <option value="FREQ=DAILY">Daily</option>
+                                    <option value="FREQ=WEEKLY">Weekly</option>
+                                    <option value="FREQ=MONTHLY">Monthly</option>
+                                    <option value="FREQ=YEARLY">Yearly</option>
                                 </select>
                             </div>
                         </div>

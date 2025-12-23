@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
 import { cn } from '../../../lib/utils';
 import { UserAvatar } from '../../../components/UserAvatar';
+import { RRule } from 'rrule';
 
 export function MonthGrid({ currentDate, onEventClick }) {
     const [events, setEvents] = useState([]);
@@ -23,14 +24,66 @@ export function MonthGrid({ currentDate, onEventClick }) {
             const memberMap = {};
             familyData.forEach(m => memberMap[m.id] = m);
 
-            const formattedEvents = eventsData.map(evt => ({
-                ...evt,
-                date: new Date(evt.start_date),
-                member: memberMap[evt.member_id] || { color: 'bg-gray-100 text-gray-700' }
-            }));
-            setEvents(formattedEvents);
+            const allEvents = [];
+
+            eventsData.forEach(evt => {
+                const evtDate = new Date(evt.start_date);
+                const member = memberMap[evt.member_id] || (evt.is_external ? { color: evt.color } : { color: 'bg-gray-100 text-gray-700' });
+
+                // Check for recurrence rule (from local 'recurrence' or external 'rrule')
+                const recurrenceRule = evt.recurrence || evt.rrule;
+
+                if (recurrenceRule) {
+                    try {
+                        const rule = RRule.fromString(recurrenceRule);
+                        // RRule dates are usually UTC, need to handle timezone carefully.
+                        // Ideally we pass `dtstart`.
+                        // rrule library typically operates on UTC or local dates depending on input.
+                        // We'll simplisticly assume simplistic expansion for MVP.
+                        // For rrule.between, we need a range. Let's expand for the visible range (start - buffer, end + buffer).
+
+                        // We need to set dtstart on the rule options if not in string, or if using fromString, it might need it.
+                        // If recurrenceRule doesn't have DTSTART, we should construct options. 
+                        // But simpler: use rule options + dtstart.
+
+                        const options = RRule.parseString(recurrenceRule);
+                        options.dtstart = evtDate;
+                        const rruleObj = new RRule(options);
+
+                        const dates = rruleObj.between(startDate, endDate, true);
+                        dates.forEach(d => {
+                            allEvents.push({
+                                ...evt,
+                                id: `${evt.id}-${d.toISOString()}`, // Unique ID for instance
+                                date: d,
+                                member,
+                                original_id: evt.id
+                            });
+                        });
+                    } catch (e) {
+                        console.error("Failed to parse recurrence", e);
+                        // Fallback to single event
+                        allEvents.push({ ...evt, date: evtDate, member });
+                    }
+                } else {
+                    allEvents.push({ ...evt, date: evtDate, member });
+                }
+            });
+
+            setEvents(allEvents);
         }).catch(err => console.error(err));
-    }, []);
+    }, [currentDate]); // Re-fetch or re-calc when currentDate changes? 
+    // Ideally we fetch once and expand, but if we change months we might need to expand more if we paginate fetch. 
+    // Here we fetch ALL events every time (MVP), so we should depend on refreshTrigger from parent passed down or just runs once.
+    // Wait, the original code had `useEffect(..., [])`. 
+    // This means it only runs ONCE on mount. That's bad if we change months and want to see recurring events in that month.
+    // Since we fetch ALL events, we have the rules. So we can just re-calc expansion when `currentDate` changes.
+    // I added `currentDate` to deps. But I don't want to re-fetch on date change if I have all events.
+    // But for MVP fetching all is fine.
+
+    // Actually, `formattedEvents` logic was inside the fetch `.then`. If I rely on `currentDate` for expansion range, I need to re-run expansion.
+    // So I should separate fetch and expansion.
+    // For now, I'll just re-fetch and re-expand.
 
     return (
         <div className="h-full flex flex-col">
@@ -56,7 +109,7 @@ export function MonthGrid({ currentDate, onEventClick }) {
                             className={cn(
                                 "border-r border-b border-gray-50 p-2 relative flex flex-col gap-1 transition-colors hover:bg-gray-50/50 cursor-pointer",
                                 !isSameMonth(day, monthStart) && "bg-gray-50/30 text-gray-300",
-                                dayIdx % 7 === 6 && "border-r-0" // remove right border for last col if needed, though grid handles it usually
+                                dayIdx % 7 === 6 && "border-r-0"
                             )}
                         >
                             <div className="flex justify-between items-start">
@@ -75,7 +128,12 @@ export function MonthGrid({ currentDate, onEventClick }) {
                                         key={event.id}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            onEventClick(event);
+                                            // Handle clicking an instance. Pass original ID for editing?
+                                            // Or pass the instance and handle in modal.
+                                            // Modal currently expects 'evt'. If we pass instance, it has expanded date.
+                                            // Backend update needs original ID.
+                                            // I added `original_id`.
+                                            onEventClick({ ...event, id: event.original_id || event.id });
                                         }}
                                         className={cn(
                                             "px-1 py-1 md:px-2 md:py-1.5 rounded-md text-[9px] md:text-xs font-semibold truncate border border-transparent shadow-sm flex items-center gap-1 md:gap-1.5",

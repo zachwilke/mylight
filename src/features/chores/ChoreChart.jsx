@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Star, Settings, Trash2, Plus } from 'lucide-react';
+import { Star, Check, Plus, Trash2, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
-// import { motion, AnimatePresence } from 'framer-motion';
 import { UserAvatar } from '../../components/UserAvatar';
-import { ChoreModal } from './components/ChoreModal';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 export function ChoreChart() {
     const [chores, setChores] = useState({});
@@ -11,6 +10,8 @@ export function ChoreChart() {
     const [stars, setStars] = useState({ Max: 15, Mia: 22 });
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [pendingDeleteId, setPendingDeleteId] = useState(null);
 
     const fetchData = async () => {
         try {
@@ -23,9 +24,10 @@ export function ChoreChart() {
 
             setChores(choresData);
             setMembers(familyData);
-            setLoading(false);
         } catch (err) {
             console.error("Failed to fetch data", err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -70,24 +72,49 @@ export function ChoreChart() {
         fetchData();
     };
 
-    const handleDeleteChore = async (e, choreId) => {
-        e.stopPropagation(); // Prevent toggling
-        if (!confirm('Delete this chore?')) return;
-
+    const confirmDeleteChore = async () => {
+        if (!pendingDeleteId) return;
         try {
-            await fetch(`/api/chores/${choreId}`, {
+            await fetch(`/api/chores/${pendingDeleteId}`, {
                 method: 'DELETE'
             });
             fetchData();
+            setPendingDeleteId(null);
+            setShowDeleteConfirm(false);
         } catch (err) {
             console.error("Failed to delete", err);
         }
+    };
+
+    const handleDeleteChore = (e, choreId) => {
+        e.stopPropagation(); // Prevent toggling
+        setPendingDeleteId(choreId);
+        setShowDeleteConfirm(true);
     };
 
     if (loading) return <div className="p-8 text-center text-gray-400">Loading chores...</div>;
 
     return (
         <div className="h-full overflow-hidden flex flex-col">
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={confirmDeleteChore}
+                title="Delete Chore"
+                message="Are you sure you want to delete this chore?"
+            />
+            {/* Header / Toolbar */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+                <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Chore Chart</h2>
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center gap-2 bg-charcoal text-white px-5 py-2.5 rounded-xl hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200"
+                >
+                    <Plus size={18} />
+                    <span className="font-medium text-sm">Add Chore</span>
+                </button>
+            </div>
+
             <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-y-hidden md:overflow-x-auto bg-white snap-x md:snap-none">
                 {Object.entries(chores).map(([name, personChores]) => {
                     const member = getMemberByName(name);
@@ -164,21 +191,6 @@ export function ChoreChart() {
                         </div>
                     );
                 })}
-
-                {/* Add Chore / Edit Button */}
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="w-full md:w-24 group flex flex-row md:flex-col items-center justify-center p-6 md:p-0 border-t md:border-t-0 md:border-l border-gray-100 bg-gray-50/50 hover:bg-white hover:border-l-primary/20 transition-all cursor-pointer relative overflow-hidden gap-3 md:gap-0 min-h-[100px] md:min-h-0 shrink-0"
-                >
-                    <div className="absolute inset-x-0 bottom-0 top-auto md:top-0 h-1 md:h-auto md:w-1 bg-primary scale-x-100 md:scale-x-0 scale-y-0 md:scale-y-0 group-hover:scale-x-100 md:group-hover:scale-y-100 transition-transform origin-left md:origin-top"></div>
-
-                    <div className="text-center text-gray-400 group-hover:text-primary transition-colors flex md:flex-col items-center gap-3 md:gap-0">
-                        <div className="w-10 h-10 rounded-full bg-white border-2 border-dashed border-gray-300 group-hover:border-primary group-hover:bg-primary/5 md:mb-2 flex items-center justify-center transition-colors">
-                            <Plus className="opacity-50 group-hover:opacity-100" />
-                        </div>
-                        <span className="text-xs font-bold whitespace-nowrap md:whitespace-normal">Add Chore</span>
-                    </div>
-                </button>
             </div>
 
             <ChoreModal
@@ -187,6 +199,92 @@ export function ChoreChart() {
                 members={members}
                 onSave={handleAddChore}
             />
+        </div>
+    );
+}
+
+function ChoreModal({ isOpen, onClose, members, onSave }) {
+    const [title, setTitle] = useState('');
+    const [timeOfDay, setTimeOfDay] = useState('Morning');
+    const [selectedMember, setSelectedMember] = useState(members[0]?.id);
+
+    // Reset when opening
+    useEffect(() => {
+        if (isOpen && members.length > 0) {
+            setTitle('');
+            setTimeOfDay('Morning');
+            if (members.length > 0) setSelectedMember(members[0].id);
+        }
+    }, [isOpen, members]);
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({ title, time_of_day: timeOfDay, member_id: selectedMember });
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                    <h3 className="text-xl font-bold text-gray-800">Add New Chore</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Chore Name</label>
+                        <input
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="e.g. Empty Dishwasher"
+                            autoFocus
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Time</label>
+                            <select
+                                value={timeOfDay}
+                                onChange={(e) => setTimeOfDay(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white"
+                            >
+                                <option value="Morning">Morning</option>
+                                <option value="Evening">Evening</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Assign To</label>
+                            <select
+                                value={selectedMember}
+                                onChange={(e) => setSelectedMember(Number(e.target.value))}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white"
+                            >
+                                {members.map(m => (
+                                    <option key={m.id} value={m.id}>{m.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="pt-4">
+                        <button
+                            type="submit"
+                            disabled={!title}
+                            className="w-full py-3.5 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
+                        >
+                            Add Chore
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }

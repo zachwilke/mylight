@@ -9,6 +9,10 @@ const db = new sqlite3.Database(dbPath, (err) => {
   } else {
     console.log('Connected to the SQLite database.');
     initDb();
+    // Migration for recurrence
+    db.run("ALTER TABLE events ADD COLUMN recurrence TEXT", () => { });
+    // Migration for phone
+    db.run("ALTER TABLE family_members ADD COLUMN phone TEXT", () => { });
   }
 });
 
@@ -112,6 +116,21 @@ function initDb() {
         });
       }
     });
+    // Photos
+    db.run(`CREATE TABLE IF NOT EXISTS photos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      url TEXT NOT NULL,
+      uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Calendar Subscriptions
+    db.run(`CREATE TABLE IF NOT EXISTS calendar_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      url TEXT NOT NULL,
+      name TEXT,
+      color TEXT
+    )`);
+
   });
 }
 

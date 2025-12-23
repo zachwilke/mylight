@@ -3,6 +3,7 @@ const cors = require('cors');
 const db = require('./db.cjs');
 const multer = require('multer');
 const path = require('path');
+const ical = require('node-ical');
 
 const fs = require('fs');
 
@@ -43,10 +44,18 @@ app.get('/api/family', (req, res) => {
 });
 
 app.post('/api/family', (req, res) => {
-    const { name, color } = req.body;
-    db.run("INSERT INTO family_members (name, color) VALUES (?, ?)", [name, color], function (err) {
+    const { name, color, phone } = req.body;
+    db.run("INSERT INTO family_members (name, color, phone) VALUES (?, ?, ?)", [name, color, phone], function (err) {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ id: this.lastID, name, color });
+        res.json({ id: this.lastID, name, color, phone });
+    });
+});
+
+app.put('/api/family/:id', (req, res) => {
+    const { name, color, phone } = req.body;
+    db.run("UPDATE family_members SET name = ?, color = ?, phone = ? WHERE id = ?", [name, color, phone, req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
     });
 });
 
@@ -237,10 +246,83 @@ app.delete('/api/items/:id', (req, res) => {
 });
 
 // Events
-app.get('/api/events', (req, res) => {
-    db.all("SELECT * FROM events", [], (err, rows) => {
+// Events & Calendar Sync
+app.get('/api/events', async (req, res) => {
+    try {
+        // 1. Get local events
+        const localEvents = await new Promise((resolve, reject) => {
+            db.all("SELECT * FROM events", [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+
+        // 2. Get subscriptions
+        const subscriptions = await new Promise((resolve, reject) => {
+            db.all("SELECT * FROM calendar_subscriptions", [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+
+        // 3. Fetch and parse external calendars
+        const externalEventsPromises = subscriptions.map(sub => {
+            return new Promise((resolve) => {
+                ical.async.fromURL(sub.url, (err, data) => {
+                    if (err || !data) {
+                        console.error(`Failed to fetch ical ${sub.url}`, err);
+                        resolve([]);
+                        return;
+                    }
+                    const events = [];
+                    for (let k in data) {
+                        const ev = data[k];
+                        if (ev.type === 'VEVENT') {
+                            events.push({
+                                id: `ext-${ev.uid}`,
+                                title: ev.summary,
+                                start_date: ev.start,
+                                end_date: ev.end,
+                                member_id: null,
+                                color: sub.color || 'bg-gray-200',
+                                is_external: true
+                            });
+                        }
+                    }
+                    resolve(events);
+                });
+            });
+        });
+
+        const externalEventsArrays = await Promise.all(externalEventsPromises);
+        const externalEvents = externalEventsArrays.flat();
+
+        res.json([...localEvents, ...externalEvents]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Calendar Subscriptions
+app.get('/api/calendars', (req, res) => {
+    db.all("SELECT * FROM calendar_subscriptions", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
+    });
+});
+
+app.post('/api/calendars', (req, res) => {
+    const { url, name, color } = req.body;
+    db.run("INSERT INTO calendar_subscriptions (url, name, color) VALUES (?, ?, ?)", [url, name, color], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ id: this.lastID, url, name, color });
+    });
+});
+
+app.delete('/api/calendars/:id', (req, res) => {
+    db.run("DELETE FROM calendar_subscriptions WHERE id = ?", [req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
     });
 });
 
@@ -248,7 +330,89 @@ app.post('/api/events', (req, res) => {
     const { title, date, member_id } = req.body;
     db.run("INSERT INTO events (title, start_date, member_id) VALUES (?, ?, ?)", [title, date, member_id], function (err) {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ id: this.lastID, title, date, member_id });
+    });
+});
+
+// Photos
+app.get('/api/photos', (req, res) => {
+    db.all("SELECT * FROM photos ORDER BY uploaded_at DESC", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/photos', upload.array('photos', 10), (req, res) => {
+    if (!req.files || req.files.length === 0) return res.status(400).json({ error: "No files uploaded" });
+
+    const stmt = db.prepare("INSERT INTO photos (url) VALUES (?)");
+    const urls = [];
+
+    db.serialize(() => {
+        req.files.forEach(file => {
+            const url = `/uploads/${file.filename}`;
+            stmt.run(url);
+            urls.push(url);
+        });
+        stmt.finalize((err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, urls });
+        });
+    });
+});
+
+app.delete('/api/photos/:id', (req, res) => {
+    db.get("SELECT url FROM photos WHERE id = ?", [req.params.id], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) return res.status(404).json({ error: "Photo not found" });
+
+        // Try to delete file from disk
+        const filePath = path.join(UPLOADS_DIR, path.basename(row.url));
+        fs.unlink(filePath, (unlinkErr) => {
+            // Ignore error if file doesn't exist, proceed to delete from DB
+            db.run("DELETE FROM photos WHERE id = ?", [req.params.id], function (err) {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ success: true });
+            });
+        });
+    });
+});
+
+// SMS
+// Google Chat
+app.post('/api/chat/send', async (req, res) => {
+    const { text } = req.body;
+
+    // Fetch webhook from settings
+    db.get("SELECT value FROM settings WHERE key = 'google_chat_webhook'", async (err, row) => {
+        if (err) {
+            console.error("DB Error", err);
+            return res.status(500).json({ error: "Failed to fetch settings" });
+        }
+
+        const webhookUrl = row ? row.value : null;
+
+        if (!webhookUrl) {
+            return res.status(400).json({ error: "Google Chat Webhook URL not configured in Settings." });
+        }
+
+        try {
+            const chatRes = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+
+            if (!chatRes.ok) {
+                const err = await chatRes.text();
+                throw new Error(err);
+            }
+
+            const data = await chatRes.json();
+            res.json({ success: true, data });
+        } catch (error) {
+            console.error("Chat Error", error);
+            res.status(500).json({ error: error.message });
+        }
     });
 });
 

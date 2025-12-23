@@ -3,6 +3,7 @@ import { format, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MonthGrid } from './components/MonthGrid';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EventModal } from './components/EventModal';
 
 export function CalendarView() {
@@ -12,6 +13,8 @@ export function CalendarView() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const [currentEvent, setCurrentEvent] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [pendingDeleteId, setPendingDeleteId] = useState(null);
 
     const nextPeriod = () => {
         if (view === 'month') setCurrentDate(addMonths(currentDate, 1));
@@ -41,20 +44,33 @@ export function CalendarView() {
         }
     };
 
-    const handleDeleteEvent = async (id) => {
-        if (!confirm("Delete this event?")) return;
+    const confirmDelete = async () => {
+        if (!pendingDeleteId) return;
         try {
-            await fetch(`/api/events/${id}`, { method: 'DELETE' });
+            await fetch(`/api/events/${pendingDeleteId}`, { method: 'DELETE' });
             setCurrentEvent(null);
             setIsModalOpen(false);
             setRefreshTrigger(prev => prev + 1);
+            setPendingDeleteId(null);
         } catch (err) {
             console.error(err);
         }
     };
 
+    const handleDeleteEvent = (id) => {
+        setPendingDeleteId(id);
+        setShowDeleteConfirm(true);
+    };
+
     return (
         <div className="flex flex-col h-full bg-white relative">
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={confirmDelete}
+                title="Delete Event"
+                message="Are you sure you want to delete this event? This action cannot be undone."
+            />
             <EventModal
                 isOpen={isModalOpen}
                 onClose={() => { setIsModalOpen(false); setCurrentEvent(null); }}
