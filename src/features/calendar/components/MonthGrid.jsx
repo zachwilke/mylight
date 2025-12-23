@@ -107,7 +107,7 @@ export function MonthGrid({ currentDate, onEventClick, refreshTrigger }) {
                         <div
                             key={day.toString()}
                             className={cn(
-                                "border-r border-b border-gray-50 dark:border-gray-700 p-2 relative flex flex-col gap-1 transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-700/50 cursor-pointer",
+                                "border-r border-b border-gray-50 dark:border-gray-700 p-1 md:p-2 relative flex flex-col gap-1 transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-700/50 cursor-pointer",
                                 !isSameMonth(day, monthStart) && "bg-gray-50/30 dark:bg-gray-900/30 text-gray-300 dark:text-gray-600",
                                 dayIdx % 7 === 6 && "border-r-0"
                             )}

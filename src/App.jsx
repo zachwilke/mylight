@@ -13,9 +13,10 @@ function App() {
   const [theme] = useTheme();
   const [activeTab, setActiveTab] = useState('calendar');
   const [isIdle, setIsIdle] = useState(false);
+  const [timeoutMinutes, setTimeoutMinutes] = useState(1);
   const timeoutRef = useRef(null);
 
-  const IDLE_TIMEOUT = 60 * 1000; // 1 minute
+  const IDLE_TIMEOUT = timeoutMinutes * 60 * 1000;
 
   const resetIdleTimer = () => {
     if (isIdle) setIsIdle(false);
@@ -31,13 +32,30 @@ function App() {
 
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     const handler = () => resetIdleTimer();
+    const manualTriggerHandler = () => setIsIdle(true);
+    const updateTimeoutHandler = (e) => setTimeoutMinutes(parseInt(e.detail) || 1);
 
     events.forEach(e => window.addEventListener(e, handler));
+    window.addEventListener('trigger-screensaver', manualTriggerHandler);
+    window.addEventListener('update-timeout', updateTimeoutHandler);
+
+    // Fetch settings for timeout
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.screensaver_timeout) {
+          setTimeoutMinutes(parseInt(data.screensaver_timeout) || 1);
+        }
+      })
+      .catch(console.error);
+
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       events.forEach(e => window.removeEventListener(e, handler));
+      window.removeEventListener('trigger-screensaver', manualTriggerHandler);
+      window.removeEventListener('update-timeout', updateTimeoutHandler);
     };
-  }, [isIdle]);
+  }, [isIdle, timeoutMinutes]);
 
   return (
     <>

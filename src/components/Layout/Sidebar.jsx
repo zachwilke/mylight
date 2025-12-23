@@ -16,7 +16,7 @@ export function Sidebar({ activeTab, onTabChange }) {
         <aside className="hidden md:flex w-20 lg:w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex-col items-center lg:items-stretch py-8 h-full shadow-sm z-20 transition-all duration-300">
             <div className="mb-10 px-4 flex justify-center lg:justify-start items-center">
                 <h1 className="text-2xl font-bold text-charcoal dark:text-gray-100 hidden lg:block tracking-tight text-center w-full">
-                    MyLight
+                    🗓️ MyLight
                 </h1>
                 {/* Tablet Icon Logo */}
                 <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl lg:hidden flex items-center justify-center">

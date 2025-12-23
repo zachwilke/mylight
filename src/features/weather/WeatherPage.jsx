@@ -148,9 +148,9 @@ export function WeatherPage() {
     }
 
     return (
-        <div className="h-full flex flex-col md:flex-row overflow-hidden bg-gray-50 dark:bg-gray-950">
+        <div className="h-full flex flex-col md:flex-row overflow-y-auto md:overflow-hidden bg-gray-50 dark:bg-gray-950">
             {/* Left Panel: Current & Forecast */}
-            <div className="w-full md:w-1/3 flex flex-col h-full border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-y-auto">
+            <div className="w-full md:w-1/3 flex flex-col shrink-0 border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-y-auto">
                 <div className="p-8 pb-4">
                     <h2 className="text-2xl font-bold text-charcoal dark:text-gray-100">{location?.name || 'Unknown Location'}</h2>
                     <p className="text-gray-400 dark:text-gray-500 text-sm font-medium">Daily Forecast</p>
@@ -248,7 +248,7 @@ export function WeatherPage() {
                     {forecast.map((day) => {
                         const date = new Date(day.time);
                         return (
-                            <div key={day.time} className="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group">
+                            <div key={day.time} className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group">
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 text-center">
                                         <div className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
@@ -284,7 +284,7 @@ export function WeatherPage() {
             </div>
 
             {/* Right Panel: Map */}
-            <div className="flex-1 h-full bg-gray-100 dark:bg-gray-950 p-4 relative">
+            <div className="w-full flex-1 h-[400px] md:h-full bg-gray-100 dark:bg-gray-950 p-2 md:p-4 relative">
                 {location ? (
                     <WeatherMap lat={location.lat} lng={location.lng} />
                 ) : (

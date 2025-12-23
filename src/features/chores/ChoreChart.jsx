@@ -121,7 +121,7 @@ export function ChoreChart() {
                     return (
                         <div
                             key={name}
-                            className="w-full md:w-[300px] md:min-w-[300px] lg:flex-1 lg:min-w-[320px] p-6 md:px-4 border-b md:border-b-0 md:border-r last:border-0 border-gray-100 dark:border-gray-700 flex flex-col md:overflow-y-auto shrink-0 snap-center"
+                            className="w-full md:w-[300px] md:min-w-[300px] lg:flex-1 p-6 md:px-4 border-b md:border-b-0 md:border-r last:border-0 border-gray-100 dark:border-gray-700 flex flex-col md:overflow-y-auto shrink-0 snap-center"
                         >
                             {/* Header */}
                             <div className="text-center mb-6 flex flex-col items-center shrink-0">

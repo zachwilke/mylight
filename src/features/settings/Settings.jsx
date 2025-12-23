@@ -23,6 +23,7 @@ export function Settings() {
     const [longitude, setLongitude] = useState('');
 
     const [members, setMembers] = useState([]);
+    const [screensaverTimeout, setScreensaverTimeout] = useState(1);
     const [loading, setLoading] = useState(true);
 
     // Add Member State
@@ -52,6 +53,9 @@ export function Settings() {
                 }
             }
 
+            if (settingsData.screensaver_timeout) {
+                setScreensaverTimeout(settingsData.screensaver_timeout);
+            }
             if (settingsData.google_chat_webhook) {
                 setWebhookUrl(settingsData.google_chat_webhook);
             }
@@ -110,6 +114,26 @@ export function Settings() {
         } catch (err) {
             console.error(err);
         }
+    };
+
+    const saveScreensaverTimeout = async () => {
+        try {
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'screensaver_timeout', value: screensaverTimeout.toString() })
+            });
+            alert("Timeout Saved!");
+            // No reload needed as App.jsx will refetch or we can use a shared state/event if needed.
+            // But App.jsx refetches on mount. For instant update we could dispatch an event.
+            window.dispatchEvent(new CustomEvent('update-timeout', { detail: screensaverTimeout }));
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const triggerScreensaver = () => {
+        window.dispatchEvent(new CustomEvent('trigger-screensaver'));
     };
 
     const addMember = async (e) => {
@@ -287,6 +311,38 @@ export function Settings() {
                                 >
                                     <Save size={18} />
                                     Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Screensaver Settings</label>
+                            <div className="flex flex-col md:flex-row gap-3">
+                                <div className="flex-1 flex gap-3">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={screensaverTimeout}
+                                        onChange={(e) => setScreensaverTimeout(e.target.value)}
+                                        className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        placeholder="Timeout (minutes)"
+                                    />
+                                    <button
+                                        onClick={saveScreensaverTimeout}
+                                        className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20 whitespace-nowrap"
+                                    >
+                                        <Save size={18} />
+                                        Save Timeout
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={triggerScreensaver}
+                                    className="bg-charcoal dark:bg-gray-700 text-white px-6 py-3 rounded-xl font-medium hover:bg-charcoal/90 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2 shadow-sm whitespace-nowrap"
+                                >
+                                    <Monitor size={18} />
+                                    Go to Screensaver
                                 </button>
                             </div>
                         </div>
