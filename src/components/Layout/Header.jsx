@@ -66,29 +66,29 @@ export function Header() {
     }
 
     return (
-        <header className="h-20 px-8 flex items-center justify-between bg-transparent flex-shrink-0">
+        <header className="h-auto md:h-20 px-6 py-4 md:py-0 md:px-8 flex flex-col md:flex-row items-start md:items-center justify-between bg-transparent flex-shrink-0 gap-4 md:gap-0">
             <div>
-                <h2 className="text-3xl font-semibold text-charcoal tracking-tight">{familyName}</h2>
-                <p className="text-sm text-gray-500 font-medium">
+                <h2 className="text-xl md:text-3xl font-semibold text-charcoal tracking-tight">{familyName}</h2>
+                <p className="text-xs md:text-sm text-gray-500 font-medium">
                     {time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </p>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center justify-between w-full md:w-auto gap-4 md:gap-6">
                 {weather ? (
-                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl shadow-sm border border-gray-100">
                         {getWeatherIcon(weather.weather_code)}
                         <div className="flex flex-col">
-                            <span className="text-lg font-bold text-gray-700 leading-none">{Math.round(weather.temperature_2m)}°</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{getWeatherLabel(weather.weather_code)}</span>
+                            <span className="text-sm md:text-lg font-bold text-gray-700 leading-none">{Math.round(weather.temperature_2m)}°</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden md:block">{getWeatherLabel(weather.weather_code)}</span>
                         </div>
                     </div>
                 ) : (
-                    <div className="text-sm text-gray-400 italic">No Location Set</div>
+                    <div className="text-xs md:text-sm text-gray-400 italic hidden md:block">No Location Set</div>
                 )}
 
-                <div className="text-right">
-                    <div className="text-4xl font-light text-charcoal tracking-tighter">
+                <div className="text-right ml-auto md:ml-0">
+                    <div className="text-2xl md:text-4xl font-light text-charcoal tracking-tighter">
                         {time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                     </div>
                 </div>

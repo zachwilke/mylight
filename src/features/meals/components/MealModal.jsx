@@ -58,12 +58,26 @@ export function MealModal({ isOpen, onClose, day, type, currentMeal, onSave }) {
                         </div>
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-2 flex gap-3">
+                        {currentMeal && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (window.confirm('Delete this meal?')) {
+                                        onSave({ ...currentMeal, delete: true });
+                                        onClose();
+                                    }
+                                }}
+                                className="px-5 py-4 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl font-bold transition-colors"
+                            >
+                                <Utensils size={20} className="rotate-45" />
+                            </button>
+                        )}
                         <button
                             type="submit"
                             disabled={loading || !title}
                             className={cn(
-                                "w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all",
+                                "flex-1 py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all",
                                 loading ? "bg-gray-400" : "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5"
                             )}
                         >

@@ -30,15 +30,19 @@ export function MealPlanner() {
     };
 
     const handleSaveMeal = async (mealData) => {
-        // Assign a random nice color if new
-        const colors = ['bg-orange-100 text-orange-800', 'bg-green-100 text-green-800', 'bg-blue-100 text-blue-800', 'bg-purple-100 text-purple-800'];
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        if (mealData.delete) {
+            await fetch(`/api/meals/${currentMeal.id}`, { method: 'DELETE' });
+        } else {
+            // Assign a random nice color if new
+            const colors = ['bg-orange-100 text-orange-800', 'bg-green-100 text-green-800', 'bg-blue-100 text-blue-800', 'bg-purple-100 text-purple-800'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
-        await fetch('/api/meals', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...mealData, color: currentMeal?.color || randomColor })
-        });
+            await fetch('/api/meals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...mealData, color: currentMeal?.color || randomColor })
+            });
+        }
         fetchMeals();
     };
 

@@ -3,7 +3,7 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInte
 import { cn } from '../../../lib/utils';
 import { UserAvatar } from '../../../components/UserAvatar';
 
-export function MonthGrid({ currentDate }) {
+export function MonthGrid({ currentDate, onEventClick }) {
     const [events, setEvents] = useState([]);
 
     const monthStart = startOfMonth(currentDate);
@@ -73,14 +73,18 @@ export function MonthGrid({ currentDate }) {
                                 {dayEvents.map(event => (
                                     <div
                                         key={event.id}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEventClick(event);
+                                        }}
                                         className={cn(
-                                            "px-2 py-1.5 rounded-md text-[10px] md:text-xs font-semibold truncate border border-transparent shadow-sm flex items-center gap-1.5",
+                                            "px-1 py-1 md:px-2 md:py-1.5 rounded-md text-[9px] md:text-xs font-semibold truncate border border-transparent shadow-sm flex items-center gap-1 md:gap-1.5",
                                             event.member?.color || 'bg-gray-100 text-gray-700'
                                         )}
                                     >
-                                        <UserAvatar member={event.member} size="sm" className="w-4 h-4 text-[8px]" />
+                                        <UserAvatar member={event.member} size="sm" className="w-3 h-3 md:w-4 md:h-4 text-[6px] md:text-[8px]" />
                                         <div className="flex flex-col leading-tight min-w-0">
-                                            <span className="opacity-75 text-[0.85em]">{format(event.date, 'h:mm a')}</span>
+                                            <span className="opacity-75 text-[0.85em] hidden md:block">{format(event.date, 'h:mm a')}</span>
                                             <span className="truncate">{event.title}</span>
                                         </div>
                                     </div>

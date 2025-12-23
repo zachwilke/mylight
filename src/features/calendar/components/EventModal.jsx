@@ -3,7 +3,7 @@ import { X, Calendar as CalendarIcon, Clock, User } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { format } from 'date-fns';
 
-export function EventModal({ isOpen, onClose, onSave }) {
+export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete }) {
     const [title, setTitle] = useState('');
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [time, setTime] = useState('12:00');
@@ -12,23 +12,33 @@ export function EventModal({ isOpen, onClose, onSave }) {
 
     useEffect(() => {
         if (isOpen) {
+            if (currentEvent) {
+                setTitle(currentEvent.title);
+                const evtDate = new Date(currentEvent.date);
+                setDate(format(evtDate, 'yyyy-MM-dd'));
+                setTime(format(evtDate, 'HH:mm'));
+                setMemberId(currentEvent.member_id);
+            } else {
+                setTitle('');
+                setDate(format(new Date(), 'yyyy-MM-dd'));
+                setTime('12:00');
+                if (members.length > 0) setMemberId(members[0].id);
+            }
+
             fetch('/api/family')
                 .then(res => res.json())
                 .then(data => {
                     setMembers(data);
-                    if (data.length > 0 && !memberId) setMemberId(data[0].id);
+                    if (!currentEvent && data.length > 0 && !memberId) setMemberId(data[0].id);
                 });
         }
-    }, [isOpen]);
+    }, [isOpen, currentEvent]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Combine Date and Time
         const fullDate = time ? new Date(`${date}T${time}`) : new Date(date);
         onSave({ title, date: fullDate.toISOString(), member_id: Number(memberId) });
         onClose();
-        setTitle('');
-        setTime('12:00');
     };
 
     if (!isOpen) return null;
@@ -37,13 +47,14 @@ export function EventModal({ isOpen, onClose, onSave }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
             <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-gray-800">New Event</h3>
+                    <h3 className="text-xl font-bold text-gray-800">{currentEvent ? 'Edit Event' : 'New Event'}</h3>
                     <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-colors">
                         <X size={20} />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                    {/* ... (inputs same as before) ... */}
                     <div className="space-y-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Event Title</label>
@@ -103,12 +114,21 @@ export function EventModal({ isOpen, onClose, onSave }) {
                         </div>
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-2 flex gap-3">
+                        {currentEvent && (
+                            <button
+                                type="button"
+                                onClick={() => onDelete(currentEvent.id)}
+                                className="px-5 py-3.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl font-bold transition-colors"
+                            >
+                                Delete
+                            </button>
+                        )}
                         <button
                             type="submit"
-                            className="w-full bg-charcoal text-white rounded-xl py-3.5 font-bold hover:bg-gray-800 transition-transform active:scale-[0.98] shadow-lg shadow-gray-200"
+                            className="flex-1 bg-charcoal text-white rounded-xl py-3.5 font-bold hover:bg-gray-800 transition-transform active:scale-[0.98] shadow-lg shadow-gray-200"
                         >
-                            Create Event
+                            {currentEvent ? 'Save Changes' : 'Create Event'}
                         </button>
                     </div>
                 </form>

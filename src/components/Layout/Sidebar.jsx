@@ -12,7 +12,7 @@ const NAV_ITEMS = [
 
 export function Sidebar({ activeTab, onTabChange }) {
     return (
-        <aside className="w-24 md:w-64 bg-white border-r border-gray-100 flex flex-col items-center md:items-stretch py-8 h-full shadow-sm z-20">
+        <aside className="hidden md:flex w-24 md:w-64 bg-white border-r border-gray-100 flex-col items-center md:items-stretch py-8 h-full shadow-sm z-20">
             <div className="mb-10 px-4 flex justify-center md:justify-start">
                 <h1 className="text-2xl font-bold text-charcoal hidden md:block tracking-tight text-center w-full">
                     MyLight
