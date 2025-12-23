@@ -59,6 +59,25 @@ npm run dev
 
 The application should automatically open in your default browser.
 
+### 4. Production Build
+
+To run the application in production mode:
+
+1.  **Build the Frontend**:
+    ```bash
+    npm run build
+    ```
+    This compiles the React application into the `dist/` folder.
+
+2.  **Start the Server**:
+    ```bash
+    node server/index.cjs
+    ```
+    The server will serve the static files from `dist/` and handle API requests.
+
+3.  **Access App**:
+    Open `http://localhost:3000` in your browser.
+
 ## 📂 Project Structure
 
 ```text

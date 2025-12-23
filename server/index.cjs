@@ -11,6 +11,9 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../dist')));
+
 // Multer Config
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -232,6 +235,12 @@ app.post('/api/events', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ id: this.lastID, title, date, member_id });
     });
+});
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('/*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 const server = app.listen(PORT, () => {
