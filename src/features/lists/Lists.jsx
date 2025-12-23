@@ -104,30 +104,43 @@ export function Lists() {
     if (loading) return <div className="p-8">Loading lists...</div>;
 
     return (
-        <div className="flex h-full bg-white">
-            {/* Sidebar */}
-            <div className="w-1/4 min-w-[250px] bg-gray-50 border-r border-gray-100 p-6 flex flex-col">
-                <h2 className="text-xl font-bold text-gray-800 mb-6 px-2">My Lists</h2>
+        <div className="flex flex-col md:flex-row h-full bg-white divide-y md:divide-y-0 md:divide-x divide-gray-100">
+            {/* Sidebar / Top Bar */}
+            <div className="w-full md:w-1/4 md:min-w-[250px] bg-gray-50 p-4 md:p-6 flex flex-col shrink-0 max-h-[200px] md:max-h-none">
+                <h2 className="text-xl font-bold text-gray-800 mb-4 px-2 hidden md:block">My Lists</h2>
 
-                <div className="space-y-2 flex-1 overflow-y-auto">
+                <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto pb-4 md:pb-0 scrollbar-hide">
                     {lists.map(list => (
                         <button
                             key={list.id}
                             onClick={() => setActiveList(list)}
                             className={cn(
-                                "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left",
-                                activeList?.id === list.id ? "bg-white shadow-sm ring-1 ring-gray-100 text-charcoal font-semibold" : "text-gray-500 hover:bg-gray-100/50 hover:text-gray-700"
+                                "flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 rounded-xl transition-all text-left whitespace-nowrap md:whitespace-normal shrink-0",
+                                activeList?.id === list.id
+                                    ? "bg-white shadow-sm ring-1 ring-gray-100 text-charcoal font-semibold"
+                                    : "text-gray-500 hover:bg-gray-100/50 hover:text-gray-700 md:bg-transparent bg-white/50 border border-transparent md:border-0"
                             )}
                         >
-                            <span className={activeList?.id === list.id ? "text-sky-blue" : "text-gray-400"}>
+                            <span className={activeList?.id === list.id ? "text-sky-blue shrink-0" : "text-gray-400 shrink-0"}>
                                 {getIcon(list.icon)}
                             </span>
-                            {list.title}
+                            <span className="text-sm md:text-base">{list.title}</span>
                         </button>
                     ))}
+
+                    {/* Tiny 'New List' button for mobile scroll row */}
+                    {!showNewListInput && (
+                        <button
+                            onClick={() => setShowNewListInput(true)}
+                            className="md:hidden flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-gray-400 border border-gray-200 hover:text-sky-blue hover:border-sky-blue transition-all whitespace-nowrap shrink-0 bg-white/50"
+                        >
+                            <Plus size={14} />
+                            New
+                        </button>
+                    )}
                 </div>
 
-                <div className="pt-4 border-t border-gray-100">
+                <div className="hidden md:block pt-4 border-t border-gray-100 mt-auto">
                     {showNewListInput ? (
                         <form onSubmit={createList} className="space-y-2">
                             <input
@@ -153,6 +166,24 @@ export function Lists() {
                         </button>
                     )}
                 </div>
+
+                {/* Mobile New List Modal/Input (Simplification: Just showing basic input if toggled on mobile, ideally a modal) */}
+                {showNewListInput && (
+                    <div className="md:hidden mt-2 p-2 bg-white rounded-lg border border-gray-100 shadow-sm animate-in slide-in-from-top-2">
+                        <form onSubmit={createList} className="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="List Name"
+                                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-sky-blue"
+                                value={newListTitle}
+                                onChange={e => setNewListTitle(e.target.value)}
+                                autoFocus
+                            />
+                            <button type="submit" className="bg-charcoal text-white px-3 py-2 rounded-lg font-bold text-xs">Add</button>
+                            <button type="button" onClick={() => setShowNewListInput(false)} className="bg-gray-100 text-gray-500 px-3 py-2 rounded-lg font-bold text-xs">X</button>
+                        </form>
+                    </div>
+                )}
             </div>
 
             {/* Main Content */}
