@@ -327,9 +327,26 @@ app.delete('/api/calendars/:id', (req, res) => {
 });
 
 app.post('/api/events', (req, res) => {
-    const { title, date, member_id } = req.body;
-    db.run("INSERT INTO events (title, start_date, member_id) VALUES (?, ?, ?)", [title, date, member_id], function (err) {
+    const { title, date, member_id, recurrence } = req.body;
+    db.run("INSERT INTO events (title, start_date, member_id, recurrence) VALUES (?, ?, ?, ?)", [title, date, member_id, recurrence], function (err) {
         if (err) return res.status(500).json({ error: err.message });
+        res.json({ id: this.lastID, title, start_date: date, member_id, recurrence });
+    });
+});
+
+app.put('/api/events/:id', (req, res) => {
+    const { title, date, member_id, recurrence } = req.body;
+    db.run("UPDATE events SET title = ?, start_date = ?, member_id = ?, recurrence = ? WHERE id = ?",
+        [title, date, member_id, recurrence, req.params.id], function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        });
+});
+
+app.delete('/api/events/:id', (req, res) => {
+    db.run("DELETE FROM events WHERE id = ?", [req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
     });
 });
 

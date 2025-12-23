@@ -23,7 +23,7 @@ export function UserAvatar({ member, size = "md", className }) {
                 src={`/uploads/${member.avatar.split('/').pop()}`}
                 alt={member.name}
                 className={cn(
-                    "rounded-full object-cover border border-gray-100",
+                    "rounded-full object-cover border border-gray-100 dark:border-gray-800",
                     sizeClasses[size],
                     className
                 )}
@@ -33,13 +33,13 @@ export function UserAvatar({ member, size = "md", className }) {
 
     return (
         <div className={cn(
-            "rounded-full flex items-center justify-center text-gray-400",
-            member?.color || "bg-gray-100",
+            "rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500",
+            member?.color || "bg-gray-100 dark:bg-gray-800",
             sizeClasses[size],
             className
         )}>
             {member?.name ? (
-                <span className="font-bold text-gray-700 opacity-50 uppercase">
+                <span className="font-bold text-gray-700 dark:text-gray-200 opacity-50 uppercase">
                     {member.name.substring(0, 1)}
                 </span>
             ) : (

@@ -47,21 +47,21 @@ export function MealModal({ isOpen, onClose, day, type, currentMeal, onSave }) {
                 message="Are you sure you want to remove this meal from the plan?"
                 confirmText="Remove"
             />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-                <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 dark:bg-black/50 backdrop-blur-sm">
+                <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
                         <div>
-                            <h3 className="text-xl font-bold text-gray-800">Plan Meal</h3>
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Plan Meal</h3>
                             <p className="text-sm text-gray-500 font-medium">{day} — {type}</p>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
+                        <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500">
                             <X size={20} />
                         </button>
                     </div>
 
                     <form onSubmit={handleSubmit} className="p-6 space-y-6">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">What's on the menu?</label>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">What's on the menu?</label>
                             <div className="relative">
                                 <Utensils className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                                 <input
@@ -69,7 +69,7 @@ export function MealModal({ isOpen, onClose, day, type, currentMeal, onSave }) {
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     placeholder="e.g. Tacos, Spaghetti..."
-                                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     autoFocus
                                 />
                             </div>

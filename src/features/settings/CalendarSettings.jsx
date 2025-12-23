@@ -69,14 +69,14 @@ export function CalendarSettings() {
                 confirmText="Unsubscribe"
             />
             {calendars.map(cal => (
-                <div key={cal.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
+                <div key={cal.id} className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm">
                     <div className="flex items-center gap-4 overflow-hidden">
-                        <div className={`w-10 h-10 rounded-full ${cal.color || 'bg-gray-100'} flex items-center justify-center shrink-0`}>
-                            <Calendar size={18} className="opacity-70" />
+                        <div className={`w-10 h-10 rounded-full ${cal.color || 'bg-gray-100 dark:bg-gray-700'} flex items-center justify-center shrink-0`}>
+                            <Calendar size={18} className="opacity-70 dark:text-white" />
                         </div>
                         <div className="min-w-0">
-                            <h4 className="font-semibold text-gray-800 truncate">{cal.name}</h4>
-                            <p className="text-xs text-gray-400 truncate max-w-xs">{cal.url}</p>
+                            <h4 className="font-semibold text-gray-800 dark:text-gray-100 truncate">{cal.name}</h4>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-xs">{cal.url}</p>
                         </div>
                     </div>
                     <button
@@ -88,21 +88,21 @@ export function CalendarSettings() {
                 </div>
             ))}
 
-            <form onSubmit={addCalendar} className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
-                <h4 className="font-bold text-gray-700 text-sm">Add Subscription</h4>
+            <form onSubmit={addCalendar} className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800 space-y-3">
+                <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Add Subscription</h4>
                 <input
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="Calendar Name (e.g. Holidays)"
-                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
                 <input
                     type="text"
                     value={newUrl}
                     onChange={(e) => setNewUrl(e.target.value)}
                     placeholder="iCal URL (https://...)"
-                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
                 <div className="flex items-center gap-2">
                     {PRESET_COLORS.map(c => (
@@ -110,7 +110,7 @@ export function CalendarSettings() {
                             key={c.value}
                             type="button"
                             onClick={() => setNewColor(c.value)}
-                            className={`w-6 h-6 rounded-full ${c.value.split(' ')[0]} border-2 ${newColor === c.value ? 'border-gray-600' : 'border-transparent'}`}
+                            className={`w-6 h-6 rounded-full ${c.value.split(' ')[0]} border-2 ${newColor === c.value ? 'border-gray-600 dark:border-white' : 'border-transparent'}`}
                             title={c.label}
                         />
                     ))}

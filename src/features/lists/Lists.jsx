@@ -157,11 +157,11 @@ export function Lists() {
     const completedItems = items.filter(i => i.completed);
 
     return (
-        <div className="flex flex-col md:flex-row h-full bg-[#F2F2F7] md:bg-[#F2F2F7] relative">
+        <div className="flex flex-col md:flex-row h-full bg-[#F2F2F7] dark:bg-gray-950 md:bg-[#F2F2F7] dark:md:bg-gray-950 relative">
             {/* Sidebar */}
-            <div className="w-full md:w-[280px] bg-[#F2F2F7] flex flex-col pt-6 md:pt-8 md:h-full border-r border-gray-300/50 shrink-0">
+            <div className="w-full md:w-[280px] bg-[#F2F2F7] dark:bg-gray-950 flex flex-col pt-6 md:pt-8 md:h-full border-r border-gray-300/50 dark:border-gray-800 shrink-0">
                 <div className="px-4 mb-2">
-                    <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide px-2 mb-2">My Lists</h2>
+                    <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-2 mb-2">My Lists</h2>
                 </div>
 
                 <div className="flex md:flex-col overflow-x-auto md:overflow-visible px-4 gap-1 pb-4 md:pb-0 scrollbar-hide">
@@ -171,7 +171,7 @@ export function Lists() {
                             onClick={() => setActiveList(list)}
                             className={cn(
                                 "flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left shrink-0 group relative",
-                                activeList?.id === list.id ? "bg-[#dcdce1]" : "hover:bg-[#eaeaee]"
+                                activeList?.id === list.id ? "bg-[#dcdce1] dark:bg-gray-800" : "hover:bg-[#eaeaee] dark:hover:bg-gray-900"
                             )}
                         >
                             <div className={cn(
@@ -180,25 +180,25 @@ export function Lists() {
                             )}>
                                 {getIcon(list.icon)}
                             </div>
-                            <span className="text-[15px] font-medium text-gray-700 flex-1 truncate">{list.title}</span>
+                            <span className="text-[15px] font-medium text-gray-700 dark:text-gray-300 flex-1 truncate">{list.title}</span>
                         </button>
                     ))}
 
                     {!showNewListInput ? (
                         <button
                             onClick={() => setShowNewListInput(true)}
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#eaeaee] text-gray-500 transition-all shrink-0"
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#eaeaee] dark:hover:bg-gray-900 text-gray-500 dark:text-gray-400 transition-all shrink-0"
                         >
-                            <div className="w-7 h-7 rounded-full bg-gray-300 text-white flex items-center justify-center">
+                            <div className="w-7 h-7 rounded-full bg-gray-300 dark:bg-gray-700 text-white dark:text-gray-300 flex items-center justify-center">
                                 <Plus size={16} strokeWidth={3} />
                             </div>
                             <span className="text-[15px] font-medium">Add List</span>
                         </button>
                     ) : (
-                        <form onSubmit={createList} className="px-3 bg-white rounded-lg shadow-sm p-2 animate-in zoom-in-95">
+                        <form onSubmit={createList} className="px-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-2 animate-in zoom-in-95">
                             <input
                                 autoFocus
-                                className="w-full text-sm outline-none bg-transparent"
+                                className="w-full text-sm outline-none bg-transparent dark:text-gray-100 dark:placeholder:text-gray-500"
                                 placeholder="List Name"
                                 value={newListTitle}
                                 onChange={e => setNewListTitle(e.target.value)}
@@ -210,7 +210,7 @@ export function Lists() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col h-full bg-white relative">
+            <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-900 relative">
                 {activeList ? (
                     <div className="flex flex-col h-full max-w-4xl mx-auto w-full">
                         {/* Header */}
@@ -239,17 +239,17 @@ export function Lists() {
                             {/* Incomplete */}
                             <div className="space-y-0.5">
                                 {incompleteItems.map(item => (
-                                    <div key={item.id} className="group flex items-start gap-4 py-3 border-b border-gray-100 items-center">
+                                    <div key={item.id} className="group flex items-start gap-4 py-3 border-b border-gray-100 dark:border-gray-800 items-center">
                                         <button
                                             onClick={() => toggleItem(item.id, item.completed)}
                                             className={cn(
                                                 "w-5 h-5 rounded-full border-[1.5px] transition-all flex items-center justify-center shrink-0 mt-0.5",
-                                                "border-gray-300 hover:border-gray-400 text-transparent"
+                                                "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-transparent"
                                             )}
                                         >
                                             {/* Empty Circle usually for incomplete */}
                                         </button>
-                                        <span className="text-[17px] text-gray-800 flex-1 leading-snug">{item.text}</span>
+                                        <span className="text-[17px] text-gray-800 dark:text-gray-200 flex-1 leading-snug">{item.text}</span>
                                         <button onClick={() => deleteItem(item.id)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Trash2 size={16} />
                                         </button>
@@ -259,9 +259,9 @@ export function Lists() {
 
                             {/* New Item Input (Inline Style) */}
                             <form onSubmit={addItem} className="flex items-center gap-4 py-3 border-b border-transparent">
-                                <Plus size={20} className="text-gray-300" />
+                                <Plus size={20} className="text-gray-300 dark:text-gray-600" />
                                 <input
-                                    className="flex-1 text-[17px] outline-none placeholder:text-gray-400"
+                                    className="flex-1 text-[17px] outline-none bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-gray-200"
                                     placeholder="New Item"
                                     value={newItemText}
                                     onChange={e => setNewItemText(e.target.value)}
@@ -282,7 +282,7 @@ export function Lists() {
                                     {showCompleted && (
                                         <div className="space-y-0.5 animate-in slide-in-from-top-2 fade-in duration-200">
                                             {completedItems.map(item => (
-                                                <div key={item.id} className="group flex items-center gap-4 py-3 border-b border-gray-50 opacity-60">
+                                                <div key={item.id} className="group flex items-center gap-4 py-3 border-b border-gray-50 dark:border-gray-800 opacity-60">
                                                     <button
                                                         onClick={() => toggleItem(item.id, item.completed)}
                                                         className={cn(
@@ -293,7 +293,7 @@ export function Lists() {
                                                     >
                                                         <Check size={12} strokeWidth={4} />
                                                     </button>
-                                                    <span className="text-[17px] text-gray-500 line-through flex-1 leading-snug">{item.text}</span>
+                                                    <span className="text-[17px] text-gray-500 dark:text-gray-400 line-through flex-1 leading-snug">{item.text}</span>
                                                     <button onClick={() => deleteItem(item.id)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <Trash2 size={16} />
                                                     </button>
@@ -306,7 +306,7 @@ export function Lists() {
                         </div>
                     </div>
                 ) : (
-                    <div className="flex-1 flex items-center justify-center text-gray-300">
+                    <div className="flex-1 flex items-center justify-center text-gray-300 dark:text-gray-700">
                         Select a list
                     </div>
                 )}

@@ -4,7 +4,11 @@
 
 @layer base {
   body {
-    @apply bg-soft-gray text-charcoal font-sans antialiased;
+    @apply bg-soft-gray text-charcoal font-sans antialiased transition-colors duration-300;
+  }
+  
+  .dark body {
+    @apply bg-gray-900 text-gray-100;
   }
 }
 

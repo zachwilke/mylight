@@ -7,8 +7,10 @@ import { Settings } from './features/settings/Settings';
 import { Lists } from './features/lists/Lists';
 import { WeatherPage } from './features/weather/WeatherPage';
 import Screensaver from './features/screensaver/Screensaver';
+import { useTheme } from './hooks/useTheme';
 
 function App() {
+  const [theme] = useTheme();
   const [activeTab, setActiveTab] = useState('calendar');
   const [isIdle, setIsIdle] = useState(false);
   const timeoutRef = useRef(null);

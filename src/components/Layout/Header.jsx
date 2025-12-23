@@ -115,19 +115,19 @@ export function Header() {
     return (
         <header className="h-auto md:h-20 px-6 py-4 md:py-0 md:px-8 flex flex-col md:flex-row items-start md:items-center justify-between bg-transparent flex-shrink-0 gap-4 md:gap-0">
             <div>
-                <h2 className="text-xl md:text-3xl font-semibold text-charcoal tracking-tight">{familyName}</h2>
-                <p className="text-xs md:text-sm text-gray-500 font-medium">
+                <h2 className="text-xl md:text-3xl font-semibold text-charcoal dark:text-gray-100 tracking-tight">{familyName}</h2>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium">
                     {time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </p>
             </div>
 
             <div className="flex items-center justify-between w-full md:w-auto gap-4 md:gap-6">
                 {weather ? (
-                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                         {getWeatherIcon(weather.code)}
                         <div className="flex flex-col">
-                            <span className="text-sm md:text-lg font-bold text-gray-700 leading-none">{Math.round(weather.temp)}°</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden md:block">{getWeatherLabel(weather.code)}</span>
+                            <span className="text-sm md:text-lg font-bold text-gray-700 dark:text-gray-200 leading-none">{Math.round(weather.temp)}°</span>
+                            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider hidden md:block">{getWeatherLabel(weather.code)}</span>
                         </div>
                     </div>
                 ) : (
@@ -135,7 +135,7 @@ export function Header() {
                 )}
 
                 <div className="text-right ml-auto md:ml-0">
-                    <div className="text-2xl md:text-4xl font-light text-charcoal tracking-tighter">
+                    <div className="text-2xl md:text-4xl font-light text-charcoal dark:text-gray-100 tracking-tighter">
                         {time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                     </div>
                 </div>

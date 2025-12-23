@@ -4,7 +4,7 @@ import { cn } from '../../../lib/utils';
 import { UserAvatar } from '../../../components/UserAvatar';
 import { RRule } from 'rrule';
 
-export function MonthGrid({ currentDate, onEventClick }) {
+export function MonthGrid({ currentDate, onEventClick, refreshTrigger }) {
     const [events, setEvents] = useState([]);
 
     const monthStart = startOfMonth(currentDate);
@@ -17,8 +17,8 @@ export function MonthGrid({ currentDate, onEventClick }) {
 
     useEffect(() => {
         Promise.all([
-            fetch('/api/family').then(res => res.json()),
-            fetch('/api/events').then(res => res.json())
+            fetch('/api/family', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/events', { cache: 'no-store' }).then(res => res.json())
         ]).then(([familyData, eventsData]) => {
             // Map family data
             const memberMap = {};
@@ -72,7 +72,7 @@ export function MonthGrid({ currentDate, onEventClick }) {
 
             setEvents(allEvents);
         }).catch(err => console.error(err));
-    }, [currentDate]); // Re-fetch or re-calc when currentDate changes? 
+    }, [currentDate, refreshTrigger]); // Re-fetch or re-calc when currentDate or refreshTrigger changes
     // Ideally we fetch once and expand, but if we change months we might need to expand more if we paginate fetch. 
     // Here we fetch ALL events every time (MVP), so we should depend on refreshTrigger from parent passed down or just runs once.
     // Wait, the original code had `useEffect(..., [])`. 
@@ -88,7 +88,7 @@ export function MonthGrid({ currentDate, onEventClick }) {
     return (
         <div className="h-full flex flex-col">
             {/* Weekday Headers */}
-            <div className="grid grid-cols-7 border-b border-gray-100">
+            <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-700">
                 {weekDays.map((day) => (
                     <div key={day} className="py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                         {day}
@@ -107,15 +107,15 @@ export function MonthGrid({ currentDate, onEventClick }) {
                         <div
                             key={day.toString()}
                             className={cn(
-                                "border-r border-b border-gray-50 p-2 relative flex flex-col gap-1 transition-colors hover:bg-gray-50/50 cursor-pointer",
-                                !isSameMonth(day, monthStart) && "bg-gray-50/30 text-gray-300",
+                                "border-r border-b border-gray-50 dark:border-gray-700 p-2 relative flex flex-col gap-1 transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-700/50 cursor-pointer",
+                                !isSameMonth(day, monthStart) && "bg-gray-50/30 dark:bg-gray-900/30 text-gray-300 dark:text-gray-600",
                                 dayIdx % 7 === 6 && "border-r-0"
                             )}
                         >
                             <div className="flex justify-between items-start">
                                 <span className={cn(
                                     "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
-                                    isToday ? "bg-charcoal text-white" : "text-gray-700"
+                                    isToday ? "bg-charcoal dark:bg-gray-100 text-white dark:text-charcoal" : "text-gray-700 dark:text-gray-300"
                                 )}>
                                     {format(day, 'd')}
                                 </span>

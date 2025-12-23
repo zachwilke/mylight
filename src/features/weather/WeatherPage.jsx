@@ -139,21 +139,21 @@ export function WeatherPage() {
 
     if (!location) {
         return (
-            <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                <Cloud size={64} className="text-gray-300 mb-4" />
-                <h2 className="text-xl font-bold text-gray-700 mb-2">Location Not Set</h2>
-                <p className="text-gray-500 max-w-md">Please go to Settings and enter your Zip Code or City.</p>
+            <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-white dark:bg-gray-800">
+                <Cloud size={64} className="text-gray-300 dark:text-gray-600 mb-4" />
+                <h2 className="text-xl font-bold text-gray-700 dark:text-gray-200 mb-2">Location Not Set</h2>
+                <p className="text-gray-500 dark:text-gray-400 max-w-md">Please go to Settings and enter your Zip Code or City.</p>
             </div>
         );
     }
 
     return (
-        <div className="h-full flex flex-col md:flex-row overflow-hidden bg-gray-50">
+        <div className="h-full flex flex-col md:flex-row overflow-hidden bg-gray-50 dark:bg-gray-950">
             {/* Left Panel: Current & Forecast */}
-            <div className="w-full md:w-1/3 flex flex-col h-full border-r border-gray-200 bg-white overflow-y-auto">
+            <div className="w-full md:w-1/3 flex flex-col h-full border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-y-auto">
                 <div className="p-8 pb-4">
-                    <h2 className="text-2xl font-bold text-charcoal">{location?.name || 'Unknown Location'}</h2>
-                    <p className="text-gray-400 text-sm font-medium">Daily Forecast</p>
+                    <h2 className="text-2xl font-bold text-charcoal dark:text-gray-100">{location?.name || 'Unknown Location'}</h2>
+                    <p className="text-gray-400 dark:text-gray-500 text-sm font-medium">Daily Forecast</p>
                 </div>
 
                 {/* Current / Today Highlight */}
@@ -164,12 +164,12 @@ export function WeatherPage() {
                             <div>
                                 <div className="flex items-center gap-3 mb-2">
                                     {getWeatherIcon(weather.weatherCode)}
-                                    <span className="text-lg font-medium text-gray-600">{getWeatherLabel(weather.weatherCode)}</span>
+                                    <span className="text-lg font-medium text-gray-600 dark:text-gray-300">{getWeatherLabel(weather.weatherCode)}</span>
                                 </div>
-                                <span className="text-7xl font-bold text-charcoal tracking-tighter">
+                                <span className="text-7xl font-bold text-charcoal dark:text-gray-100 tracking-tighter">
                                     {Math.round(weather.temperatureAvg)}°
                                 </span>
-                                <div className="text-gray-500 font-medium mt-1">
+                                <div className="text-gray-500 dark:text-gray-400 font-medium mt-1">
                                     Feels like {Math.round(weather.temperatureApparentAvg)}°
                                 </div>
                             </div>
@@ -185,58 +185,58 @@ export function WeatherPage() {
 
                         {/* Details Grid */}
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-gray-50 p-4 rounded-2xl flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl flex items-center gap-3 border border-transparent dark:border-gray-700">
+                                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
                                     <Droplets size={20} />
                                 </div>
                                 <div>
-                                    <div className="text-xs text-gray-400 font-bold uppercase">Humidity</div>
-                                    <div className="font-bold text-gray-700">{weather.humidityAvg}%</div>
+                                    <div className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Humidity</div>
+                                    <div className="font-bold text-gray-700 dark:text-gray-200">{weather.humidityAvg}%</div>
                                 </div>
                             </div>
-                            <div className="bg-gray-50 p-4 rounded-2xl flex items-center gap-3">
-                                <div className="p-2 bg-gray-200 text-gray-600 rounded-lg">
+                            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl flex items-center gap-3 border border-transparent dark:border-gray-700">
+                                <div className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg">
                                     <Wind size={20} />
                                 </div>
                                 <div>
-                                    <div className="text-xs text-gray-400 font-bold uppercase">Wind</div>
-                                    <div className="font-bold text-gray-700">{Math.round(weather.windSpeedAvg)} mph</div>
+                                    <div className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Wind</div>
+                                    <div className="font-bold text-gray-700 dark:text-gray-200">{Math.round(weather.windSpeedAvg)} mph</div>
                                 </div>
                             </div>
-                            <div className="bg-gray-50 p-4 rounded-2xl flex items-center gap-3">
-                                <div className="p-2 bg-yellow-100 text-yellow-600 rounded-lg">
+                            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl flex items-center gap-3 border border-transparent dark:border-gray-700">
+                                <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-lg">
                                     <Sun size={20} />
                                 </div>
                                 <div>
-                                    <div className="text-xs text-gray-400 font-bold uppercase">UV Index</div>
-                                    <div className="font-bold text-gray-700">{weather.uvIndexMax || 0}</div>
+                                    <div className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">UV Index</div>
+                                    <div className="font-bold text-gray-700 dark:text-gray-200">{weather.uvIndexMax || 0}</div>
                                 </div>
                             </div>
-                            <div className="bg-gray-50 p-4 rounded-2xl flex items-center gap-3">
-                                <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl flex items-center gap-3 border border-transparent dark:border-gray-700">
+                                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg">
                                     <Eye size={20} />
                                 </div>
                                 <div>
-                                    <div className="text-xs text-gray-400 font-bold uppercase">Visibility</div>
-                                    <div className="font-bold text-gray-700">{weather.visibilityAvg ? Math.round(weather.visibilityAvg) + ' mi' : '--'}</div>
+                                    <div className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Visibility</div>
+                                    <div className="font-bold text-gray-700 dark:text-gray-200">{weather.visibilityAvg ? Math.round(weather.visibilityAvg) + ' mi' : '--'}</div>
                                 </div>
                             </div>
-                            <div className="bg-gray-50 p-4 rounded-2xl flex items-center gap-3">
-                                <div className="p-2 bg-teal-100 text-teal-600 rounded-lg">
+                            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl flex items-center gap-3 border border-transparent dark:border-gray-700">
+                                <div className="p-2 bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 rounded-lg">
                                     <Gauge size={20} />
                                 </div>
                                 <div>
-                                    <div className="text-xs text-gray-400 font-bold uppercase">Pressure</div>
-                                    <div className="font-bold text-gray-700">{Math.round(weather.pressureSurfaceLevelAvg)} hPa</div>
+                                    <div className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Pressure</div>
+                                    <div className="font-bold text-gray-700 dark:text-gray-200">{Math.round(weather.pressureSurfaceLevelAvg)} hPa</div>
                                 </div>
                             </div>
-                            <div className="bg-gray-50 p-4 rounded-2xl flex items-center gap-3">
-                                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl flex items-center gap-3 border border-transparent dark:border-gray-700">
+                                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg">
                                     <Umbrella size={20} />
                                 </div>
                                 <div>
-                                    <div className="text-xs text-gray-400 font-bold uppercase">Precip %</div>
-                                    <div className="font-bold text-gray-700">{weather.precipitationProbabilityAvg}%</div>
+                                    <div className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Precip %</div>
+                                    <div className="font-bold text-gray-700 dark:text-gray-200">{weather.precipitationProbabilityAvg}%</div>
                                 </div>
                             </div>
                         </div>
@@ -248,21 +248,21 @@ export function WeatherPage() {
                     {forecast.map((day) => {
                         const date = new Date(day.time);
                         return (
-                            <div key={day.time} className="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 group">
+                            <div key={day.time} className="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group">
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 text-center">
-                                        <div className="text-xs font-bold text-gray-400 uppercase">{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                                        <div className="text-lg font-bold text-gray-700">{date.getDate()}</div>
+                                        <div className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                                        <div className="text-lg font-bold text-gray-700 dark:text-gray-200">{date.getDate()}</div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         {getWeatherIcon(day.values.weatherCode)}
-                                        <span className="text-sm font-medium text-gray-700">
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                             {getWeatherLabel(day.values.weatherCode)}
                                         </span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden relative">
+                                    <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden relative">
                                         {/* Simple Temp Bar Visualization */}
                                         <div
                                             className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-400 to-orange-400 opacity-50"
@@ -273,8 +273,8 @@ export function WeatherPage() {
                                         />
                                     </div>
                                     <div className="text-right w-20">
-                                        <span className="text-sm font-bold text-gray-800">{Math.round(day.values.temperatureMax)}°</span>
-                                        <span className="text-sm text-gray-400 ml-2">{Math.round(day.values.temperatureMin)}°</span>
+                                        <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{Math.round(day.values.temperatureMax)}°</span>
+                                        <span className="text-sm text-gray-400 dark:text-gray-500 ml-2">{Math.round(day.values.temperatureMin)}°</span>
                                     </div>
                                 </div>
                             </div>
@@ -284,11 +284,11 @@ export function WeatherPage() {
             </div>
 
             {/* Right Panel: Map */}
-            <div className="flex-1 h-full bg-gray-100 p-4 relative">
+            <div className="flex-1 h-full bg-gray-100 dark:bg-gray-950 p-4 relative">
                 {location ? (
                     <WeatherMap lat={location.lat} lng={location.lng} />
                 ) : (
-                    <div className="h-full w-full rounded-3xl bg-gray-200 animate-pulse" />
+                    <div className="h-full w-full rounded-3xl bg-gray-200 dark:bg-gray-800 animate-pulse" />
                 )}
             </div>
         </div>

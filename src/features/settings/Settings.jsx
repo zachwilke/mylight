@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Save, User, Upload, MapPin, Edit2, X, Check } from 'lucide-react';
+import { Plus, Trash2, Save, User, Upload, MapPin, Edit2, X, Check, Moon, Sun, Monitor } from 'lucide-react';
 import { UserAvatar } from '../../components/UserAvatar';
 import { CalendarSettings } from './CalendarSettings';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { useTheme } from '../../hooks/useTheme';
 
 const COLORS = [
     { label: 'Blue', value: 'bg-blue-100 text-blue-800', hex: 'bg-blue-100' },
@@ -14,6 +15,7 @@ const COLORS = [
 ];
 
 export function Settings() {
+    const [theme, setTheme] = useTheme();
     const [familyName, setFamilyName] = useState('');
 
     // Coordinate States
@@ -206,19 +208,19 @@ export function Settings() {
             <div className="max-w-3xl mx-auto p-4 md:p-8 space-y-8 md:space-y-12">
                 <div className="space-y-6">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">General Settings</h2>
-                        <p className="text-gray-500 text-sm">Update your family's profile and preferences.</p>
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">General Settings</h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">Update your family's profile and preferences.</p>
                     </div>
 
-                    <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4">
+                    <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Family Name</label>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Family Name</label>
                             <div className="flex gap-3">
                                 <input
                                     type="text"
                                     value={familyName}
                                     onChange={(e) => setFamilyName(e.target.value)}
-                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     placeholder="e.g. The Miller Family"
                                 />
                                 <button
@@ -232,7 +234,30 @@ export function Settings() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Weather Location (Coordinates)</label>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Display Theme</label>
+                            <div className="flex gap-3">
+                                {[
+                                    { id: 'light', label: 'Light', icon: Sun },
+                                    { id: 'dark', label: 'Dark', icon: Moon },
+                                    { id: 'system', label: 'System', icon: Monitor },
+                                ].map((option) => (
+                                    <button
+                                        key={option.id}
+                                        onClick={() => setTheme(option.id)}
+                                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${theme === option.id
+                                            ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
+                                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                                            }`}
+                                    >
+                                        <option.icon size={18} />
+                                        <span className="font-medium">{option.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Weather Location (Coordinates)</label>
                             <div className="flex gap-3">
                                 <div className="flex-1 flex gap-3">
                                     <div className="flex-1 relative">
@@ -241,7 +266,7 @@ export function Settings() {
                                             type="text"
                                             value={latitude}
                                             onChange={(e) => setLatitude(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
                                             placeholder="Lat"
                                         />
                                     </div>
@@ -251,7 +276,7 @@ export function Settings() {
                                             type="text"
                                             value={longitude}
                                             onChange={(e) => setLongitude(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
                                             placeholder="Lng"
                                         />
                                     </div>
@@ -267,16 +292,16 @@ export function Settings() {
                         </div>
                     </div>
 
-                    <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4">
+                    <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Google Chat Webhook</label>
-                            <p className="text-xs text-gray-500 mb-2">Paste the webhook URL for your family chat space.</p>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Google Chat Webhook</label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Paste the webhook URL for your family chat space.</p>
                             <div className="flex gap-3">
                                 <input
                                     type="text"
                                     value={webhookUrl}
                                     onChange={(e) => setWebhookUrl(e.target.value)}
-                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     placeholder="https://chat.googleapis.com..."
                                 />
                                 <button
@@ -293,13 +318,13 @@ export function Settings() {
 
                 <div className="space-y-6">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Family Members</h2>
-                        <p className="text-gray-500 text-sm">Manage who appears on the chore chart and calendar. Add phone numbers to enable SMS sharing.</p>
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Family Members</h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">Manage who appears on the chore chart and calendar. Add phone numbers to enable SMS sharing.</p>
                     </div>
 
                     <div className="space-y-3">
                         {members.map(member => (
-                            <div key={member.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
+                            <div key={member.id} className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm">
                                 {editingMember && editingMember.id === member.id ? (
                                     <div className="flex-1 flex items-center gap-3">
                                         <div className="flex-1 space-y-2">
@@ -307,14 +332,14 @@ export function Settings() {
                                                 type="text"
                                                 value={editingMember.name}
                                                 onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
-                                                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                                                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm"
                                                 placeholder="Name"
                                             />
                                             <input
                                                 type="text"
                                                 value={editingMember.phone}
                                                 onChange={(e) => setEditingMember({ ...editingMember, phone: e.target.value })}
-                                                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                                                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm"
                                                 placeholder="Phone (+1...)"
                                             />
                                             <div className="flex gap-1">
@@ -322,7 +347,7 @@ export function Settings() {
                                                     <button
                                                         key={c.value}
                                                         onClick={() => setEditingMember({ ...editingMember, color: c.value })}
-                                                        className={`w-6 h-6 rounded-full ${c.hex} border-2 ${editingMember.color === c.value ? 'border-gray-600' : 'border-transparent'}`}
+                                                        className={`w-6 h-6 rounded-full ${c.hex} border-2 ${editingMember.color === c.value ? 'border-gray-600 dark:border-white' : 'border-transparent'}`}
                                                     />
                                                 ))}
                                             </div>
@@ -349,8 +374,8 @@ export function Settings() {
                                                 />
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="font-semibold text-gray-800 truncate">{member.name}</span>
-                                                {member.phone && <span className="text-xs text-gray-400">{member.phone}</span>}
+                                                <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">{member.name}</span>
+                                                {member.phone && <span className="text-xs text-gray-400 dark:text-gray-500">{member.phone}</span>}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -372,15 +397,15 @@ export function Settings() {
                             </div>
                         ))}
 
-                        <form onSubmit={addMember} className="pt-4 space-y-4 bg-gray-50 p-4 rounded-xl border border-gray-200/50">
-                            <h3 className="text-sm font-bold text-gray-700">Add New Member</h3>
+                        <form onSubmit={addMember} className="pt-4 space-y-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200/50 dark:border-gray-800">
+                            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Add New Member</h3>
                             <div className="flex gap-2">
                                 {COLORS.map(c => (
                                     <button
                                         key={c.value}
                                         type="button"
                                         onClick={() => setSelectedColor(c.value)}
-                                        className={`w-8 h-8 rounded-full ${c.hex} border-2 transition-all ${selectedColor === c.value ? 'border-gray-600 scale-110' : 'border-transparent hover:scale-105'}`}
+                                        className={`w-8 h-8 rounded-full ${c.hex} border-2 transition-all ${selectedColor === c.value ? 'border-gray-600 dark:border-white scale-110' : 'border-transparent hover:scale-105'}`}
                                         title={c.label}
                                     />
                                 ))}
@@ -391,14 +416,14 @@ export function Settings() {
                                     type="text"
                                     value={newMemberName}
                                     onChange={(e) => setNewMemberName(e.target.value)}
-                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     placeholder="Name"
                                 />
                                 <input
                                     type="text"
                                     value={newMemberPhone}
                                     onChange={(e) => setNewMemberPhone(e.target.value)}
-                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     placeholder="Phone (e.g. +1...)"
                                 />
                                 <button
@@ -415,16 +440,16 @@ export function Settings() {
 
                 <div className="space-y-6">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Calendar Sync</h2>
-                        <p className="text-gray-500 text-sm">Subscribe to external calendars (iCal).</p>
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Calendar Sync</h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">Subscribe to external calendars (iCal).</p>
                     </div>
                     <CalendarSettings />
                 </div>
 
                 <div className="space-y-6 pb-12">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Screensaver Photos</h2>
-                        <p className="text-gray-500 text-sm">Upload photos to display when the screen is idle.</p>
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Screensaver Photos</h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">Upload photos to display when the screen is idle.</p>
                     </div>
                     <PhotosSettings />
                 </div>
@@ -496,7 +521,7 @@ function PhotosSettings() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-gray-50 hover:bg-white"
+                    className="aspect-square rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-gray-50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-900"
                 >
                     <Upload size={24} />
                     <span className="text-sm font-medium mt-2">Upload</span>
@@ -510,12 +535,12 @@ function PhotosSettings() {
                     />
                 </div>
                 {photos.map(photo => (
-                    <div key={photo.id} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200">
+                    <div key={photo.id} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
                         <img src={photo.url} alt="Screensaver" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <button
                                 onClick={() => handleDelete(photo.id)}
-                                className="p-2 bg-white rounded-full text-red-500 hover:bg-red-50"
+                                className="p-2 bg-white dark:bg-gray-800 rounded-full text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                             >
                                 <Trash2 size={16} />
                             </button>

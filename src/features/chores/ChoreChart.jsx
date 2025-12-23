@@ -104,34 +104,34 @@ export function ChoreChart() {
                 message="Are you sure you want to delete this chore?"
             />
             {/* Header / Toolbar */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-                <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Chore Chart</h2>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700 shrink-0">
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Chore Chart</h2>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 bg-charcoal text-white px-5 py-2.5 rounded-xl hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200"
+                    className="flex items-center gap-2 bg-charcoal dark:bg-gray-100 text-white dark:text-charcoal px-5 py-2.5 rounded-xl hover:bg-gray-800 dark:hover:bg-white transition-colors shadow-lg shadow-gray-200 dark:shadow-none"
                 >
                     <Plus size={18} />
                     <span className="font-medium text-sm">Add Chore</span>
                 </button>
             </div>
 
-            <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-y-hidden md:overflow-x-auto bg-white snap-x md:snap-none">
+            <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-y-hidden md:overflow-x-auto bg-white dark:bg-gray-800 snap-x md:snap-none">
                 {Object.entries(chores).map(([name, personChores]) => {
                     const member = getMemberByName(name);
                     return (
                         <div
                             key={name}
-                            className="w-full md:w-[300px] md:min-w-[300px] lg:flex-1 lg:min-w-[320px] p-6 md:px-4 border-b md:border-b-0 md:border-r last:border-0 border-gray-100 flex flex-col md:overflow-y-auto shrink-0 snap-center"
+                            className="w-full md:w-[300px] md:min-w-[300px] lg:flex-1 lg:min-w-[320px] p-6 md:px-4 border-b md:border-b-0 md:border-r last:border-0 border-gray-100 dark:border-gray-700 flex flex-col md:overflow-y-auto shrink-0 snap-center"
                         >
                             {/* Header */}
                             <div className="text-center mb-6 flex flex-col items-center shrink-0">
                                 <div className="mb-3">
                                     <UserAvatar member={member} size="xl" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-gray-800 mb-1">{name}</h3>
-                                <div className="inline-flex items-center gap-1.5 bg-yellow-50 px-3 py-1 rounded-full border border-yellow-100">
+                                <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">{name}</h3>
+                                <div className="inline-flex items-center gap-1.5 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1 rounded-full border border-yellow-100 dark:border-yellow-700/30">
                                     <Star size={14} className="fill-yellow-400 text-yellow-400" />
-                                    <span className="text-sm font-bold text-yellow-700">{stars[name] || 0} Stars</span>
+                                    <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400">{stars[name] || 0} Stars</span>
                                 </div>
                             </div>
 
@@ -139,7 +139,7 @@ export function ChoreChart() {
                             <div className="space-y-6 flex-1">
                                 {['Morning', 'Evening'].map((time) => (
                                     <div key={time}>
-                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 sticky top-0 bg-white z-10 py-1">{time}</h4>
+                                        <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 sticky top-0 bg-white dark:bg-gray-800 z-10 py-1">{time}</h4>
                                         <div className="space-y-3">
                                             {personChores.filter(c => c.time_of_day === time).map(chore => (
                                                 <div key={chore.id} className="relative group">
@@ -148,8 +148,8 @@ export function ChoreChart() {
                                                         className={cn(
                                                             "w-full text-left p-4 rounded-2xl border-2 transition-all duration-200 flex items-center justify-between group/btn",
                                                             chore.completed
-                                                                ? "bg-gray-50 border-gray-100 opacity-60"
-                                                                : "bg-white border-gray-100 hover:border-primary/50 hover:shadow-sm"
+                                                                ? "bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-800 opacity-60"
+                                                                : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-primary/50 hover:shadow-sm"
                                                         )}
                                                     >
                                                         <span className={cn(
@@ -163,7 +163,7 @@ export function ChoreChart() {
                                                             "w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ml-2",
                                                             chore.completed
                                                                 ? "bg-green-400 border-green-400 text-white"
-                                                                : "border-gray-200 group-hover/btn:border-primary/50"
+                                                                : "border-gray-200 dark:border-gray-600 group-hover/btn:border-primary/50"
                                                         )}>
                                                             {chore.completed && <Check size={18} strokeWidth={4} />}
                                                         </div>
@@ -173,7 +173,7 @@ export function ChoreChart() {
                                                     <div className="absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={(e) => handleDeleteChore(e, chore.id)}
-                                                            className="bg-white text-red-400 border border-red-100 p-1.5 rounded-full shadow-sm hover:bg-red-50 hover:text-red-600 transition-colors"
+                                                            className="bg-white dark:bg-gray-700 text-red-400 border border-red-100 dark:border-red-900/50 p-1.5 rounded-full shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
                                                             title="Delete Chore"
                                                         >
                                                             <Trash2 size={14} />
@@ -226,23 +226,23 @@ function ChoreModal({ isOpen, onClose, members, onSave }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                    <h3 className="text-xl font-bold text-gray-800">Add New Chore</h3>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 dark:bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Add New Chore</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500">
                         <X size={20} />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Chore Name</label>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Chore Name</label>
                         <input
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
                             placeholder="e.g. Empty Dishwasher"
                             autoFocus
                         />
@@ -250,25 +250,25 @@ function ChoreModal({ isOpen, onClose, members, onSave }) {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Time</label>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Time</label>
                             <select
                                 value={timeOfDay}
                                 onChange={(e) => setTimeOfDay(e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white"
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                             >
-                                <option value="Morning">Morning</option>
-                                <option value="Evening">Evening</option>
+                                <option value="Morning" className="dark:bg-gray-800">Morning</option>
+                                <option value="Evening" className="dark:bg-gray-800">Evening</option>
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Assign To</label>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Assign To</label>
                             <select
                                 value={selectedMember}
                                 onChange={(e) => setSelectedMember(Number(e.target.value))}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white"
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                             >
                                 {members.map(m => (
-                                    <option key={m.id} value={m.id}>{m.name}</option>
+                                    <option key={m.id} value={m.id} className="dark:bg-gray-800">{m.name}</option>
                                 ))}
                             </select>
                         </div>

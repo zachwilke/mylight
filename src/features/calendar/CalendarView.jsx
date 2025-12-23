@@ -32,11 +32,17 @@ export function CalendarView() {
 
     const handleSaveEvent = async (eventData) => {
         try {
-            await fetch('/api/events', {
-                method: 'POST',
+            const isEdit = !!currentEvent;
+            const url = isEdit ? `/api/events/${currentEvent.id}` : '/api/events';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(eventData)
             });
+
+            setIsModalOpen(false);
             setCurrentEvent(null);
             setRefreshTrigger(prev => prev + 1);
         } catch (err) {
@@ -52,6 +58,7 @@ export function CalendarView() {
             setIsModalOpen(false);
             setRefreshTrigger(prev => prev + 1);
             setPendingDeleteId(null);
+            setShowDeleteConfirm(false);
         } catch (err) {
             console.error(err);
         }
@@ -63,7 +70,7 @@ export function CalendarView() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-white relative">
+        <div className="flex flex-col h-full bg-white dark:bg-gray-800 relative">
             <ConfirmDialog
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
@@ -80,19 +87,19 @@ export function CalendarView() {
             />
 
             {/* Calendar Header / Toolbar */}
-            <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-4 border-b border-gray-100 shrink-0 gap-4 md:gap-0">
+            <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-4 border-b border-gray-100 dark:border-gray-700 shrink-0 gap-4 md:gap-0">
                 <div className="flex items-center justify-between w-full md:w-auto gap-4">
-                    <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight min-w-[150px] md:min-w-[200px]">
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight min-w-[150px] md:min-w-[200px]">
                         {format(currentDate, 'MMMM yyyy')}
                     </h2>
-                    <div className="flex items-center bg-gray-100 rounded-xl p-1">
-                        <button onClick={prevPeriod} className="p-1.5 md:p-2 hover:bg-white rounded-lg transition-all text-gray-600">
+                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
+                        <button onClick={prevPeriod} className="p-1.5 md:p-2 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-all text-gray-600 dark:text-gray-300">
                             <ChevronLeft size={20} />
                         </button>
-                        <button onClick={today} className="px-3 py-1 text-xs md:text-sm font-semibold text-gray-600 hover:text-gray-900">
+                        <button onClick={today} className="px-3 py-1 text-xs md:text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                             Today
                         </button>
-                        <button onClick={nextPeriod} className="p-1.5 md:p-2 hover:bg-white rounded-lg transition-all text-gray-600">
+                        <button onClick={nextPeriod} className="p-1.5 md:p-2 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-all text-gray-600 dark:text-gray-300">
                             <ChevronRight size={20} />
                         </button>
                     </div>
@@ -100,14 +107,14 @@ export function CalendarView() {
 
                 <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
                     {/* View Toggles */}
-                    <div className="flex bg-gray-100 p-1 rounded-xl flex-1 md:flex-none justify-center">
+                    <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl flex-1 md:flex-none justify-center">
                         {['month', 'week', 'day'].map((v) => (
                             <button
                                 key={v}
                                 onClick={() => setView(v)}
                                 className={cn(
                                     "px-3 md:px-4 py-1.5 md:py-2 capitalize text-xs md:text-sm font-medium rounded-lg transition-all flex-1 md:flex-none text-center",
-                                    view === v ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-800"
+                                    view === v ? "bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                                 )}
                             >
                                 {v}
@@ -117,7 +124,7 @@ export function CalendarView() {
 
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 bg-charcoal text-white px-4 md:px-5 py-2 md:py-2.5 rounded-xl hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200 whitespace-nowrap"
+                        className="flex items-center gap-2 bg-charcoal dark:bg-gray-100 text-white dark:text-charcoal px-4 md:px-5 py-2 md:py-2.5 rounded-xl hover:bg-gray-800 dark:hover:bg-white transition-colors shadow-lg shadow-gray-200 dark:shadow-none whitespace-nowrap"
                     >
                         <Plus size={18} />
                         <span className="font-medium text-sm hidden md:inline">New Event</span>

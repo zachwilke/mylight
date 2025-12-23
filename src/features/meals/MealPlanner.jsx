@@ -47,13 +47,13 @@ export function MealPlanner() {
     };
 
     return (
-        <div className="h-full flex flex-col bg-white overflow-hidden">
+        <div className="h-full flex flex-col bg-white dark:bg-gray-800 overflow-hidden">
             <div className="flex h-full">
                 {/* Y-Axis Headers (Meal Types - Sticky Left) */}
-                <div className="w-24 md:w-32 flex-shrink-0 border-r border-gray-100 pt-10 bg-gray-50/90 backdrop-blur-sm sticky left-0 z-10 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
+                <div className="w-24 md:w-32 flex-shrink-0 border-r border-gray-100 dark:border-gray-700 pt-10 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm sticky left-0 z-10 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
                     {MEAL_TYPES.map(type => (
                         <div key={type} className="h-32 flex items-center justify-center">
-                            <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase rotate-0 tracking-wider text-center px-1">
+                            <span className="text-[10px] md:text-xs font-bold text-gray-400 dark:text-gray-500 uppercase rotate-0 tracking-wider text-center px-1">
                                 {type}
                             </span>
                         </div>
@@ -64,10 +64,10 @@ export function MealPlanner() {
                 <div className="flex-1 flex flex-col overflow-x-auto overflow-y-auto">
                     <div className="min-w-max">
                         {/* X-Axis Headers (Days) */}
-                        <div className="flex border-b border-gray-100 sticky top-0 bg-white z-20">
+                        <div className="flex border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-20">
                             {DAYS.map(day => (
                                 <div key={day} className="w-[140px] md:w-auto md:flex-1 py-4 text-center min-w-[140px]">
-                                    <span className="text-sm font-semibold text-gray-600">{day}</span>
+                                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{day}</span>
                                 </div>
                             ))}
                         </div>
@@ -76,7 +76,7 @@ export function MealPlanner() {
                         <div className="relative">
                             {/* Render Grid Rows */}
                             {MEAL_TYPES.map((type, rowIndex) => (
-                                <div key={type} className="flex h-32 border-b border-gray-100 last:border-b-0">
+                                <div key={type} className="flex h-32 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                                     {DAYS.map(day => {
                                         const key = `${day}-${type}`;
                                         const meal = meals[key];
@@ -85,18 +85,18 @@ export function MealPlanner() {
                                             <div
                                                 key={key}
                                                 onClick={() => handleCellClick(day, type, meal)}
-                                                className="w-[140px] md:w-auto md:flex-1 border-r border-gray-100 last:border-r-0 min-w-[140px] p-2 hover:bg-gray-50/50 transition-colors group relative cursor-pointer"
+                                                className="w-[140px] md:w-auto md:flex-1 border-r border-gray-100 dark:border-gray-700 last:border-r-0 min-w-[140px] p-2 hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors group relative cursor-pointer"
                                             >
                                                 {meal ? (
                                                     <div className={cn(
                                                         "w-full h-full rounded-xl p-3 shadow-sm flex items-start justify-between flex-col transition-all hover:scale-[1.02]",
-                                                        meal.color || "bg-gray-100"
+                                                        meal.color || "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100"
                                                     )}>
-                                                        <span className="font-semibold text-xs md:text-sm leading-tight text-current line-clamp-3">{meal.title}</span>
-                                                        <div className="w-full h-1 bg-black/5 rounded-full mt-auto" />
+                                                        <span className="font-semibold text-xs md:text-sm leading-tight line-clamp-3">{meal.title}</span>
+                                                        <div className="w-full h-1 bg-black/5 dark:bg-white/10 rounded-full mt-auto" />
                                                     </div>
                                                 ) : (
-                                                    <button className="w-full h-full rounded-xl border-2 border-dashed border-gray-100 opacity-0 group-hover:opacity-100 flex items-center justify-center text-gray-300 hover:border-primary/30 hover:text-primary transition-all">
+                                                    <button className="w-full h-full rounded-xl border-2 border-dashed border-gray-100 dark:border-gray-700 opacity-0 group-hover:opacity-100 flex items-center justify-center text-gray-300 dark:text-gray-600 hover:border-primary/30 hover:text-primary transition-all">
                                                         <Plus size={20} />
                                                     </button>
                                                 )}
