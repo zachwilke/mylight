@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Utensils } from 'lucide-react';
+import { X, Save, Utensils, Trash2 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 export function MealModal({ isOpen, onClose, day, type, currentMeal, onSave }) {
@@ -70,7 +70,7 @@ export function MealModal({ isOpen, onClose, day, type, currentMeal, onSave }) {
                                 }}
                                 className="px-5 py-4 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl font-bold transition-colors"
                             >
-                                <Utensils size={20} className="rotate-45" />
+                                <Trash2 size={20} />
                             </button>
                         )}
                         <button

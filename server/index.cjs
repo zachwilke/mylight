@@ -183,6 +183,13 @@ app.post('/api/meals', (req, res) => {
     });
 });
 
+app.delete('/api/meals/:id', (req, res) => {
+    db.run("DELETE FROM meals WHERE id = ?", [req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
 // Lists
 app.get('/api/lists', (req, res) => {
     db.all("SELECT * FROM lists", [], (err, rows) => {
