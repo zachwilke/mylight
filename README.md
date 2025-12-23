@@ -78,6 +78,22 @@ To run the application in production mode:
 3.  **Access App**:
     Open `http://localhost:3000` in your browser.
 
+### 5. Accessing Over the Network
+
+To access the application from other devices on your WiFi (like your phone or tablet):
+
+1.  **Find your Computer's Local IP Address**:
+    -   **Mac/Linux**: Run `ifconfig` (look for `en0` or `wlan0`, typically `192.168.x.x`).
+    -   **Windows**: Run `ipconfig` (look for "IPv4 Address").
+
+2.  **Open the URL**:
+    On your other device, open:
+    `http://<YOUR_IP_ADDRESS>:3000`
+    
+    Example: `http://192.168.1.15:3000`
+
+> **Note**: Ensure your computer's firewall allows incoming connections on port 3000.
+
 ## 📂 Project Structure
 
 ```text

@@ -13,7 +13,7 @@ export function Lists() {
 
     // Fetch Lists
     useEffect(() => {
-        fetch('http://localhost:3000/api/lists')
+        fetch('/api/lists')
             .then(res => res.json())
             .then(data => {
                 setLists(data);
@@ -25,7 +25,7 @@ export function Lists() {
     // Fetch Items when Active List Changes
     useEffect(() => {
         if (activeList) {
-            fetch(`http://localhost:3000/api/lists/${activeList.id}/items`)
+            fetch(`/api/lists/${activeList.id}/items`)
                 .then(res => res.json())
                 .then(setItems);
         }
@@ -36,7 +36,7 @@ export function Lists() {
         if (!newItemText.trim() || !activeList) return;
 
         try {
-            const res = await fetch('http://localhost:3000/api/items', {
+            const res = await fetch('/api/items', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ list_id: activeList.id, text: newItemText })
@@ -55,7 +55,7 @@ export function Lists() {
         setItems(updatedItems);
 
         try {
-            await fetch(`http://localhost:3000/api/items/${id}/toggle`, {
+            await fetch(`/api/items/${id}/toggle`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ completed: !currentStatus })
@@ -69,7 +69,7 @@ export function Lists() {
         const updatedItems = items.filter(i => i.id !== id);
         setItems(updatedItems);
         try {
-            await fetch(`http://localhost:3000/api/items/${id}`, { method: 'DELETE' });
+            await fetch(`/api/items/${id}`, { method: 'DELETE' });
         } catch (err) {
             console.error(err);
         }
@@ -80,7 +80,7 @@ export function Lists() {
         if (!newListTitle.trim()) return;
 
         try {
-            const res = await fetch('http://localhost:3000/api/lists', {
+            const res = await fetch('/api/lists', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: newListTitle, icon: 'list' })

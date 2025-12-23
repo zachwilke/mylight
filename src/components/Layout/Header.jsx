@@ -12,7 +12,7 @@ export function Header() {
         const fetchSettingsAndWeather = async () => {
             try {
                 // 1. Fetch Settings
-                const res = await fetch('http://localhost:3000/api/settings');
+                const res = await fetch('/api/settings');
                 const data = await res.json();
 
                 if (data.family_name) setFamilyName(data.family_name);

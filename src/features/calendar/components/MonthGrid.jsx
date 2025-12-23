@@ -16,8 +16,8 @@ export function MonthGrid({ currentDate }) {
 
     useEffect(() => {
         Promise.all([
-            fetch('http://localhost:3000/api/family').then(res => res.json()),
-            fetch('http://localhost:3000/api/events').then(res => res.json())
+            fetch('/api/family').then(res => res.json()),
+            fetch('/api/events').then(res => res.json())
         ]).then(([familyData, eventsData]) => {
             // Map family data
             const memberMap = {};

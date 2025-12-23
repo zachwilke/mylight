@@ -20,7 +20,7 @@ export function UserAvatar({ member, size = "md", className }) {
     if (member?.avatar) {
         return (
             <img
-                src={`http://localhost:3000${member.avatar}`}
+                src={`/uploads/${member.avatar.split('/').pop()}`}
                 alt={member.name}
                 className={cn(
                     "rounded-full object-cover border border-gray-100",

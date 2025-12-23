@@ -27,7 +27,7 @@ export function CalendarView() {
 
     const handleSaveEvent = async (eventData) => {
         try {
-            await fetch('http://localhost:3000/api/events', {
+            await fetch('/api/events', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(eventData)

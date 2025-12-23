@@ -22,8 +22,8 @@ export function Settings() {
     // Fetch initial data
     useEffect(() => {
         Promise.all([
-            fetch('http://localhost:3000/api/settings').then(res => res.json()),
-            fetch('http://localhost:3000/api/family').then(res => res.json())
+            fetch('/api/settings').then(res => res.json()),
+            fetch('/api/family').then(res => res.json())
         ]).then(([settingsData, familyData]) => {
             if (settingsData.family_name) setFamilyName(settingsData.family_name);
             if (settingsData.weather_location) setLocation(settingsData.weather_location);
@@ -34,7 +34,7 @@ export function Settings() {
 
     const saveFamilyName = async () => {
         try {
-            await fetch('http://localhost:3000/api/settings', {
+            await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ key: 'family_name', value: familyName })
@@ -47,7 +47,7 @@ export function Settings() {
 
     const saveLocation = async () => {
         try {
-            await fetch('http://localhost:3000/api/settings', {
+            await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ key: 'weather_location', value: location })
@@ -63,7 +63,7 @@ export function Settings() {
         if (!newMemberName.trim()) return;
 
         try {
-            const res = await fetch('http://localhost:3000/api/family', {
+            const res = await fetch('/api/family', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: newMemberName, color: selectedColor })
@@ -80,7 +80,7 @@ export function Settings() {
     const deleteMember = async (id) => {
         if (!window.confirm("Delete this member? Current chores/events may break.")) return;
         try {
-            await fetch(`http://localhost:3000/api/family/${id}`, { method: 'DELETE' });
+            await fetch(`/api/family/${id}`, { method: 'DELETE' });
             setMembers(members.filter(m => m.id !== id));
         } catch (err) {
             console.error(err);
@@ -97,7 +97,7 @@ export function Settings() {
         formData.append('avatar', file);
 
         try {
-            const res = await fetch(`http://localhost:3000/api/family/${id}/avatar`, {
+            const res = await fetch(`/api/family/${id}/avatar`, {
                 method: 'POST',
                 body: formData
             });

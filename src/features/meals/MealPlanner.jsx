@@ -13,7 +13,7 @@ export function MealPlanner() {
     const [currentMeal, setCurrentMeal] = useState(null);
 
     const fetchMeals = () => {
-        fetch('http://localhost:3000/api/meals')
+        fetch('/api/meals')
             .then(res => res.json())
             .then(data => setMeals(data))
             .catch(err => console.error(err));
@@ -34,7 +34,7 @@ export function MealPlanner() {
         const colors = ['bg-orange-100 text-orange-800', 'bg-green-100 text-green-800', 'bg-blue-100 text-blue-800', 'bg-purple-100 text-purple-800'];
         const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
-        await fetch('http://localhost:3000/api/meals', {
+        await fetch('/api/meals', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...mealData, color: currentMeal?.color || randomColor })

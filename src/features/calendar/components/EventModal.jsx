@@ -12,7 +12,7 @@ export function EventModal({ isOpen, onClose, onSave }) {
 
     useEffect(() => {
         if (isOpen) {
-            fetch('http://localhost:3000/api/family')
+            fetch('/api/family')
                 .then(res => res.json())
                 .then(data => {
                     setMembers(data);

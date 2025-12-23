@@ -15,8 +15,8 @@ export function ChoreChart() {
     const fetchData = async () => {
         try {
             const [choresRes, familyRes] = await Promise.all([
-                fetch('http://localhost:3000/api/chores'),
-                fetch('http://localhost:3000/api/family')
+                fetch('/api/chores'),
+                fetch('/api/family')
             ]);
             const choresData = await choresRes.json();
             const familyData = await familyRes.json();
@@ -51,7 +51,7 @@ export function ChoreChart() {
         });
 
         try {
-            await fetch(`http://localhost:3000/api/chores/${choreId}/toggle`, {
+            await fetch(`/api/chores/${choreId}/toggle`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ completed: !currentStatus })
@@ -62,7 +62,7 @@ export function ChoreChart() {
     };
 
     const handleAddChore = async (choreData) => {
-        await fetch('http://localhost:3000/api/chores', {
+        await fetch('/api/chores', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(choreData)
@@ -75,7 +75,7 @@ export function ChoreChart() {
         if (!confirm('Delete this chore?')) return;
 
         try {
-            await fetch(`http://localhost:3000/api/chores/${choreId}`, {
+            await fetch(`/api/chores/${choreId}`, {
                 method: 'DELETE'
             });
             fetchData();
