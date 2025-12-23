@@ -119,122 +119,125 @@ export function Settings() {
     if (loading) return <div className="p-8">Loading settings...</div>;
 
     return (
-        <div className="max-w-3xl mx-auto p-8 space-y-12">
-            <div className="space-y-6">
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">General Settings</h2>
-                    <p className="text-gray-500 text-sm">Update your family's profile and preferences.</p>
-                </div>
-
-                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4">
+        <div className="h-full overflow-y-auto">
+            <div className="max-w-3xl mx-auto p-4 md:p-8 space-y-8 md:space-y-12">
+                <div className="space-y-6">
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Family Name</label>
-                        <div className="flex gap-3">
-                            <input
-                                type="text"
-                                value={familyName}
-                                onChange={(e) => setFamilyName(e.target.value)}
-                                className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                placeholder="e.g. The Miller Family"
-                            />
-                            <button
-                                onClick={saveFamilyName}
-                                className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
-                            >
-                                <Save size={18} />
-                                Save
-                            </button>
-                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">General Settings</h2>
+                        <p className="text-gray-500 text-sm">Update your family's profile and preferences.</p>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Location (City)</label>
-                        <div className="flex gap-3">
-                            <input
-                                type="text"
-                                value={location}
-                                onChange={(e) => setLocation(e.target.value)}
-                                className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                placeholder="e.g. New York"
-                            />
-                            <button
-                                onClick={saveLocation}
-                                className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
-                            >
-                                <Save size={18} />
-                                Save
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="space-y-6">
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Family Members</h2>
-                    <p className="text-gray-500 text-sm">Manage who appears on the chore chart and calendar.</p>
-                </div>
-
-                <div className="space-y-3">
-                    {members.map(member => (
-                        <div key={member.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
-                            <div className="flex items-center gap-4">
-                                <div className="relative group cursor-pointer" onClick={() => triggerFileInput(member.id)}>
-                                    <UserAvatar member={member} size="md" />
-                                    <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Upload size={14} className="text-white" />
-                                    </div>
-                                    <input
-                                        type="file"
-                                        ref={el => fileInputRefs.current[member.id] = el}
-                                        className="hidden"
-                                        accept="image/*"
-                                        onChange={(e) => handleAvatarUpload(member.id, e.target.files[0])}
-                                    />
-                                </div>
-                                <span className="font-semibold text-gray-800">{member.name}</span>
-                            </div>
-                            <button
-                                onClick={() => deleteMember(member.id)}
-                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        </div>
-                    ))}
-
-                    <form onSubmit={addMember} className="pt-4 space-y-4">
-                        <div className="flex gap-2">
-                            {COLORS.map(c => (
-                                <button
-                                    key={c.value}
-                                    type="button"
-                                    onClick={() => setSelectedColor(c.value)}
-                                    className={`w-8 h-8 rounded-full ${c.hex} border-2 transition-all ${selectedColor === c.value ? 'border-gray-600 scale-110' : 'border-transparent hover:scale-105'}`}
-                                    title={c.label}
+                    <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Family Name</label>
+                            <div className="flex gap-3">
+                                <input
+                                    type="text"
+                                    value={familyName}
+                                    onChange={(e) => setFamilyName(e.target.value)}
+                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    placeholder="e.g. The Miller Family"
                                 />
-                            ))}
+                                <button
+                                    onClick={saveFamilyName}
+                                    className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
+                                >
+                                    <Save size={18} />
+                                    Save
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="flex gap-3">
-                            <input
-                                type="text"
-                                value={newMemberName}
-                                onChange={(e) => setNewMemberName(e.target.value)}
-                                className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                placeholder="Add new member name..."
-                            />
-                            <button
-                                type="submit"
-                                className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
-                            >
-                                <Plus size={18} />
-                                Add
-                            </button>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Location (City)</label>
+                            <div className="flex gap-3">
+                                <input
+                                    type="text"
+                                    value={location}
+                                    onChange={(e) => setLocation(e.target.value)}
+                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    placeholder="e.g. New York"
+                                />
+                                <button
+                                    onClick={saveLocation}
+                                    className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
+                                >
+                                    <Save size={18} />
+                                    Save
+                                </button>
+                            </div>
                         </div>
-                    </form>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Family Members</h2>
+                        <p className="text-gray-500 text-sm">Manage who appears on the chore chart and calendar.</p>
+                    </div>
+
+                    <div className="space-y-3">
+                        {members.map(member => (
+                            <div key={member.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className="relative group cursor-pointer" onClick={() => triggerFileInput(member.id)}>
+                                        <UserAvatar member={member} size="md" />
+                                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Upload size={14} className="text-white" />
+                                        </div>
+                                        <input
+                                            type="file"
+                                            ref={el => fileInputRefs.current[member.id] = el}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={(e) => handleAvatarUpload(member.id, e.target.files[0])}
+                                        />
+                                    </div>
+                                    <span className="font-semibold text-gray-800 truncate">{member.name}</span>
+                                </div>
+                                <button
+                                    onClick={() => deleteMember(member.id)}
+                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
+                        ))}
+
+                        <form onSubmit={addMember} className="pt-4 space-y-4">
+                            <div className="flex gap-2">
+                                {COLORS.map(c => (
+                                    <button
+                                        key={c.value}
+                                        type="button"
+                                        onClick={() => setSelectedColor(c.value)}
+                                        className={`w-8 h-8 rounded-full ${c.hex} border-2 transition-all ${selectedColor === c.value ? 'border-gray-600 scale-110' : 'border-transparent hover:scale-105'}`}
+                                        title={c.label}
+                                    />
+                                ))}
+                            </div>
+
+                            <div className="flex gap-3">
+                                <input
+                                    type="text"
+                                    value={newMemberName}
+                                    onChange={(e) => setNewMemberName(e.target.value)}
+                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    placeholder="Add new member name..."
+                                />
+                                <button
+                                    type="submit"
+                                    className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
+                                >
+                                    <Plus size={18} />
+                                    Add
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     );
+
 }
