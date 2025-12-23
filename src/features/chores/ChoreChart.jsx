@@ -87,14 +87,17 @@ export function ChoreChart() {
     if (loading) return <div className="p-8 text-center text-gray-400">Loading chores...</div>;
 
     return (
-        <div className="h-full overflow-y-auto md:overflow-hidden">
-            <div className="flex flex-col md:flex-row min-h-full bg-white md:h-full">
+        <div className="h-full overflow-hidden flex flex-col">
+            <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-y-hidden md:overflow-x-auto bg-white snap-x md:snap-none">
                 {Object.entries(chores).map(([name, personChores]) => {
                     const member = getMemberByName(name);
                     return (
-                        <div key={name} className="w-full md:flex-1 p-6 md:px-4 border-b md:border-b-0 md:border-r last:border-0 border-gray-100 flex flex-col">
+                        <div
+                            key={name}
+                            className="w-full md:w-[300px] md:min-w-[300px] lg:flex-1 lg:min-w-[320px] p-6 md:px-4 border-b md:border-b-0 md:border-r last:border-0 border-gray-100 flex flex-col md:overflow-y-auto shrink-0 snap-center"
+                        >
                             {/* Header */}
-                            <div className="text-center mb-6 flex flex-col items-center">
+                            <div className="text-center mb-6 flex flex-col items-center shrink-0">
                                 <div className="mb-3">
                                     <UserAvatar member={member} size="xl" />
                                 </div>
@@ -106,10 +109,10 @@ export function ChoreChart() {
                             </div>
 
                             {/* Chores List */}
-                            <div className="space-y-6">
+                            <div className="space-y-6 flex-1">
                                 {['Morning', 'Evening'].map((time) => (
                                     <div key={time}>
-                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">{time}</h4>
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 sticky top-0 bg-white z-10 py-1">{time}</h4>
                                         <div className="space-y-3">
                                             {personChores.filter(c => c.time_of_day === time).map(chore => (
                                                 <div key={chore.id} className="relative group">
@@ -123,14 +126,14 @@ export function ChoreChart() {
                                                         )}
                                                     >
                                                         <span className={cn(
-                                                            "font-medium text-lg",
+                                                            "font-medium text-lg line-clamp-2",
                                                             chore.completed ? "text-gray-400 line-through" : "text-gray-700"
                                                         )}>
                                                             {chore.title}
                                                         </span>
 
                                                         <div className={cn(
-                                                            "w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors",
+                                                            "w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ml-2",
                                                             chore.completed
                                                                 ? "bg-green-400 border-green-400 text-white"
                                                                 : "border-gray-200 group-hover/btn:border-primary/50"
@@ -165,7 +168,7 @@ export function ChoreChart() {
                 {/* Add Chore / Edit Button */}
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="w-full md:w-24 group flex flex-row md:flex-col items-center justify-center p-6 md:p-0 border-t md:border-t-0 md:border-l border-gray-100 bg-gray-50/50 hover:bg-white hover:border-l-primary/20 transition-all cursor-pointer relative overflow-hidden gap-3 md:gap-0 min-h-[100px] md:min-h-0"
+                    className="w-full md:w-24 group flex flex-row md:flex-col items-center justify-center p-6 md:p-0 border-t md:border-t-0 md:border-l border-gray-100 bg-gray-50/50 hover:bg-white hover:border-l-primary/20 transition-all cursor-pointer relative overflow-hidden gap-3 md:gap-0 min-h-[100px] md:min-h-0 shrink-0"
                 >
                     <div className="absolute inset-x-0 bottom-0 top-auto md:top-0 h-1 md:h-auto md:w-1 bg-primary scale-x-100 md:scale-x-0 scale-y-0 md:scale-y-0 group-hover:scale-x-100 md:group-hover:scale-y-100 transition-transform origin-left md:origin-top"></div>
 
@@ -173,7 +176,7 @@ export function ChoreChart() {
                         <div className="w-10 h-10 rounded-full bg-white border-2 border-dashed border-gray-300 group-hover:border-primary group-hover:bg-primary/5 md:mb-2 flex items-center justify-center transition-colors">
                             <Plus className="opacity-50 group-hover:opacity-100" />
                         </div>
-                        <span className="text-xs font-bold">Add Chore</span>
+                        <span className="text-xs font-bold whitespace-nowrap md:whitespace-normal">Add Chore</span>
                     </div>
                 </button>
             </div>

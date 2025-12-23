@@ -12,14 +12,14 @@ const NAV_ITEMS = [
 
 export function Sidebar({ activeTab, onTabChange }) {
     return (
-        <aside className="hidden md:flex w-24 md:w-64 bg-white border-r border-gray-100 flex-col items-center md:items-stretch py-8 h-full shadow-sm z-20">
-            <div className="mb-10 px-4 flex justify-center md:justify-start">
-                <h1 className="text-2xl font-bold text-charcoal hidden md:block tracking-tight text-center w-full">
+        <aside className="hidden md:flex w-20 lg:w-64 bg-white border-r border-gray-100 flex-col items-center lg:items-stretch py-8 h-full shadow-sm z-20 transition-all duration-300">
+            <div className="mb-10 px-4 flex justify-center lg:justify-start items-center">
+                <h1 className="text-2xl font-bold text-charcoal hidden lg:block tracking-tight text-center w-full">
                     MyLight
                 </h1>
-                {/* Mobile/Collapsed Logo Fallback */}
-                <div className="w-10 h-10 bg-sky-blue rounded-xl md:hidden flex items-center justify-center">
-                    <span className="font-bold text-gray-700">S</span>
+                {/* Tablet Icon Logo */}
+                <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl lg:hidden flex items-center justify-center">
+                    <span className="font-bold text-lg">M</span>
                 </div>
             </div>
 
@@ -33,11 +33,12 @@ export function Sidebar({ activeTab, onTabChange }) {
                             key={item.id}
                             onClick={() => onTabChange(item.id)}
                             className={cn(
-                                "w-full flex items-center gap-4 px-4 py-3 rounded-r-2xl md:rounded-r-none md:border-r-4 transition-all duration-200 group relative",
+                                "w-full flex items-center justify-center lg:justify-start gap-4 px-0 lg:px-4 py-3 rounded-xl lg:rounded-r-none lg:border-r-4 transition-all duration-200 group relative",
                                 isActive
-                                    ? "bg-primary/5 text-primary border-primary font-semibold"
+                                    ? "bg-primary/5 text-primary lg:border-primary font-semibold"
                                     : "border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                             )}
+                            title={item.label}
                         >
                             <Icon
                                 size={24}
@@ -46,17 +47,20 @@ export function Sidebar({ activeTab, onTabChange }) {
                                     isActive ? "text-primary" : "text-gray-400 group-hover:text-gray-600"
                                 )}
                             />
-                            <span className="hidden md:block text-sm">{item.label}</span>
+                            <span className="hidden lg:block text-sm">{item.label}</span>
                         </button>
                     );
                 })}
             </nav>
 
             <div className="mt-auto px-4">
-                {/* Placeholder for small sync status or similar */}
-                <div className="hidden md:flex items-center gap-2 text-xs text-gray-400 justify-center">
+                {/* Sync Status */}
+                <div className="hidden lg:flex items-center gap-2 text-xs text-gray-400 justify-center">
                     <div className="w-2 h-2 rounded-full bg-green-400"></div>
                     <span>Synced</span>
+                </div>
+                <div className="lg:hidden flex justify-center text-green-400">
+                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
                 </div>
             </div>
         </aside>
