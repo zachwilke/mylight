@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, useMap, Marker } from 'react-leaflet';
 import { Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../hooks/useTheme';
+import { getRainViewerData } from '../../utils/weather';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default Leaflet icon not finding images in webpack/vite environments
@@ -43,12 +44,13 @@ export function WeatherMap({ lat, lng }) {
     const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     useEffect(() => {
-        // Fetch RainViewer timestamps
-        fetch('https://api.rainviewer.com/public/weather-maps.json')
-            .then(res => res.json())
+        // Fetch RainViewer timestamps using cached utility
+        getRainViewerData()
             .then(data => {
-                setApiData(data);
-                if (data.host) setHost(data.host);
+                if (data) {
+                    setApiData(data);
+                    if (data.host) setHost(data.host);
+                }
             })
             .catch(console.error);
     }, []);
@@ -136,7 +138,6 @@ export function WeatherMap({ lat, lng }) {
                     {/* Radar Layer (RainViewer) */}
                     {currentFrame && (
                         <TileLayer
-                            key={`${host}${currentFrame.path}`} // Key change forces re-render of layer
                             url={`${host}${currentFrame.path}/256/{z}/{x}/{y}/2/1_1.png`}
                             opacity={isDark ? 0.8 : 0.6}
                             zIndex={100}

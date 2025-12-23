@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning, Sun, Wind } from 'lucide-react';
+import { getRainViewerData, getCachedWeather } from '../../utils/weather';
 
 export default function Screensaver({ onInteraction }) {
     const [photos, setPhotos] = useState([]);
@@ -55,15 +56,17 @@ export default function Screensaver({ onInteraction }) {
                     }
 
                     if (latitude && longitude) {
-                        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`);
-                        const weatherData = await weatherRes.json();
-                        setWeather(weatherData.current);
+                        const weatherData = await getCachedWeather(latitude, longitude);
+                        if (weatherData && weatherData.current) {
+                            setWeather(weatherData.current);
+                        }
                     }
                 }
             } catch (err) {
                 console.error(err);
             }
         };
+
 
         fetchWeather();
         // Refresh weather every 15 mins

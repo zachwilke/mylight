@@ -55,3 +55,47 @@ export async function getCachedWeather(lat, lng) {
         return null; // Return null (or expired cache if we implemented fallback)
     }
 }
+
+/**
+ * Fetches RainViewer metadata with caching.
+ * @returns {Promise<Object|null>} - RainViewer data or null if failed
+ */
+export async function getRainViewerData() {
+    const key = `${CACHE_KEY_PREFIX}rainviewer`;
+    const RAINVIEWER_CACHE_duration = 5 * 60 * 1000; // 5 minutes
+
+    // 1. Check Cache
+    try {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+            const { timestamp, data } = JSON.parse(cached);
+            if (Date.now() - timestamp < RAINVIEWER_CACHE_duration) {
+                return data;
+            }
+        }
+    } catch (e) {
+        console.warn('RainViewer cache read failed', e);
+    }
+
+    // 2. Fetch Fresh Data
+    try {
+        const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+        if (!res.ok) throw new Error('RainViewer fetch failed');
+        const data = await res.json();
+
+        // 3. Update Cache
+        try {
+            localStorage.setItem(key, JSON.stringify({
+                timestamp: Date.now(),
+                data
+            }));
+        } catch (e) {
+            console.warn('RainViewer cache write failed', e);
+        }
+
+        return data;
+    } catch (err) {
+        console.error(err);
+        return null;
+    }
+}
