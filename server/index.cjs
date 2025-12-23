@@ -4,12 +4,20 @@ const db = require('./db.cjs');
 const multer = require('multer');
 const path = require('path');
 
+const fs = require('fs');
+
 const app = express();
 const PORT = 3000;
 
+// Ensure uploads directory exists
+const UPLOADS_DIR = path.join(__dirname, '../uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR);
+}
+
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dist')));
@@ -17,7 +25,7 @@ app.use(express.static(path.join(__dirname, '../dist')));
 // Multer Config
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/');
+        cb(null, UPLOADS_DIR);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
