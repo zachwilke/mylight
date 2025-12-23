@@ -15,10 +15,13 @@ function App() {
   const [isIdle, setIsIdle] = useState(false);
   const [timeoutMinutes, setTimeoutMinutes] = useState(1);
   const timeoutRef = useRef(null);
-
   const IDLE_TIMEOUT = timeoutMinutes * 60 * 1000;
+  const lastManualTriggerRef = useRef(0);
 
   const resetIdleTimer = () => {
+    // If we just manually triggered, ignore reset for 1 second to avoid immediate closure from the click/move
+    if (Date.now() - lastManualTriggerRef.current < 1000) return;
+
     if (isIdle) setIsIdle(false);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
@@ -32,7 +35,10 @@ function App() {
 
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     const handler = () => resetIdleTimer();
-    const manualTriggerHandler = () => setIsIdle(true);
+    const manualTriggerHandler = () => {
+      lastManualTriggerRef.current = Date.now();
+      setIsIdle(true);
+    };
     const updateTimeoutHandler = (e) => setTimeoutMinutes(parseInt(e.detail) || 1);
 
     events.forEach(e => window.addEventListener(e, handler));
