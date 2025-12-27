@@ -5,13 +5,13 @@ import { Header } from './Header';
 
 export function Layout({ children, activeTab, onTabChange }) {
     return (
-        <div className="flex h-screen w-full bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden relative transition-colors duration-300">
+        <div className="flex h-screen w-full bg-transparent overflow-hidden relative transition-colors duration-300">
             <Sidebar activeTab={activeTab} onTabChange={onTabChange} />
 
             <main className="flex-1 flex flex-col h-full relative overflow-hidden w-full">
                 <Header />
-                <div className="flex-1 overflow-auto p-2 pb-24 md:p-8 md:px-8">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl md:rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 h-full w-full overflow-hidden relative">
+                <div className="flex-1 overflow-hidden p-2 pb-2 md:p-6 md:pr-6 md:pl-0">
+                    <div className="bg-white/85 dark:bg-gray-800/85 backdrop-blur-2xl rounded-[2rem] shadow-xl border border-white/50 dark:border-white/10 h-full w-full overflow-hidden relative transition-all">
                         {children}
                     </div>
                 </div>

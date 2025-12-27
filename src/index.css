@@ -4,18 +4,41 @@
 
 @layer base {
   body {
-    @apply bg-soft-gray text-charcoal font-sans antialiased transition-colors duration-300;
+    @apply bg-[#F2F3F5] text-gray-900 font-sans antialiased overflow-hidden selection:bg-blue-500/30;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(200, 220, 255, 0.4) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(255, 220, 220, 0.4) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(220, 255, 240, 0.4) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(240, 230, 255, 0.4) 0px, transparent 50%);
+    background-attachment: fixed;
   }
-  
+
   .dark body {
     @apply bg-gray-900 text-gray-100;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(20, 50, 100, 0.3) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(50, 20, 20, 0.3) 0px, transparent 50%);
   }
 }
 
-/* Custom Scrollbar for a cleaner look */
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-lg shadow-black/5;
+  }
+
+  .glass-dark {
+    @apply dark:bg-gray-900/60 dark:backdrop-blur-xl dark:border-white/10 dark:shadow-black/20;
+  }
+
+  .glass-panel {
+    @apply bg-white/40 backdrop-blur-md border border-white/30 shadow-sm;
+  }
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -23,9 +46,5 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+  @apply bg-gray-300/50 rounded-full hover:bg-gray-400/50 transition-colors;
 }

@@ -123,11 +123,11 @@ export function Header() {
 
             <div className="flex items-center justify-between w-full md:w-auto gap-4 md:gap-6">
                 {weather ? (
-                    <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center gap-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md px-3 py-1.5 md:px-5 md:py-2.5 rounded-2xl md:rounded-3xl shadow-sm border border-white/40 dark:border-white/10 transition-all hover:bg-white/80 dark:hover:bg-gray-800/80">
                         {getWeatherIcon(weather.code)}
                         <div className="flex flex-col">
-                            <span className="text-sm md:text-lg font-bold text-gray-700 dark:text-gray-200 leading-none">{Math.round(weather.temp)}°</span>
-                            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider hidden md:block">{getWeatherLabel(weather.code)}</span>
+                            <span className="text-sm md:text-lg font-bold text-gray-800 dark:text-gray-100 leading-none">{Math.round(weather.temp)}°</span>
+                            <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:block">{getWeatherLabel(weather.code)}</span>
                         </div>
                     </div>
                 ) : (

@@ -13,18 +13,18 @@ const NAV_ITEMS = [
 
 export function Sidebar({ activeTab, onTabChange }) {
     return (
-        <aside className="hidden md:flex w-20 lg:w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex-col items-center lg:items-stretch py-8 h-full shadow-sm z-20 transition-all duration-300">
-            <div className="mb-10 px-4 flex justify-center lg:justify-start items-center">
-                <h1 className="text-2xl font-bold text-charcoal dark:text-gray-100 hidden lg:block tracking-tight text-center w-full">
+        <aside className="hidden md:flex w-20 lg:w-64 bg-transparent flex-col items-center lg:items-stretch py-8 h-full z-20 transition-all duration-300">
+            <div className="mb-10 px-6 flex justify-center lg:justify-start items-center">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white hidden lg:block tracking-tight text-center w-full drop-shadow-sm">
                     🗓️ MyLight
                 </h1>
                 {/* Tablet Icon Logo */}
-                <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl lg:hidden flex items-center justify-center">
+                <div className="w-10 h-10 bg-white/50 dark:bg-black/20 backdrop-blur-md text-primary rounded-xl lg:hidden flex items-center justify-center shadow-sm border border-white/20">
                     <span className="font-bold text-lg">M</span>
                 </div>
             </div>
 
-            <nav className="flex-1 w-full px-2 space-y-2">
+            <nav className="flex-1 w-full px-4 space-y-3">
                 {NAV_ITEMS.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
@@ -34,21 +34,21 @@ export function Sidebar({ activeTab, onTabChange }) {
                             key={item.id}
                             onClick={() => onTabChange(item.id)}
                             className={cn(
-                                "w-full flex items-center justify-center lg:justify-start gap-4 px-0 lg:px-4 py-3 rounded-xl lg:rounded-r-none lg:border-r-4 transition-all duration-200 group relative",
+                                "w-full flex items-center justify-center lg:justify-start gap-3 px-3 py-3 rounded-2xl transition-all duration-300 group relative overflow-hidden",
                                 isActive
-                                    ? "bg-primary/5 text-primary lg:border-primary font-semibold"
-                                    : "border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
+                                    ? "bg-white/60 dark:bg-white/10 shadow-lg shadow-black/5 backdrop-blur-md text-primary font-semibold ring-1 ring-white/50"
+                                    : "text-gray-600 dark:text-gray-400 hover:bg-white/30 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-200"
                             )}
                             title={item.label}
                         >
                             <Icon
-                                size={24}
+                                size={22}
                                 className={cn(
-                                    "transition-colors",
-                                    isActive ? "text-primary" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+                                    "transition-colors duration-300",
+                                    isActive ? "text-primary scale-110" : "text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
                                 )}
                             />
-                            <span className="hidden lg:block text-sm">{item.label}</span>
+                            <span className="hidden lg:block text-sm tracking-medium">{item.label}</span>
                         </button>
                     );
                 })}

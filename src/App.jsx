@@ -67,7 +67,7 @@ function App() {
     <>
       {isIdle && <Screensaver onInteraction={resetIdleTimer} />}
       <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-        <div className="p-8 h-full">
+        <div className="h-full w-full">
           {/* Main Content Area */}
           {activeTab === 'calendar' && <CalendarView />}
 
