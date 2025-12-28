@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { CloudSun, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Wind } from 'lucide-react';
+import { CloudSun, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Wind, PanelLeftOpen, PanelLeftClose } from 'lucide-react';
 import { getCachedWeather } from '../../utils/weather';
 
-export function Header() {
+export function Header({ isSidebarOpen, toggleSidebar }) {
     const [time, setTime] = useState(new Date());
     const [familyName, setFamilyName] = useState('The Miller Family');
     const [weather, setWeather] = useState(null);
@@ -114,11 +114,19 @@ export function Header() {
 
     return (
         <header className="h-auto md:h-20 px-6 py-4 md:py-0 md:px-8 flex flex-col md:flex-row items-start md:items-center justify-between bg-transparent flex-shrink-0 gap-4 md:gap-0">
-            <div>
-                <h2 className="text-xl md:text-3xl font-semibold text-charcoal dark:text-gray-100 tracking-tight">{familyName}</h2>
-                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium">
-                    {time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </p>
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={toggleSidebar}
+                    className="hidden md:flex p-2 text-gray-500 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-xl transition-colors"
+                >
+                    {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+                </button>
+                <div>
+                    <h2 className="text-xl md:text-3xl font-semibold text-charcoal dark:text-gray-100 tracking-tight">{familyName}</h2>
+                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium">
+                        {time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    </p>
+                </div>
             </div>
 
             <div className="flex items-center justify-between w-full md:w-auto gap-4 md:gap-6">

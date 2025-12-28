@@ -3,7 +3,7 @@ import { Cloud, Droplets, Wind, Thermometer, Calendar, Eye, Sun, Gauge, Umbrella
 import { WeatherMap } from './WeatherMap';
 import { getCachedWeather } from '../../utils/weather';
 
-export function WeatherPage() {
+export function WeatherPage({ kiosk = false }) {
     const [weather, setWeather] = useState(null);
     const [forecast, setForecast] = useState([]);
     const [location, setLocation] = useState(null);
@@ -142,7 +142,57 @@ export function WeatherPage() {
             <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-white dark:bg-gray-800">
                 <Cloud size={64} className="text-gray-300 dark:text-gray-600 mb-4" />
                 <h2 className="text-xl font-bold text-gray-700 dark:text-gray-200 mb-2">Location Not Set</h2>
-                <p className="text-gray-500 dark:text-gray-400 max-w-md">Please go to Settings and enter your Zip Code or City.</p>
+                {!kiosk && <p className="text-gray-500 dark:text-gray-400 max-w-md">Please go to Settings and enter your Zip Code or City.</p>}
+            </div>
+        );
+    }
+
+    if (kiosk) {
+        return (
+            <div className="h-full flex flex-col bg-white dark:bg-gray-900 overflow-hidden">
+                <div className="p-6 pb-2 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-xl font-bold text-charcoal dark:text-gray-100 leading-tight">{location?.name}</h2>
+                            <p className="text-gray-400 dark:text-gray-500 text-xs font-medium uppercase tracking-wider">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                        </div>
+                        {weather && (
+                            <div className="text-right">
+                                <span className="text-4xl font-bold text-charcoal dark:text-gray-100">{Math.round(weather.temperatureAvg)}°</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {weather && (
+                    <div className="px-6 py-2 grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                            <Droplets size={14} className="text-blue-500" />
+                            <span>{weather.humidityAvg}%</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                            <Wind size={14} className="text-gray-400" />
+                            <span>{Math.round(weather.windSpeedAvg)} mph</span>
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1 custom-scrollbar">
+                    {forecast.map((day) => {
+                        const date = new Date(day.time);
+                        return (
+                            <div key={day.time} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <div className="text-xs font-bold text-gray-400 dark:text-gray-500 w-8">{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                                <div className="flex items-center gap-2">
+                                    {getWeatherIcon(day.values.weatherCode)}
+                                </div>
+                                <div className="text-xs font-bold text-gray-800 dark:text-gray-200 w-16 text-right">
+                                    {Math.round(day.values.temperatureMax)}° <span className="text-gray-400 font-normal">/ {Math.round(day.values.temperatureMin)}°</span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         );
     }

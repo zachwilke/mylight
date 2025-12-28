@@ -8,6 +8,7 @@ import { Lists } from './features/lists/Lists';
 import { WeatherPage } from './features/weather/WeatherPage';
 import Screensaver from './features/screensaver/Screensaver';
 import { useTheme } from './hooks/useTheme';
+import { Kiosk } from './features/kiosk/Kiosk';
 
 function App() {
   const [theme] = useTheme();
@@ -62,6 +63,16 @@ function App() {
       window.removeEventListener('update-timeout', updateTimeoutHandler);
     };
   }, [isIdle, timeoutMinutes]);
+
+  // Simple routing for Kiosk
+  if (window.location.pathname === '/kiosk') {
+    return (
+      <>
+        {isIdle && <Screensaver onInteraction={resetIdleTimer} />}
+        <Kiosk />
+      </>
+    );
+  }
 
   return (
     <>

@@ -4,6 +4,7 @@ const db = require('./db.cjs');
 const multer = require('multer');
 const path = require('path');
 const ical = require('node-ical');
+const cron = require('node-cron');
 
 const fs = require('fs');
 
@@ -96,6 +97,12 @@ app.post('/api/settings', (req, res) => {
     const { key, value } = req.body;
     db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key, value], function (err) {
         if (err) return res.status(500).json({ error: err.message });
+
+        // Dynamic scheduling check
+        if (key === 'chore_reset_time') {
+            scheduleResetTask(value);
+        }
+
         res.json({ success: true });
     });
 });
@@ -431,6 +438,68 @@ app.post('/api/chat/send', async (req, res) => {
             res.status(500).json({ error: error.message });
         }
     });
+});
+
+// Chore Reset Logic
+let resetTask = null;
+
+const resetChores = () => {
+    const today = new Date().toISOString().split('T')[0];
+    console.log(`[Chore Reset] Attempting reset for ${today}`);
+
+    db.get("SELECT value FROM settings WHERE key = 'last_chore_reset'", (err, row) => {
+        if (err) {
+            console.error("[Chore Reset] Failed to check last reset date", err);
+            return;
+        }
+
+        const lastReset = row ? row.value : null;
+
+        if (lastReset !== today) {
+            console.log("[Chore Reset] Resetting chores...");
+            db.run("UPDATE chores SET completed = 0", [], (updateErr) => {
+                if (updateErr) {
+                    console.error("[Chore Reset] Failed to reset chores", updateErr);
+                } else {
+                    console.log("[Chore Reset] Chores reset successfully.");
+                    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('last_chore_reset', ?)", [today], (settingErr) => {
+                        if (settingErr) console.error("[Chore Reset] Failed to update last reset date", settingErr);
+                    });
+                }
+            });
+        } else {
+            console.log("[Chore Reset] Chores already reset for today.");
+        }
+    });
+};
+
+const scheduleResetTask = (timeStr) => {
+    // timeStr format: "HH:MM", default "00:00"
+    const time = timeStr || "00:00";
+    const [hour, minute] = time.split(':');
+
+    if (resetTask) {
+        console.log("[Cron] Stopping existing reset task.");
+        resetTask.stop();
+    }
+
+    // Cron format: minute hour * * *
+    const cronExpression = `${minute} ${hour} * * *`;
+    console.log(`[Cron] Scheduling chore reset at ${time} (${cronExpression})`);
+
+    resetTask = cron.schedule(cronExpression, () => {
+        console.log("[Cron] Running scheduled chore reset task.");
+        resetChores();
+    });
+};
+
+// Startup: Fetch configured time and schedule
+db.get("SELECT value FROM settings WHERE key = 'chore_reset_time'", (err, row) => {
+    const configuredTime = row ? row.value : "00:00";
+    scheduleResetTask(configuredTime);
+
+    // Also perform immediate check on startup
+    resetChores();
 });
 
 // The "catchall" handler: for any request that doesn't

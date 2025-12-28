@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Save, User, Upload, MapPin, Edit2, X, Check, Moon, Sun, Monitor } from 'lucide-react';
+import { Plus, Trash2, Save, User, Upload, MapPin, Edit2, X, Check, Moon, Sun, Monitor, Clock } from 'lucide-react';
 import { UserAvatar } from '../../components/UserAvatar';
 import { CalendarSettings } from './CalendarSettings';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -21,6 +21,7 @@ export function Settings() {
     // Coordinate States
     const [latitude, setLatitude] = useState('');
     const [longitude, setLongitude] = useState('');
+    const [choreResetTime, setChoreResetTime] = useState('00:00');
 
     const [members, setMembers] = useState([]);
     const [screensaverTimeout, setScreensaverTimeout] = useState(1);
@@ -58,6 +59,9 @@ export function Settings() {
             }
             if (settingsData.google_chat_webhook) {
                 setWebhookUrl(settingsData.google_chat_webhook);
+            }
+            if (settingsData.chore_reset_time) {
+                setChoreResetTime(settingsData.chore_reset_time);
             }
 
             setMembers(familyData);
@@ -111,6 +115,19 @@ export function Settings() {
                 body: JSON.stringify({ key: 'weather_location', value: locationString })
             });
             window.location.reload();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const saveChoreResetTime = async () => {
+        try {
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'chore_reset_time', value: choreResetTime })
+            });
+            alert("Reset Time Saved!");
         } catch (err) {
             console.error(err);
         }
@@ -307,6 +324,31 @@ export function Settings() {
                                 </div>
                                 <button
                                     onClick={saveLocation}
+                                    className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
+                                >
+                                    <Save size={18} />
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Chore Reset Time</label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Set the time when chores automatically reset.</p>
+                            <div className="flex gap-3">
+                                <div className="flex-1 relative">
+                                    <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="time"
+                                        value={choreResetTime}
+                                        onChange={(e) => setChoreResetTime(e.target.value)}
+                                        className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    />
+                                </div>
+                                <button
+                                    onClick={saveChoreResetTime}
                                     className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
                                 >
                                     <Save size={18} />

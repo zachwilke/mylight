@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils';
 import { UserAvatar } from '../../components/UserAvatar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
-export function ChoreChart() {
+export function ChoreChart({ kiosk = false }) {
     const [chores, setChores] = useState({});
     const [members, setMembers] = useState([]);
     const [stars, setStars] = useState({});
@@ -142,18 +142,23 @@ export function ChoreChart() {
                 message="Are you sure you want to delete this chore?"
             />
             {/* Header / Toolbar */}
-            <div className="flex items-center justify-between px-6 py-6 shrink-0">
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">Chore Chart</h2>
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 bg-white/50 dark:bg-white/10 text-gray-900 dark:text-white px-5 py-2.5 rounded-2xl hover:bg-white/80 dark:hover:bg-white/20 transition-all font-semibold shadow-sm border border-white/40 ring-1 ring-black/5"
-                >
-                    <Plus size={18} />
-                    <span className="font-medium text-sm">Add Chore</span>
-                </button>
-            </div>
+            {!kiosk && (
+                <div className="flex items-center justify-between px-6 py-6 shrink-0">
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">Chore Chart</h2>
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center gap-2 bg-white/50 dark:bg-white/10 text-gray-900 dark:text-white px-5 py-2.5 rounded-2xl hover:bg-white/80 dark:hover:bg-white/20 transition-all font-semibold shadow-sm border border-white/40 ring-1 ring-black/5"
+                    >
+                        <Plus size={18} />
+                        <span className="font-medium text-sm">Add Chore</span>
+                    </button>
+                </div>
+            )}
 
-            <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-y-hidden md:overflow-x-auto px-6 gap-6 pb-6 snap-x md:snap-none custom-scrollbar">
+            <div className={cn(
+                "flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-y-hidden md:overflow-x-auto px-6 gap-6 pb-6 snap-x md:snap-none custom-scrollbar",
+                kiosk && "pt-6"
+            )}>
                 {Object.entries(chores).map(([name, personChores]) => {
                     const member = getMemberByName(name);
                     return (
