@@ -13,6 +13,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
     db.run("ALTER TABLE events ADD COLUMN recurrence TEXT", () => { });
     // Migration for phone
     db.run("ALTER TABLE family_members ADD COLUMN phone TEXT", () => { });
+    // Migration for stars
+    db.run("ALTER TABLE family_members ADD COLUMN stars INTEGER DEFAULT 0", () => { });
   }
 });
 
@@ -29,7 +31,8 @@ function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       color TEXT,
-      avatar TEXT
+      avatar TEXT,
+      stars INTEGER DEFAULT 0
     )`);
 
     // Events
@@ -48,6 +51,16 @@ function initDb() {
       time_of_day TEXT, -- 'Morning', 'Evening'
       member_id INTEGER,
       completed BOOLEAN DEFAULT 0,
+      FOREIGN KEY (member_id) REFERENCES family_members (id)
+    )`);
+
+    // Chore Completions History
+    db.run(`CREATE TABLE IF NOT EXISTS chore_completions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chore_id INTEGER,
+      member_id INTEGER,
+      completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (chore_id) REFERENCES chores (id),
       FOREIGN KEY (member_id) REFERENCES family_members (id)
     )`);
 

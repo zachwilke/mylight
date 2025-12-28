@@ -26,11 +26,10 @@ export function ChoreChart({ kiosk = false }) {
             setChores(choresData);
             setMembers(familyData);
 
-            // Calculate initial stars based on completed chores
-            // This is a placeholder logic. Real app might store "stars" in DB.
+            // Use stars from member data
             const initialStars = {};
-            Object.entries(choresData).forEach(([name, personChores]) => {
-                initialStars[name] = personChores.filter(c => c.completed).length * 5; // 5 stars per chore
+            familyData.forEach(m => {
+                initialStars[m.name] = m.stars || 0;
             });
             setStars(initialStars);
 
@@ -68,10 +67,10 @@ export function ChoreChart({ kiosk = false }) {
             return { ...prev, [person]: personChores };
         });
 
-        // Update Stars
+        // Update Stars (Optimistically)
         setStars(prev => ({
             ...prev,
-            [person]: (prev[person] || 0) + (newStatus ? 5 : -5)
+            [person]: Math.max(0, (prev[person] || 0) + (newStatus ? 1 : -1))
         }));
 
         // Celebration if completing

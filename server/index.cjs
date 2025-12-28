@@ -159,9 +159,52 @@ app.delete('/api/chores/:id', (req, res) => {
 app.post('/api/chores/:id/toggle', (req, res) => {
     const { id } = req.params;
     const { completed } = req.body;
-    db.run("UPDATE chores SET completed = ? WHERE id = ?", [completed, id], function (err) {
+
+    db.get("SELECT member_id FROM chores WHERE id = ?", [id], (err, chore) => {
+        if (err || !chore) return res.status(500).json({ error: err ? err.message : "Chore not found" });
+
+        db.serialize(() => {
+            db.run("UPDATE chores SET completed = ? WHERE id = ?", [completed, id]);
+
+            if (completed) {
+                // Award 1 star
+                db.run("UPDATE family_members SET stars = stars + 1 WHERE id = ?", [chore.member_id]);
+                // Record completion
+                db.run("INSERT INTO chore_completions (chore_id, member_id) VALUES (?, ?)", [id, chore.member_id]);
+            } else {
+                // Remove 1 star (if they uncheck it)
+                db.run("UPDATE family_members SET stars = MAX(0, stars - 1) WHERE id = ?", [chore.member_id]);
+                // Remove last completion record for this chore/member
+                db.run("DELETE FROM chore_completions WHERE id = (SELECT id FROM chore_completions WHERE chore_id = ? AND member_id = ? ORDER BY completed_at DESC LIMIT 1)", [id, chore.member_id]);
+            }
+
+            res.json({ success: true });
+        });
+    });
+});
+
+// History API
+app.get('/api/history', (req, res) => {
+    const { period } = req.query; // 'week', 'month', 'year'
+    let days = 7;
+    if (period === 'month') days = 30;
+    if (period === 'year') days = 365;
+
+    const query = `
+        SELECT 
+            fm.name as member_name,
+            DATE(cc.completed_at) as date,
+            COUNT(*) as count
+        FROM chore_completions cc
+        JOIN family_members fm ON cc.member_id = fm.id
+        WHERE cc.completed_at >= date('now', '-${days} days')
+        GROUP BY member_name, date
+        ORDER BY date ASC
+    `;
+
+    db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, changes: this.changes });
+        res.json(rows);
     });
 });
 

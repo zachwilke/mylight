@@ -9,6 +9,7 @@ import { WeatherPage } from './features/weather/WeatherPage';
 import Screensaver from './features/screensaver/Screensaver';
 import { useTheme } from './hooks/useTheme';
 import { Kiosk } from './features/kiosk/Kiosk';
+import { HistoryPage } from './features/history/HistoryPage';
 
 function App() {
   const [theme] = useTheme();
@@ -83,6 +84,7 @@ function App() {
           {activeTab === 'calendar' && <CalendarView />}
 
           {activeTab === 'chores' && <ChoreChart />}
+          {activeTab === 'history' && <HistoryPage />}
           {activeTab === 'meals' && <MealPlanner />}
 
           {activeTab === 'lists' && <Lists />}
