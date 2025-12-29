@@ -8,7 +8,7 @@ MyLight is a modern, interactive family dashboard designed to organize your hous
 
 -   **📅 Family Calendar**: View and manage family events.
 -   **🧹 Chore Chart**: Assign chores to family members, track completion with a star system, and manage daily tasks.
--   **🍽️ Meal Planner**: Plan breakfast, lunch, dinner, and snacks for the week.
+-   **🍽️ Meal Planner**: Plan usage with a full **Monthly Calendar View**. Features drag-and-drop rescheduling and one-click integration with your shopping list.
 -   **📝 Lists**: Manage shared grocery lists and to-do lists.
 -   **👨‍👩‍👧‍👦 Profile Management**: Add family members, upload custom avatars, and customize colors.
 -   **☀️ Weather Integration**: Live local weather updates based on your city.

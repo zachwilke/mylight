@@ -210,33 +210,38 @@ app.get('/api/history', (req, res) => {
 
 // Meals
 app.get('/api/meals', (req, res) => {
-    db.all("SELECT * FROM meals", [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const { start, end } = req.query;
+    let query = "SELECT * FROM meals";
+    const params = [];
 
-        // Transform for grid: 'Mon-Dinner': { ... }
-        const mealGrid = {};
-        rows.forEach(row => {
-            const key = `${row.day}-${row.type}`;
-            mealGrid[key] = row;
-        });
-        res.json(mealGrid);
+    if (start && end) {
+        query += " WHERE date BETWEEN ? AND ?";
+        params.push(start, end);
+    }
+
+    db.all(query, params, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
     });
 });
 
 app.post('/api/meals', (req, res) => {
-    const { day, type, title, color } = req.body;
-    db.get("SELECT id FROM meals WHERE day = ? AND type = ?", [day, type], (err, row) => {
+    const { date, type, title, color } = req.body;
+
+    if (!date || !type) return res.status(400).json({ error: "Date and Type are required" });
+
+    db.get("SELECT id FROM meals WHERE date = ? AND type = ?", [date, type], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
 
         if (row) {
             db.run("UPDATE meals SET title = ?, color = ? WHERE id = ?", [title, color, row.id], function (err) {
                 if (err) return res.status(500).json({ error: err.message });
-                res.json({ success: true, id: row.id, day, type, title, color });
+                res.json({ success: true, id: row.id, date, type, title, color });
             });
         } else {
-            db.run("INSERT INTO meals (day, type, title, color) VALUES (?, ?, ?, ?)", [day, type, title, color || 'bg-sky-blue'], function (err) {
+            db.run("INSERT INTO meals (date, type, title, color) VALUES (?, ?, ?, ?)", [date, type, title, color || 'bg-sky-blue'], function (err) {
                 if (err) return res.status(500).json({ error: err.message });
-                res.json({ success: true, id: this.lastID, day, type, title, color: color || 'bg-sky-blue' });
+                res.json({ success: true, id: this.lastID, date, type, title, color: color || 'bg-sky-blue' });
             });
         }
     });

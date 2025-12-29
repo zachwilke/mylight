@@ -1,111 +1,316 @@
 import React, { useState, useEffect } from 'react';
+import {
+    format,
+    startOfMonth,
+    endOfMonth,
+    startOfWeek,
+    endOfWeek,
+    eachDayOfInterval,
+    isSameMonth,
+    isSameDay,
+    addMonths,
+    subMonths,
+    parseISO,
+    isValid
+} from 'date-fns';
+import { DndContext, useDraggable, useDroppable, DragOverlay, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
+import { ChevronLeft, ChevronRight, Plus, ShoppingCart, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { Plus } from 'lucide-react';
 import { MealModal } from './components/MealModal';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export function MealPlanner() {
-    const [meals, setMeals] = useState({});
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [meals, setMeals] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [activeId, setActiveId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedSlot, setSelectedSlot] = useState({ day: '', type: '' });
+    const [selectedSlot, setSelectedSlot] = useState({ date: null, type: null });
     const [currentMeal, setCurrentMeal] = useState(null);
+    const [addingToShop, setAddingToShop] = useState(false);
 
-    const fetchMeals = () => {
-        fetch('/api/meals')
-            .then(res => res.json())
-            .then(data => setMeals(data))
-            .catch(err => console.error(err));
+    const sensors = useSensors(
+        useSensor(PointerSensor, { // Require movement of 3px before drag starts to prevent accidental clicks
+            activationConstraint: {
+                distance: 3,
+            },
+        })
+    );
+
+    const fetchMeals = async () => {
+        setLoading(true);
+        try {
+            // Fetch broadly for the view (could optimize with start/end dates later)
+            const res = await fetch('/api/meals');
+            const data = await res.json();
+            setMeals(data);
+        } catch (err) {
+            console.error("Failed to fetch meals", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         fetchMeals();
-    }, []);
+    }, [currentMonth]); // Refetch if we change logic to depend on range
 
-    const handleCellClick = (day, type, meal) => {
-        setSelectedSlot({ day, type });
+    const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+    const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+
+    const handleCellClick = (date, type, meal) => {
+        setSelectedSlot({ date, type });
         setCurrentMeal(meal);
         setIsModalOpen(true);
     };
 
     const handleSaveMeal = async (mealData) => {
+        const dateStr = format(selectedSlot.date, 'yyyy-MM-dd');
+
         if (mealData.delete) {
             await fetch(`/api/meals/${currentMeal.id}`, { method: 'DELETE' });
         } else {
-            // Assign a random nice color if new
+            // Keep existing color if exists, else random
             const colors = ['bg-orange-100 text-orange-800', 'bg-green-100 text-green-800', 'bg-blue-100 text-blue-800', 'bg-purple-100 text-purple-800'];
             const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
             await fetch('/api/meals', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...mealData, color: currentMeal?.color || randomColor })
+                body: JSON.stringify({
+                    date: dateStr,
+                    type: selectedSlot.type,
+                    title: mealData.title,
+                    color: currentMeal?.color || randomColor
+                })
             });
         }
         fetchMeals();
     };
 
+    const handleDragStart = (event) => {
+        setActiveId(event.active.id);
+    };
+
+    const handleDragEnd = async (event) => {
+        const { active, over } = event;
+        setActiveId(null);
+
+        if (!over) return;
+
+        const mealId = active.id;
+        // Droppable ID format: "dateString|type"
+        const [targetDateStr, targetType] = over.id.split('|');
+
+        // Find the dragged meal
+        const meal = meals.find(m => m.id === mealId);
+        if (!meal) return;
+
+        // If dropped on same slot, do nothing
+        if (meal.date === targetDateStr && meal.type === targetType) return;
+
+        // Optimistic UI update could go here, but let's just wait for server for safety
+        try {
+            await fetch('/api/meals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date: targetDateStr,
+                    type: targetType,
+                    title: meal.title,
+                    color: meal.color
+                })
+            });
+            // If it was a generic "move", we might need to delete the old one IF the server created a new ID?
+            // But our POST updates if exists at target.
+            // Wait, if we move specific ID row to new date/type...
+            // the server POST logic logic checks "SELECT id FROM meals WHERE date=? AND type=?".
+            // If target returns a row, it UPDATES that row (overwriting target).
+            // But the SOURCE row (meal.id) is still there!
+            // We effectively "Copied" unless we delete source.
+            // BUT: if we want to MOVE, we should Delete source, then Post new?
+            // OR proper Move API.
+            // Let's do: Delete Source -> Post Target.
+            // BUT simpler: Update Source Row to have new Date/Type.
+
+            // However, our API `POST /api/meals` logic searches for *Target* slot.
+            // If target slot is occupied, it overwrites it.
+            // If we assume specific Meal Item identity, we should Update the ID.
+            // But `POST` logic is "Find meal at DATE/TYPE".
+
+            // Let's implement a better move logic: 
+            // 1. Delete old meal (meal.id)
+            // 2. Post new meal (at new date/type)
+
+            // Actually, safest is:
+            await fetch(`/api/meals/${meal.id}`, { method: 'DELETE' });
+            await fetch('/api/meals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date: targetDateStr,
+                    type: targetType,
+                    title: meal.title,
+                    color: meal.color
+                })
+            });
+
+            fetchMeals();
+        } catch (err) {
+            console.error("Failed to move meal", err);
+        }
+    };
+
+    const addToShoppingList = async () => {
+        setAddingToShop(true);
+        // Add meals from currently visible month? Or just this week?
+        // Let's add all visible meals to grocery list
+        // Filter meals in current view
+        try {
+            const start = startOfWeek(startOfMonth(currentMonth));
+            const end = endOfWeek(endOfMonth(currentMonth));
+
+            const visibleMeals = meals.filter(m => {
+                if (!m.date) return false;
+                const d = parseISO(m.date);
+                return isValid(d) && d >= start && d <= end;
+            });
+
+            // Get 'Groceries' list ID - assumption: it exists or we fetch it.
+            // For now, let's just fetch all lists and find 'Groceries'
+            const listsRes = await fetch('/api/lists');
+            const lists = await listsRes.json();
+            let groceryList = lists.find(l => l.title === 'Groceries');
+
+            if (!groceryList) {
+                // create it
+                const res = await fetch('/api/lists', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: 'Groceries', icon: 'shopping-cart' })
+                });
+                groceryList = await res.json();
+            }
+
+            // Add items
+            let count = 0;
+            for (const meal of visibleMeals) {
+                await fetch('/api/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ list_id: groceryList.id, text: `${meal.title} (${meal.type})` })
+                });
+                count++;
+            }
+            alert(`Added ${count} meals to Groceries!`);
+        } catch (err) {
+            console.error(err);
+            alert(`Failed to add to shopping list: ${err.message}`);
+        } finally {
+            setAddingToShop(false);
+        }
+    };
+
+    // --- Render Helpers ---
+
+    const days = eachDayOfInterval({
+        start: startOfWeek(startOfMonth(currentMonth)),
+        end: endOfWeek(endOfMonth(currentMonth))
+    });
+
+    const activeMeal = activeId ? meals.find(m => m.id === activeId) : null;
+
     return (
-        <div className="h-full flex flex-col bg-transparent overflow-hidden">
-            <div className="flex h-full">
-                {/* Y-Axis Headers (Meal Types - Sticky Left) */}
-                <div className="w-24 md:w-32 flex-shrink-0 border-r border-black/5 dark:border-white/5 pt-10 bg-white/40 dark:bg-black/40 backdrop-blur-xl sticky left-0 z-30 shadow-lg shadow-black/5">
-                    {MEAL_TYPES.map(type => (
-                        <div key={type} className="h-32 flex items-center justify-center relative">
-                            <span className="text-[10px] md:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase rotate-0 tracking-widest text-center px-1">
-                                {type}
-                            </span>
-                            {/* Subtle separator */}
-                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[1px] bg-black/5 dark:bg-white/5 mx-auto" />
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <div className="h-full flex flex-col bg-slate-50 dark:bg-black/20 overflow-hidden">
+                {/* Header */}
+                <div className="flex-shrink-0 px-6 py-4 bg-white/50 dark:bg-black/40 backdrop-blur-md border-b border-black/5 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
+                            {format(currentMonth, 'MMMM yyyy')}
+                        </h2>
+                        <div className="flex bg-white dark:bg-gray-800 rounded-full shadow-sm border border-black/5 p-1">
+                            <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"><ChevronLeft size={20} /></button>
+                            <button onClick={handleNextMonth} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"><ChevronRight size={20} /></button>
                         </div>
-                    ))}
+                    </div>
+
+                    <button
+                        onClick={addToShoppingList}
+                        disabled={addingToShop}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl font-semibold transition-all"
+                    >
+                        {addingToShop ? <Loader2 className="animate-spin" size={18} /> : <ShoppingCart size={18} />}
+                        <span>Add to Groceries</span>
+                    </button>
                 </div>
 
-                {/* Main Grid */}
-                <div className="flex-1 flex flex-col overflow-x-auto overflow-y-auto custom-scrollbar">
-                    <div className="min-w-max">
-                        {/* X-Axis Headers (Days) */}
-                        <div className="flex border-b border-black/5 dark:border-white/5 sticky top-0 bg-white/40 dark:bg-black/40 backdrop-blur-xl z-20">
-                            {DAYS.map(day => (
-                                <div key={day} className="w-[140px] md:w-auto md:flex-1 py-4 text-center min-w-[140px]">
-                                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-widest text-[10px] md:text-xs">{day}</span>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Grid Cells */}
-                        {/* Render Grid Rows */}
-                        {MEAL_TYPES.map((type, rowIndex) => (
-                            <div key={type} className="flex h-32 border-b border-black/5 dark:border-white/5 last:border-b-0">
-                                {DAYS.map(day => {
-                                    const key = `${day}-${type}`;
-                                    const meal = meals[key];
-
-                                    return (
-                                        <div
-                                            key={key}
-                                            onClick={() => handleCellClick(day, type, meal)}
-                                            className="w-[140px] md:w-auto md:flex-1 border-r border-black/5 dark:border-white/5 last:border-r-0 min-w-[140px] p-2 hover:bg-white/40 dark:hover:bg-white/5 transition-all group relative cursor-pointer"
-                                        >
-                                            {meal ? (
-                                                <div className={cn(
-                                                    "w-full h-full rounded-2xl p-3 shadow-sm border border-black/5 flex items-start justify-between flex-col transition-all hover:scale-[1.02] hover:shadow-md",
-                                                    meal.color || "bg-white/60 dark:bg-white/10 backdrop-blur-sm text-gray-800 dark:text-gray-100"
-                                                )}>
-                                                    <span className="font-semibold text-xs md:text-sm leading-snug line-clamp-3">{meal.title}</span>
-                                                    <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full mt-auto" />
-                                                </div>
-                                            ) : (
-                                                <button className="w-full h-full rounded-2xl border border-dashed border-black/10 dark:border-white/10 opacity-0 group-hover:opacity-100 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all duration-300">
-                                                    <Plus size={20} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                {/* Grid */}
+                <div className="flex-1 overflow-auto p-4 custom-scrollbar">
+                    <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-800 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+                        {/* Day Headers */}
+                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((dayName) => (
+                            <div key={dayName} className="bg-white dark:bg-gray-900 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">
+                                {dayName}
                             </div>
                         ))}
+
+                        {/* Calendar Days */}
+                        {days.map((day, dayIdx) => {
+                            const dateStr = format(day, 'yyyy-MM-dd');
+                            const isCurrentMonth = isSameMonth(day, currentMonth);
+                            const isTodayDate = isSameDay(day, new Date());
+
+                            // Find meals for this day
+                            const daysMeals = meals.filter(m => m.date === dateStr);
+
+                            return (
+                                <div
+                                    key={day.toString()}
+                                    className={cn(
+                                        "min-h-[140px] bg-white dark:bg-gray-900 p-2 flex flex-col gap-1 transition-colors relative group",
+                                        !isCurrentMonth && "bg-gray-50/50 dark:bg-gray-900/50 text-gray-400",
+                                        isTodayDate && "bg-blue-50/30 dark:bg-blue-900/10"
+                                    )}
+                                >
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <span className={cn(
+                                            "text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full",
+                                            isTodayDate ? "bg-primary text-white shadow-md shadow-primary/30" : "text-gray-700 dark:text-gray-300"
+                                        )}>
+                                            {format(day, 'd')}
+                                        </span>
+                                        {/* Optional Add Button visible on hover */}
+                                        <button
+                                            onClick={() => handleCellClick(day, 'Dinner', null)} // Default to Dinner if general click? or maybe ask type?
+                                            // Actually, grid is crowded, better to click a specific slot.
+                                            // Let's render slots.
+                                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-opacity"
+                                        >
+                                            <Plus size={14} />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex-1 flex flex-col gap-1.5">
+                                        {MEAL_TYPES.map(type => {
+                                            const meal = daysMeals.find(m => m.type === type);
+                                            const slotId = `${dateStr}|${type}`;
+
+                                            return (
+                                                <MealSlot
+                                                    key={slotId}
+                                                    id={slotId}
+                                                    type={type}
+                                                    meal={meal}
+                                                    onClick={() => handleCellClick(day, type, meal)}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
@@ -113,11 +318,65 @@ export function MealPlanner() {
             <MealModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                day={selectedSlot.day}
+                day={selectedSlot.date ? format(selectedSlot.date, 'EEEE, MMM d') : ''}
                 type={selectedSlot.type}
                 currentMeal={currentMeal}
                 onSave={handleSaveMeal}
             />
+
+            <DragOverlay>
+                {activeMeal ? (
+                    <div className={cn(
+                        "px-3 py-2 rounded-lg text-xs font-semibold shadow-xl cursor-grabbing ring-2 ring-primary bg-white dark:bg-gray-800",
+                        activeMeal.color
+                    )}>
+                        {activeMeal.title}
+                    </div>
+                ) : null}
+            </DragOverlay>
+        </DndContext>
+    );
+}
+
+function MealSlot({ id, type, meal, onClick }) {
+    const { isOver, setNodeRef } = useDroppable({ id });
+    const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+        id: meal ? meal.id : `empty-${id}`,
+        disabled: !meal
+    });
+
+    return (
+        <div
+            ref={setNodeRef}
+            onClick={onClick}
+            className={cn(
+                "group/slot relative min-h-[28px] rounded-lg text-xs transition-all border border-transparent",
+                !meal && "hover:bg-gray-50 dark:hover:bg-gray-800 border-dashed border-gray-200 dark:border-gray-800",
+                isOver && !isDragging && "ring-2 ring-primary/50 bg-primary/5 z-10 scale-105",
+                meal && !isDragging && "hover:shadow-md cursor-pointer",
+                isDragging && "opacity-30"
+            )}
+        >
+            {meal ? (
+                <div
+                    ref={setDragRef}
+                    {...listeners}
+                    {...attributes}
+                    className={cn(
+                        "w-full h-full px-2 py-1.5 rounded-lg flex items-center gap-2 truncate",
+                        meal.color || "bg-white",
+                        "cursor-grab active:cursor-grabbing"
+                    )}
+                >
+                    <span className="opacity-50 text-[10px] uppercase font-bold tracking-wider w-3">{type[0]}</span>
+                    <span className="truncate font-medium">{meal.title}</span>
+                </div>
+            ) : (
+                <div className="w-full h-full flex items-center opacity-0 group-hover/slot:opacity-100 transition-opacity px-2">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase">{type}</span>
+                </div>
+            )}
         </div>
     );
 }
+

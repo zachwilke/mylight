@@ -15,6 +15,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
     db.run("ALTER TABLE family_members ADD COLUMN phone TEXT", () => { });
     // Migration for stars
     db.run("ALTER TABLE family_members ADD COLUMN stars INTEGER DEFAULT 0", () => { });
+    // Migration for meals date
+    db.run("ALTER TABLE meals ADD COLUMN date TEXT", () => { });
   }
 });
 
@@ -68,7 +70,8 @@ function initDb() {
     db.run(`CREATE TABLE IF NOT EXISTS meals (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
-      day TEXT NOT NULL, -- 'Mon', 'Tue' etc.
+      day TEXT, -- Keeping for legacy/templates if needed, but 'date' is primary now
+      date TEXT, -- YYYY-MM-DD
       type TEXT NOT NULL, -- 'Breakfast', 'Lunch', 'Dinner'
       color TEXT
     )`);
