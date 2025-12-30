@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Check, Plus, Trash2, X, Sparkles } from 'lucide-react';
+import { Star, Check, Plus, Trash2, X, Sparkles, Lock, Unlock } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { UserAvatar } from '../../components/UserAvatar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -14,14 +14,23 @@ export function ChoreChart({ kiosk = false }) {
     const [pendingDeleteId, setPendingDeleteId] = useState(null);
     const [celebration, setCelebration] = useState(null); // { x, y, id }
 
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editCode, setEditCode] = useState(null); // The correct code from settings
+    const [showUnlockModal, setShowUnlockModal] = useState(false);
+    const [unlockInput, setUnlockInput] = useState('');
+
     const fetchData = async () => {
         try {
-            const [choresRes, familyRes] = await Promise.all([
+            const [choresRes, familyRes, settingsRes] = await Promise.all([
                 fetch('/api/chores'),
-                fetch('/api/family')
+                fetch('/api/family'),
+                fetch('/api/settings')
             ]);
             const choresData = await choresRes.json();
             const familyData = await familyRes.json();
+            const settingsData = await settingsRes.json();
+
+            setEditCode(settingsData.edit_code || null);
 
             setChores(choresData);
             setMembers(familyData);
@@ -54,6 +63,7 @@ export function ChoreChart({ kiosk = false }) {
     };
 
     const toggleChore = async (person, choreId, currentStatus, event) => {
+        if (isEditMode) return; // Disable toggling in edit mode to prevent accidental checks while managing
         const newStatus = !currentStatus;
 
         // Optimistic UI Update
@@ -118,6 +128,31 @@ export function ChoreChart({ kiosk = false }) {
         setShowDeleteConfirm(true);
     };
 
+    const handleUnlock = (e) => {
+        e.preventDefault();
+        if (unlockInput === editCode) {
+            setIsEditMode(true);
+            setShowUnlockModal(false);
+            setUnlockInput('');
+        } else {
+            alert("Incorrect Code");
+            setUnlockInput('');
+        }
+    };
+
+    const requestEditMode = () => {
+        if (isEditMode) {
+            setIsEditMode(false);
+            return;
+        }
+
+        if (!editCode) {
+            setIsEditMode(true);
+        } else {
+            setShowUnlockModal(true);
+        }
+    };
+
     if (loading) return <div className="p-8 text-center text-gray-400">Loading chores...</div>;
 
     return (
@@ -141,16 +176,57 @@ export function ChoreChart({ kiosk = false }) {
                 message="Are you sure you want to delete this chore?"
             />
             {/* Header / Toolbar */}
+            {/* Unlock Modal */}
+            {showUnlockModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-xl w-full max-w-xs space-y-4">
+                        <h3 className="text-lg font-bold text-center dark:text-white">Enter Passcode</h3>
+                        <form onSubmit={handleUnlock}>
+                            <input
+                                type="password"
+                                inputMode="numeric"
+                                autoFocus
+                                value={unlockInput}
+                                onChange={(e) => setUnlockInput(e.target.value)}
+                                className="w-full text-center text-2xl tracking-widest p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white mb-4"
+                                placeholder=""
+                            />
+                            <div className="flex gap-2">
+                                <button type="button" onClick={() => setShowUnlockModal(false)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium">Cancel</button>
+                                <button type="submit" className="flex-1 py-3 bg-primary text-white rounded-xl font-medium">Unlock</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {!kiosk && (
                 <div className="flex items-center justify-between px-6 py-6 shrink-0">
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">Chore Chart</h2>
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 bg-white/50 dark:bg-white/10 text-gray-900 dark:text-white px-5 py-2.5 rounded-2xl hover:bg-white/80 dark:hover:bg-white/20 transition-all font-semibold shadow-sm border border-white/40 ring-1 ring-black/5"
-                    >
-                        <Plus size={18} />
-                        <span className="font-medium text-sm">Add Chore</span>
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={requestEditMode}
+                            className={cn(
+                                "flex items-center gap-2 px-5 py-2.5 rounded-2xl transition-all font-semibold shadow-sm border ring-1 ring-black/5",
+                                isEditMode
+                                    ? "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200"
+                                    : "bg-white/50 dark:bg-white/10 text-gray-900 dark:text-white border-white/40 hover:bg-white/80 dark:hover:bg-white/20"
+                            )}
+                        >
+                            {isEditMode ? <Unlock size={18} /> : <Lock size={18} />}
+                            <span className="font-medium text-sm">{isEditMode ? "Done" : "Edit"}</span>
+                        </button>
+
+                        {isEditMode && (
+                            <button
+                                onClick={() => setIsModalOpen(true)}
+                                className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-2xl hover:bg-primary/90 transition-all font-semibold shadow-sm shadow-primary/20"
+                            >
+                                <Plus size={18} />
+                                <span className="font-medium text-sm">Add Chore</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -214,16 +290,18 @@ export function ChoreChart({ kiosk = false }) {
                                                             </div>
                                                         </button>
 
-                                                        {/* Delete Button (Visible on Hover) */}
-                                                        <div className="absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 hover:scale-110">
-                                                            <button
-                                                                onClick={(e) => handleDeleteChore(e, chore.id)}
-                                                                className="bg-red-50 dark:bg-red-900/80 text-red-500 border border-red-100 dark:border-red-800 p-1.5 rounded-full shadow-sm hover:bg-red-100 hover:text-red-600 transition-colors"
-                                                                title="Delete Chore"
-                                                            >
-                                                                <Trash2 size={12} />
-                                                            </button>
-                                                        </div>
+                                                        {/* Delete Button (Visible in Edit Mode) */}
+                                                        {isEditMode && (
+                                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20">
+                                                                <button
+                                                                    onClick={(e) => handleDeleteChore(e, chore.id)}
+                                                                    className="bg-white/90 dark:bg-red-900/90 text-red-500 border border-red-100 dark:border-red-800 p-2 rounded-xl shadow-sm hover:bg-red-50 hover:scale-105 transition-all"
+                                                                    title="Delete Chore"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                                 {personChores.filter(c => c.time_of_day === time).length === 0 && (
