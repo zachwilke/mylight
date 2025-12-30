@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Check, Plus, Trash2, X, Sparkles, Lock, Unlock } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { cn } from '../../lib/utils';
 import { UserAvatar } from '../../components/UserAvatar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -49,9 +50,19 @@ export function ChoreChart({ kiosk = false }) {
     const getMemberByName = (name) => members.find(m => m.name === name);
 
     const triggerCelebration = (x, y) => {
-        const id = Date.now();
-        setCelebration({ x, y, id });
-        setTimeout(() => setCelebration(null), 1000);
+        // High quality confetti at the click location
+        const rect = {
+            x: x / window.innerWidth,
+            y: y / window.innerHeight
+        };
+
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: rect,
+            colors: ['#0ea5e9', '#85d941', '#f59e0b', '#ec4899', '#8b5cf6'],
+            disableForReducedMotion: true
+        });
     };
 
     const toggleChore = async (person, choreId, currentStatus, event) => {
@@ -143,16 +154,6 @@ export function ChoreChart({ kiosk = false }) {
 
     return (
         <div className="h-full overflow-hidden flex flex-col bg-transparent">
-            {celebration && (
-                <div
-                    className="fixed pointer-events-none z-50 animate-ping opacity-0"
-                    style={{ left: celebration.x, top: celebration.y }}
-                >
-                    <div className="absolute -top-4 -left-4 text-yellow-500"><Sparkles size={32} /></div>
-                    <div className="absolute -top-8 left-2 text-blue-500"><Sparkles size={24} /></div>
-                    <div className="absolute top-2 -right-6 text-purple-500"><Sparkles size={20} /></div>
-                </div>
-            )}
 
             <ConfirmDialog
                 isOpen={showDeleteConfirm}
@@ -188,7 +189,7 @@ export function ChoreChart({ kiosk = false }) {
 
             {!kiosk && (
                 <div className="flex items-center justify-between px-6 py-6 shrink-0">
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">Chore Chart</h2>
+                    <h2 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">Chore Chart</h2>
                     <div className="flex items-center gap-3">
                         <button
                             onClick={requestEditMode}
@@ -225,7 +226,7 @@ export function ChoreChart({ kiosk = false }) {
                     return (
                         <div
                             key={name}
-                            className="w-full md:w-[320px] md:min-w-[320px] lg:flex-1 p-0 flex flex-col shrink-0 snap-center"
+                            className="w-full md:w-[400px] md:min-w-[400px] lg:flex-1 p-0 flex flex-col shrink-0 snap-center"
                         >
                             {/* Glass Card for Member */}
                             <div className="h-full bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-[2rem] border border-white/50 dark:border-white/10 shadow-lg shadow-black/5 flex flex-col overflow-hidden">
@@ -235,14 +236,14 @@ export function ChoreChart({ kiosk = false }) {
                                     <div className="mb-3 transform hover:scale-105 transition-transform duration-300">
                                         <UserAvatar member={member} size="xl" />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{name}</h3>
+                                    <h3 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">{name}</h3>
                                 </div>
 
                                 {/* Chores Scroll Area */}
                                 <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
                                     {['Morning', 'Evening'].map((time) => (
                                         <div key={time}>
-                                            <h4 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 pl-2 opacity-80">{time}</h4>
+                                            <h4 className="text-[11px] md:text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 pl-2 opacity-80">{time}</h4>
                                             <div className="space-y-2.5">
                                                 {personChores.filter(c => c.time_of_day === time).map(chore => (
                                                     <div key={chore.id} className="relative group">
@@ -256,19 +257,19 @@ export function ChoreChart({ kiosk = false }) {
                                                             )}
                                                         >
                                                             <span className={cn(
-                                                                "font-medium text-[15px] leading-snug line-clamp-2 transition-all relative z-10",
+                                                                "font-medium text-[15px] md:text-xl leading-snug line-clamp-2 transition-all relative z-10",
                                                                 chore.completed ? "text-gray-500 line-through" : "text-gray-800 dark:text-gray-100"
                                                             )}>
                                                                 {chore.title}
                                                             </span>
 
                                                             <div className={cn(
-                                                                "w-6 h-6 rounded-full border-[1.5px] flex items-center justify-center transition-all shrink-0 ml-3 shadow-inner relative z-10",
+                                                                "w-6 h-6 md:w-10 md:h-10 rounded-full border-[1.5px] flex items-center justify-center transition-all shrink-0 ml-3 shadow-inner relative z-10",
                                                                 chore.completed
                                                                     ? "bg-green-500 border-green-500 text-white scale-110"
                                                                     : "bg-white/50 border-gray-300 dark:border-gray-500 group-hover/btn:border-primary group-hover/btn:scale-110"
                                                             )}>
-                                                                {chore.completed && <Check size={14} strokeWidth={4} />}
+                                                                {!!chore.completed && <Check size={20} className="md:w-6 md:h-6" strokeWidth={4} />}
                                                             </div>
                                                         </button>
 

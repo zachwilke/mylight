@@ -113,17 +113,17 @@ export function Header({ isSidebarOpen, toggleSidebar }) {
     }
 
     return (
-        <header className="h-auto md:h-20 px-6 py-4 md:py-0 md:px-8 flex flex-col md:flex-row items-start md:items-center justify-between bg-transparent flex-shrink-0 gap-4 md:gap-0">
+        <header className="h-auto md:h-28 px-6 py-4 md:py-0 md:px-10 flex flex-col md:flex-row items-start md:items-center justify-between bg-transparent flex-shrink-0 gap-4 md:gap-0">
             <div className="flex items-center gap-4">
                 <button
                     onClick={toggleSidebar}
                     className="hidden md:flex p-2 text-gray-500 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-xl transition-colors"
                 >
-                    {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+                    {isSidebarOpen ? <PanelLeftClose size={24} /> : <PanelLeftOpen size={24} />}
                 </button>
                 <div>
                     <h2 className="text-xl md:text-3xl font-semibold text-charcoal dark:text-gray-100 tracking-tight">{familyName}</h2>
-                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium">
+                    <p className="text-xs md:text-base text-gray-500 dark:text-gray-400 font-medium">
                         {time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </p>
                 </div>
@@ -131,10 +131,10 @@ export function Header({ isSidebarOpen, toggleSidebar }) {
 
             <div className="flex items-center justify-between w-full md:w-auto gap-4 md:gap-6">
                 {weather ? (
-                    <div className="flex items-center gap-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md px-3 py-1.5 md:px-5 md:py-2.5 rounded-2xl md:rounded-3xl shadow-sm border border-white/40 dark:border-white/10 transition-all hover:bg-white/80 dark:hover:bg-gray-800/80">
+                    <div className="flex items-center gap-3 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md px-3 py-1.5 md:px-6 md:py-3.5 rounded-2xl md:rounded-[2rem] shadow-sm border border-white/40 dark:border-white/10 transition-all hover:bg-white/80 dark:hover:bg-gray-800/80">
                         {getWeatherIcon(weather.code)}
                         <div className="flex flex-col">
-                            <span className="text-sm md:text-lg font-bold text-gray-800 dark:text-gray-100 leading-none">{Math.round(weather.temp)}°</span>
+                            <span className="text-sm md:text-2xl font-bold text-gray-800 dark:text-gray-100 leading-none">{Math.round(weather.temp)}°</span>
                             <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:block">{getWeatherLabel(weather.code)}</span>
                         </div>
                     </div>
@@ -143,7 +143,7 @@ export function Header({ isSidebarOpen, toggleSidebar }) {
                 )}
 
                 <div className="text-right ml-auto md:ml-0">
-                    <div className="text-2xl md:text-4xl font-light text-charcoal dark:text-gray-100 tracking-tighter">
+                    <div className="text-2xl md:text-5xl font-light text-charcoal dark:text-gray-100 tracking-tighter">
                         {time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                     </div>
                 </div>

@@ -12,7 +12,7 @@ const NAV_ITEMS = [
 
 export function Sidebar({ activeTab, onTabChange }) {
     return (
-        <aside className="hidden md:flex w-20 lg:w-64 bg-transparent flex-col items-center lg:items-stretch py-8 h-full z-20 transition-all duration-300">
+        <aside className="hidden md:flex w-24 lg:w-72 bg-transparent flex-col items-center lg:items-stretch py-8 h-full z-20 transition-all duration-300">
             <div className="mb-10 px-6 flex justify-center lg:justify-start items-center">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white hidden lg:block tracking-tight text-center w-full drop-shadow-sm">
                     🗓️ MyLight
@@ -41,13 +41,13 @@ export function Sidebar({ activeTab, onTabChange }) {
                             title={item.label}
                         >
                             <Icon
-                                size={22}
+                                size={28}
                                 className={cn(
                                     "transition-colors duration-300",
                                     isActive ? "text-primary scale-110" : "text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
                                 )}
                             />
-                            <span className="hidden lg:block text-sm tracking-medium">{item.label}</span>
+                            <span className="hidden lg:block text-base tracking-medium">{item.label}</span>
                         </button>
                     );
                 })}

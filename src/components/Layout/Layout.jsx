@@ -4,7 +4,7 @@ import { MobileNav } from './MobileNav';
 import { Header } from './Header';
 
 export function Layout({ children, activeTab, onTabChange }) {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     return (
         <div className="flex h-screen w-full bg-transparent overflow-hidden relative transition-colors duration-300">

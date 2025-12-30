@@ -90,7 +90,7 @@ export function MonthGrid({ currentDate, onEventClick, refreshTrigger }) {
             {/* Weekday Headers */}
             <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-700">
                 {weekDays.map((day) => (
-                    <div key={day} className="py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <div key={day} className="py-3 text-center text-xs md:text-sm font-semibold text-gray-400 uppercase tracking-wider">
                         {day}
                     </div>
                 ))}
@@ -114,7 +114,7 @@ export function MonthGrid({ currentDate, onEventClick, refreshTrigger }) {
                         >
                             <div className="flex justify-between items-start">
                                 <span className={cn(
-                                    "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
+                                    "text-sm md:text-xl font-medium w-7 h-7 md:w-10 md:h-10 flex items-center justify-center rounded-full",
                                     isToday ? "bg-charcoal dark:bg-gray-100 text-white dark:text-charcoal" : "text-gray-700 dark:text-gray-300"
                                 )}>
                                     {format(day, 'd')}
@@ -136,11 +136,11 @@ export function MonthGrid({ currentDate, onEventClick, refreshTrigger }) {
                                             onEventClick({ ...event, id: event.original_id || event.id });
                                         }}
                                         className={cn(
-                                            "px-1 py-1 md:px-2 md:py-1.5 rounded-md text-[9px] md:text-xs font-semibold truncate border border-transparent shadow-sm flex items-center gap-1 md:gap-1.5",
+                                            "px-1 py-1 md:px-3 md:py-2 rounded-md text-[9px] md:text-sm font-semibold truncate border border-transparent shadow-sm flex items-center gap-1 md:gap-2",
                                             event.member?.color || 'bg-gray-100 text-gray-700'
                                         )}
                                     >
-                                        <UserAvatar member={event.member} size="sm" className="w-3 h-3 md:w-4 md:h-4 text-[6px] md:text-[8px]" />
+                                        <UserAvatar member={event.member} size="sm" className="w-3 h-3 md:w-5 md:h-5 text-[6px] md:text-[10px]" />
                                         <div className="flex flex-col leading-tight min-w-0">
                                             <span className="opacity-75 text-[0.85em] hidden md:block">{format(event.date, 'h:mm a')}</span>
                                             <span className="truncate">{event.title}</span>
