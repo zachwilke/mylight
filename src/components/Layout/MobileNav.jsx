@@ -1,12 +1,10 @@
 import React from 'react';
-import { Calendar, CheckSquare, Utensils, List, Settings, CloudSun } from 'lucide-react';
+import { Calendar, CheckSquare, Settings, CloudSun } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const NAV_ITEMS = [
     { id: 'calendar', label: 'Calendar', icon: Calendar },
     { id: 'chores', label: 'Chores', icon: CheckSquare },
-    { id: 'meals', label: 'Meals', icon: Utensils },
-    { id: 'lists', label: 'Lists', icon: List },
     { id: 'weather', label: 'Weather', icon: CloudSun },
     { id: 'settings', label: 'Settings', icon: Settings },
 ];

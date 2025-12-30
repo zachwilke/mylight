@@ -167,13 +167,9 @@ app.post('/api/chores/:id/toggle', (req, res) => {
             db.run("UPDATE chores SET completed = ? WHERE id = ?", [completed, id]);
 
             if (completed) {
-                // Award 1 star
-                db.run("UPDATE family_members SET stars = stars + 1 WHERE id = ?", [chore.member_id]);
                 // Record completion
                 db.run("INSERT INTO chore_completions (chore_id, member_id) VALUES (?, ?)", [id, chore.member_id]);
             } else {
-                // Remove 1 star (if they uncheck it)
-                db.run("UPDATE family_members SET stars = MAX(0, stars - 1) WHERE id = ?", [chore.member_id]);
                 // Remove last completion record for this chore/member
                 db.run("DELETE FROM chore_completions WHERE id = (SELECT id FROM chore_completions WHERE chore_id = ? AND member_id = ? ORDER BY completed_at DESC LIMIT 1)", [id, chore.member_id]);
             }
@@ -205,98 +201,6 @@ app.get('/api/history', (req, res) => {
     db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
-    });
-});
-
-// Meals
-app.get('/api/meals', (req, res) => {
-    const { start, end } = req.query;
-    let query = "SELECT * FROM meals";
-    const params = [];
-
-    if (start && end) {
-        query += " WHERE date BETWEEN ? AND ?";
-        params.push(start, end);
-    }
-
-    db.all(query, params, (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
-    });
-});
-
-app.post('/api/meals', (req, res) => {
-    const { date, type, title, color } = req.body;
-
-    if (!date || !type) return res.status(400).json({ error: "Date and Type are required" });
-
-    db.get("SELECT id FROM meals WHERE date = ? AND type = ?", [date, type], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-
-        if (row) {
-            db.run("UPDATE meals SET title = ?, color = ? WHERE id = ?", [title, color, row.id], function (err) {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json({ success: true, id: row.id, date, type, title, color });
-            });
-        } else {
-            db.run("INSERT INTO meals (date, type, title, color) VALUES (?, ?, ?, ?)", [date, type, title, color || 'bg-sky-blue'], function (err) {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json({ success: true, id: this.lastID, date, type, title, color: color || 'bg-sky-blue' });
-            });
-        }
-    });
-});
-
-app.delete('/api/meals/:id', (req, res) => {
-    db.run("DELETE FROM meals WHERE id = ?", [req.params.id], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
-    });
-});
-
-// Lists
-app.get('/api/lists', (req, res) => {
-    db.all("SELECT * FROM lists", [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
-    });
-});
-
-app.post('/api/lists', (req, res) => {
-    const { title, icon } = req.body;
-    db.run("INSERT INTO lists (title, icon) VALUES (?, ?)", [title, icon], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ id: this.lastID, title, icon });
-    });
-});
-
-app.get('/api/lists/:id/items', (req, res) => {
-    db.all("SELECT * FROM list_items WHERE list_id = ?", [req.params.id], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
-    });
-});
-
-app.post('/api/items', (req, res) => {
-    const { list_id, text } = req.body;
-    db.run("INSERT INTO list_items (list_id, text) VALUES (?, ?)", [list_id, text], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ id: this.lastID, list_id, text, completed: 0 });
-    });
-});
-
-app.post('/api/items/:id/toggle', (req, res) => {
-    const { completed } = req.body;
-    db.run("UPDATE list_items SET completed = ? WHERE id = ?", [completed ? 1 : 0, req.params.id], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
-    });
-});
-
-app.delete('/api/items/:id', (req, res) => {
-    db.run("DELETE FROM list_items WHERE id = ?", [req.params.id], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
     });
 });
 

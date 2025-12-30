@@ -7,7 +7,6 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 export function ChoreChart({ kiosk = false }) {
     const [chores, setChores] = useState({});
     const [members, setMembers] = useState([]);
-    const [stars, setStars] = useState({});
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -34,13 +33,6 @@ export function ChoreChart({ kiosk = false }) {
 
             setChores(choresData);
             setMembers(familyData);
-
-            // Use stars from member data
-            const initialStars = {};
-            familyData.forEach(m => {
-                initialStars[m.name] = m.stars || 0;
-            });
-            setStars(initialStars);
 
         } catch (err) {
             console.error("Failed to fetch data", err);
@@ -76,12 +68,6 @@ export function ChoreChart({ kiosk = false }) {
             });
             return { ...prev, [person]: personChores };
         });
-
-        // Update Stars (Optimistically)
-        setStars(prev => ({
-            ...prev,
-            [person]: Math.max(0, (prev[person] || 0) + (newStatus ? 1 : -1))
-        }));
 
         // Celebration if completing
         if (newStatus && event) {
@@ -162,7 +148,7 @@ export function ChoreChart({ kiosk = false }) {
                     className="fixed pointer-events-none z-50 animate-ping opacity-0"
                     style={{ left: celebration.x, top: celebration.y }}
                 >
-                    <div className="absolute -top-4 -left-4 text-yellow-500"><Star size={32} fill="currentColor" /></div>
+                    <div className="absolute -top-4 -left-4 text-yellow-500"><Sparkles size={32} /></div>
                     <div className="absolute -top-8 left-2 text-blue-500"><Sparkles size={24} /></div>
                     <div className="absolute top-2 -right-6 text-purple-500"><Sparkles size={20} /></div>
                 </div>
@@ -250,10 +236,6 @@ export function ChoreChart({ kiosk = false }) {
                                         <UserAvatar member={member} size="xl" />
                                     </div>
                                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{name}</h3>
-                                    <div className="inline-flex items-center gap-2 bg-white/80 dark:bg-black/40 px-4 py-1.5 rounded-full border border-yellow-200/50 dark:border-yellow-500/20 shadow-sm">
-                                        <Star size={16} className="fill-yellow-400 text-yellow-400 drop-shadow-sm" />
-                                        <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400 tabular-nums">{stars[name] || 0}</span>
-                                    </div>
                                 </div>
 
                                 {/* Chores Scroll Area */}

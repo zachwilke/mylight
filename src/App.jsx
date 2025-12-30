@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout/Layout';
 import { CalendarView } from './features/calendar/CalendarView';
 import { ChoreChart } from './features/chores/ChoreChart';
-import { MealPlanner } from './features/meals/MealPlanner';
 import { Settings } from './features/settings/Settings';
-import { Lists } from './features/lists/Lists';
 import { WeatherPage } from './features/weather/WeatherPage';
 import Screensaver from './features/screensaver/Screensaver';
 import { useTheme } from './hooks/useTheme';
@@ -13,7 +11,7 @@ import { HistoryPage } from './features/history/HistoryPage';
 
 function App() {
   const [theme] = useTheme();
-  const [activeTab, setActiveTab] = useState('calendar');
+  const [activeTab, setActiveTab] = useState('chores');
   const [isIdle, setIsIdle] = useState(false);
   const [timeoutMinutes, setTimeoutMinutes] = useState(1);
   const timeoutRef = useRef(null);
@@ -85,9 +83,7 @@ function App() {
 
           {activeTab === 'chores' && <ChoreChart />}
           {activeTab === 'history' && <HistoryPage />}
-          {activeTab === 'meals' && <MealPlanner />}
 
-          {activeTab === 'lists' && <Lists />}
           {activeTab === 'weather' && <WeatherPage />}
           {activeTab === 'settings' && <Settings />}
         </div>

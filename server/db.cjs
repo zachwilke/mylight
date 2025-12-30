@@ -15,8 +15,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
     db.run("ALTER TABLE family_members ADD COLUMN phone TEXT", () => { });
     // Migration for stars
     db.run("ALTER TABLE family_members ADD COLUMN stars INTEGER DEFAULT 0", () => { });
-    // Migration for meals date
-    db.run("ALTER TABLE meals ADD COLUMN date TEXT", () => { });
   }
 });
 
@@ -66,32 +64,6 @@ function initDb() {
       FOREIGN KEY (member_id) REFERENCES family_members (id)
     )`);
 
-    // Meals
-    db.run(`CREATE TABLE IF NOT EXISTS meals (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      day TEXT, -- Keeping for legacy/templates if needed, but 'date' is primary now
-      date TEXT, -- YYYY-MM-DD
-      type TEXT NOT NULL, -- 'Breakfast', 'Lunch', 'Dinner'
-      color TEXT
-    )`);
-
-    // Lists
-    db.run(`CREATE TABLE IF NOT EXISTS lists (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      icon TEXT
-    )`);
-
-    // List Items
-    db.run(`CREATE TABLE IF NOT EXISTS list_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      list_id INTEGER,
-      text TEXT NOT NULL,
-      completed BOOLEAN DEFAULT 0,
-      FOREIGN KEY (list_id) REFERENCES lists (id)
-    )`);
-
     // Seed Data if empty
     db.get("SELECT count(*) as count FROM family_members", (err, row) => {
       if (row.count === 0) {
@@ -110,28 +82,14 @@ function initDb() {
         choreStmt.run("Brush Teeth", "Morning", 2, 1);
         choreStmt.finalize();
 
-        const mealStmt = db.prepare("INSERT INTO meals (title, day, type, color) VALUES (?, ?, ?, ?)");
-        mealStmt.run("Tacos", "Mon", "Dinner", "bg-orange-100 text-orange-800");
-        mealStmt.finalize();
-
         const eventStmt = db.prepare("INSERT INTO events (title, start_date, member_id) VALUES (?, ?, ?)");
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         eventStmt.run("Soccer Practice", tomorrow.toISOString(), 1);
         eventStmt.finalize();
-
-        // Seed Lists
-        db.run("INSERT INTO lists (title, icon) VALUES ('Groceries', 'shopping-cart')");
-        db.run("INSERT INTO lists (title, icon) VALUES ('To Do', 'check-square')");
-
-        // Seed Items for Groceries (Assuming ID 1) -> Using callback to be safe or just run after delay 
-        // For simplicity in this sync flow, we'll just run it.
-        db.serialize(() => {
-          db.run("INSERT INTO list_items (list_id, text, completed) VALUES (1, 'Milk', 0)");
-          db.run("INSERT INTO list_items (list_id, text, completed) VALUES (1, 'Eggs', 0)");
-        });
       }
     });
+
     // Photos
     db.run(`CREATE TABLE IF NOT EXISTS photos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
