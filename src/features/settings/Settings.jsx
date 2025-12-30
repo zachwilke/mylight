@@ -137,6 +137,17 @@ export function Settings() {
         }
     };
 
+    const manualResetChores = async () => {
+        if (!confirm("Are you sure you want to uncheck all chores for everyone?")) return;
+        try {
+            await fetch('/api/chores/reset', { method: 'POST' });
+            alert("Chores have been reset!");
+        } catch (err) {
+            console.error(err);
+            alert("Failed to reset chores");
+        }
+    };
+
     const saveEditCode = async () => {
         try {
             await fetch('/api/settings', {
@@ -149,6 +160,8 @@ export function Settings() {
             console.error(err);
         }
     };
+
+
 
     const saveScreensaverTimeout = async () => {
         try {
@@ -370,6 +383,13 @@ export function Settings() {
                                 >
                                     <Save size={18} />
                                     Save
+                                </button>
+                                <button
+                                    onClick={manualResetChores}
+                                    className="bg-gray-100 text-red-600 px-6 py-3 rounded-xl font-medium hover:bg-red-50 transition-colors flex items-center gap-2 shadow-sm border border-transparent hover:border-red-200"
+                                >
+                                    <Trash2 size={18} />
+                                    Reset Now
                                 </button>
                             </div>
                         </div>

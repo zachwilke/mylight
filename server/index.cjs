@@ -491,8 +491,27 @@ app.post('/api/chat/send', async (req, res) => {
 // Chore Reset Logic
 let resetTask = null;
 
+const performReset = (cb) => {
+    console.log("[Chore Reset] Resetting chores...");
+    db.run("UPDATE chores SET completed = 0", [], (updateErr) => {
+        if (updateErr) {
+            console.error("[Chore Reset] Failed to reset chores", updateErr);
+            if (cb) cb(updateErr);
+        } else {
+            // Use local date (sv-SE locale gives YYYY-MM-DD format)
+            const today = new Date().toLocaleDateString('sv-SE');
+            console.log("[Chore Reset] Chores reset successfully.");
+            db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('last_chore_reset', ?)", [today], (settingErr) => {
+                if (settingErr) console.error("[Chore Reset] Failed to update last reset date", settingErr);
+                if (cb) cb(null);
+            });
+        }
+    });
+};
+
 const resetChores = () => {
-    const today = new Date().toISOString().split('T')[0];
+    // Use local date (sv-SE locale gives YYYY-MM-DD format)
+    const today = new Date().toLocaleDateString('sv-SE');
     console.log(`[Chore Reset] Attempting reset for ${today}`);
 
     db.get("SELECT value FROM settings WHERE key = 'last_chore_reset'", (err, row) => {
@@ -504,22 +523,19 @@ const resetChores = () => {
         const lastReset = row ? row.value : null;
 
         if (lastReset !== today) {
-            console.log("[Chore Reset] Resetting chores...");
-            db.run("UPDATE chores SET completed = 0", [], (updateErr) => {
-                if (updateErr) {
-                    console.error("[Chore Reset] Failed to reset chores", updateErr);
-                } else {
-                    console.log("[Chore Reset] Chores reset successfully.");
-                    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('last_chore_reset', ?)", [today], (settingErr) => {
-                        if (settingErr) console.error("[Chore Reset] Failed to update last reset date", settingErr);
-                    });
-                }
-            });
+            performReset();
         } else {
             console.log("[Chore Reset] Chores already reset for today.");
         }
     });
 };
+
+app.post('/api/chores/reset', (req, res) => {
+    performReset((err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
 
 const scheduleResetTask = (timeStr) => {
     // timeStr format: "HH:MM", default "00:00"
