@@ -268,7 +268,7 @@ export function Settings() {
     if (loading) return <div className="p-8">Loading settings...</div>;
 
     return (
-        <div className="h-full overflow-y-auto">
+        <div className="h-full overflow-y-auto bg-gray-50/50 dark:bg-black/20 custom-scrollbar">
             <ConfirmDialog
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
@@ -276,37 +276,37 @@ export function Settings() {
                 title="Delete Family Member"
                 message="Are you sure you want to delete this member? All their assigned chores and events will be deleted as well."
             />
-            <div className="max-w-3xl mx-auto p-4 md:p-8 space-y-8 md:space-y-12">
-                <div className="space-y-6">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">General Settings</h2>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">Update your family's profile and preferences.</p>
+            <div className="max-w-4xl mx-auto p-6 md:p-10 space-y-10 md:space-y-14 pb-24">
+                <div className="space-y-8">
+                    <div className="pl-1">
+                        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">General Settings</h2>
+                        <p className="text-base text-gray-500 dark:text-gray-400">Update your family's profile and preferences.</p>
                     </div>
 
-                    <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                    <div className="bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-8">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Family Name</label>
-                            <div className="flex gap-3">
+                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-3 ml-1">Family Name</label>
+                            <div className="flex gap-4">
                                 <input
                                     type="text"
                                     value={familyName}
                                     onChange={(e) => setFamilyName(e.target.value)}
-                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-gray-400"
                                     placeholder="e.g. The Miller Family"
                                 />
                                 <button
                                     onClick={saveFamilyName}
-                                    className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
+                                    className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-3 shadow-lg shadow-primary/20"
                                 >
-                                    <Save size={18} />
+                                    <Save size={22} />
                                     Save
                                 </button>
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Display Theme</label>
-                            <div className="flex gap-3">
+                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-3 ml-1">Display Theme</label>
+                            <div className="flex gap-4">
                                 {[
                                     { id: 'light', label: 'Light', icon: Sun },
                                     { id: 'dark', label: 'Dark', icon: Moon },
@@ -315,161 +315,168 @@ export function Settings() {
                                     <button
                                         key={option.id}
                                         onClick={() => setTheme(option.id)}
-                                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${theme === option.id
-                                            ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
-                                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                                        className={`flex-1 flex items-center justify-center gap-3 px-6 py-5 rounded-2xl border-2 transition-all active:scale-95 ${theme === option.id
+                                            ? 'bg-primary/10 border-primary text-primary'
+                                            : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'
                                             }`}
                                     >
-                                        <option.icon size={18} />
-                                        <span className="font-medium">{option.label}</span>
+                                        <option.icon size={24} className={theme === option.id ? "fill-current" : ""} />
+                                        <span className="font-bold text-lg">{option.label}</span>
                                     </button>
                                 ))}
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Weather Location (Coordinates)</label>
-                            <div className="flex gap-3">
-                                <div className="flex-1 flex gap-3">
+                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-3 ml-1">Weather Location (Coordinates)</label>
+                            <div className="flex gap-4">
+                                <div className="flex-1 flex gap-4">
                                     <div className="flex-1 relative">
-                                        <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <MapPin size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="text"
+                                            inputMode="decimal"
                                             value={latitude}
                                             onChange={(e) => setLatitude(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                            className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-gray-400"
                                             placeholder="Lat"
                                         />
                                     </div>
                                     <div className="flex-1 relative">
-                                        <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <MapPin size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="text"
+                                            inputMode="decimal"
                                             value={longitude}
                                             onChange={(e) => setLongitude(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                            className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-gray-400"
                                             placeholder="Lng"
                                         />
                                     </div>
                                 </div>
                                 <button
                                     onClick={saveLocation}
-                                    className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
+                                    className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-3 shadow-lg shadow-primary/20"
                                 >
-                                    <Save size={18} />
+                                    <Save size={22} />
                                     Save
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                    <div className="bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-8">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Chore Reset Time</label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Set the time when chores automatically reset.</p>
-                            <div className="flex gap-3">
+                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-2 ml-1">Chore Reset Time</label>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-1">Set the time when chores automatically reset.</p>
+                            <div className="flex flex-col md:flex-row gap-4">
                                 <div className="flex-1 relative">
-                                    <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <Clock size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
                                     <input
                                         type="time"
                                         value={choreResetTime}
                                         onChange={(e) => setChoreResetTime(e.target.value)}
-                                        className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                                     />
                                 </div>
-                                <button
-                                    onClick={saveChoreResetTime}
-                                    className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
-                                >
-                                    <Save size={18} />
-                                    Save
-                                </button>
-                                <button
-                                    onClick={manualResetChores}
-                                    className="bg-gray-100 text-red-600 px-6 py-3 rounded-xl font-medium hover:bg-red-50 transition-colors flex items-center gap-2 shadow-sm border border-transparent hover:border-red-200"
-                                >
-                                    <Trash2 size={18} />
-                                    Reset Now
-                                </button>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={saveChoreResetTime}
+                                        className="flex-1 md:flex-none bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-primary/20"
+                                    >
+                                        <Save size={22} />
+                                        Save
+                                    </button>
+                                    <button
+                                        onClick={manualResetChores}
+                                        className="flex-1 md:flex-none bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-red-500/10"
+                                    >
+                                        <Trash2 size={22} />
+                                        Reset Now
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                    <div className="bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-8">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Edit Passcode</label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Set a code to protect editing chores (leave empty for no protection).</p>
-                            <div className="flex gap-3">
+                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-2 ml-1">Edit Passcode</label>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-1">Set a code to protect editing chores (leave empty for no protection).</p>
+                            <div className="flex gap-4">
                                 <div className="flex-1 relative">
-                                    <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <Lock size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
                                     <input
                                         type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
                                         value={editCode}
                                         onChange={(e) => setEditCode(e.target.value)}
-                                        className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-gray-400"
                                         placeholder="e.g. 1234"
                                     />
                                 </div>
                                 <button
                                     onClick={saveEditCode}
-                                    className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
+                                    className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-3 shadow-lg shadow-primary/20"
                                 >
-                                    <Save size={18} />
+                                    <Save size={22} />
                                     Save
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                    <div className="bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-8">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Screensaver Settings</label>
-                            <div className="flex flex-col md:flex-row gap-3">
-                                <div className="flex-1 flex gap-3">
+                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-3 ml-1">Screensaver Settings</label>
+                            <div className="flex flex-col md:flex-row gap-4">
+                                <div className="flex-1 flex gap-4">
                                     <input
                                         type="number"
                                         min="1"
+                                        inputMode="numeric"
                                         value={screensaverTimeout}
                                         onChange={(e) => setScreensaverTimeout(e.target.value)}
-                                        className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        className="flex-1 px-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                                         placeholder="Timeout (minutes)"
                                     />
                                     <button
                                         onClick={saveScreensaverTimeout}
-                                        className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20 whitespace-nowrap"
+                                        className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-3 shadow-lg shadow-primary/20 whitespace-nowrap"
                                     >
-                                        <Save size={18} />
+                                        <Save size={22} />
                                         Save Timeout
                                     </button>
                                 </div>
                                 <button
                                     onClick={triggerScreensaver}
-                                    className="bg-charcoal dark:bg-gray-700 text-white px-6 py-3 rounded-xl font-medium hover:bg-charcoal/90 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2 shadow-sm whitespace-nowrap"
+                                    className="bg-charcoal dark:bg-gray-700 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-charcoal/90 dark:hover:bg-gray-600 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg whitespace-nowrap"
                                 >
-                                    <Monitor size={18} />
+                                    <Monitor size={22} />
                                     Go to Screensaver
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                    <div className="bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-8">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Google Chat Webhook</label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Paste the webhook URL for your family chat space.</p>
-                            <div className="flex gap-3">
+                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-2 ml-1">Google Chat Webhook</label>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-1">Paste the webhook URL for your family chat space.</p>
+                            <div className="flex gap-4">
                                 <input
-                                    type="text"
+                                    type="url"
                                     value={webhookUrl}
                                     onChange={(e) => setWebhookUrl(e.target.value)}
-                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-gray-400"
                                     placeholder="https://chat.googleapis.com..."
                                 />
                                 <button
                                     onClick={saveWebhookUrl}
-                                    className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
+                                    className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-3 shadow-lg shadow-primary/20"
                                 >
-                                    <Save size={18} />
+                                    <Save size={22} />
                                     Save
                                 </button>
                             </div>
@@ -477,54 +484,54 @@ export function Settings() {
                     </div>
                 </div>
 
-                <div className="space-y-6">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Family Members</h2>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">Manage who appears on the chore chart and calendar. Add phone numbers to enable SMS sharing.</p>
+                <div className="space-y-8">
+                    <div className="pl-1">
+                        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">Family Members</h2>
+                        <p className="text-base text-gray-500 dark:text-gray-400">Manage who appears on the chore chart and calendar.</p>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {members.map(member => (
-                            <div key={member.id} className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm">
+                            <div key={member.id} className="flex items-center justify-between p-5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-[1.5rem] shadow-sm active:scale-[0.99] transition-transform duration-200">
                                 {editingMember && editingMember.id === member.id ? (
-                                    <div className="flex-1 flex items-center gap-3">
-                                        <div className="flex-1 space-y-2">
+                                    <div className="flex-1 flex items-center gap-4">
+                                        <div className="flex-1 space-y-3">
                                             <input
                                                 type="text"
                                                 value={editingMember.name}
                                                 onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
-                                                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm"
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-lg"
                                                 placeholder="Name"
                                             />
                                             <input
-                                                type="text"
+                                                type="tel"
                                                 value={editingMember.phone}
                                                 onChange={(e) => setEditingMember({ ...editingMember, phone: e.target.value })}
-                                                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm"
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-lg"
                                                 placeholder="Phone (+1...)"
                                             />
-                                            <div className="flex gap-1">
+                                            <div className="flex gap-2">
                                                 {COLORS.map(c => (
                                                     <button
                                                         key={c.value}
                                                         onClick={() => setEditingMember({ ...editingMember, color: c.value })}
-                                                        className={`w-6 h-6 rounded-full ${c.hex} border-2 ${editingMember.color === c.value ? 'border-gray-600 dark:border-white' : 'border-transparent'}`}
+                                                        className={`w-10 h-10 rounded-full ${c.hex} border-[3px] ${editingMember.color === c.value ? 'border-gray-600 dark:border-white' : 'border-transparent'}`}
                                                     />
                                                 ))}
                                             </div>
                                         </div>
-                                        <div className="flex flex-col gap-2">
-                                            <button onClick={saveEditing} className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200"><Check size={16} /></button>
-                                            <button onClick={() => setEditingMember(null)} className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"><X size={16} /></button>
+                                        <div className="flex flex-col gap-3">
+                                            <button onClick={saveEditing} className="p-4 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 active:scale-90 transition-all"><Check size={24} /></button>
+                                            <button onClick={() => setEditingMember(null)} className="p-4 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 active:scale-90 transition-all"><X size={24} /></button>
                                         </div>
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="flex items-center gap-4 min-w-0">
+                                        <div className="flex items-center gap-5 min-w-0">
                                             <div className="relative group cursor-pointer" onClick={() => triggerFileInput(member.id)}>
-                                                <UserAvatar member={member} size="md" />
+                                                <UserAvatar member={member} size="xl" />
                                                 <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Upload size={14} className="text-white" />
+                                                    <Upload size={20} className="text-white" />
                                                 </div>
                                                 <input
                                                     type="file"
@@ -535,22 +542,22 @@ export function Settings() {
                                                 />
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">{member.name}</span>
-                                                {member.phone && <span className="text-xs text-gray-400 dark:text-gray-500">{member.phone}</span>}
+                                                <span className="font-bold text-xl text-gray-900 dark:text-white truncate mb-0.5">{member.name}</span>
+                                                {member.phone && <span className="text-sm text-gray-400 dark:text-gray-500 font-medium">{member.phone}</span>}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-3">
                                             <button
                                                 onClick={() => startEditing(member)}
-                                                className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                className="p-4 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-2xl transition-all active:scale-90"
                                             >
-                                                <Edit2 size={18} />
+                                                <Edit2 size={24} />
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteMember(member.id)}
-                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                className="p-4 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all active:scale-90"
                                             >
-                                                <Trash2 size={18} />
+                                                <Trash2 size={24} />
                                             </button>
                                         </div>
                                     </>
@@ -558,40 +565,40 @@ export function Settings() {
                             </div>
                         ))}
 
-                        <form onSubmit={addMember} className="pt-4 space-y-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200/50 dark:border-gray-800">
-                            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Add New Member</h3>
-                            <div className="flex gap-2">
+                        <form onSubmit={addMember} className="pt-6 space-y-6 bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Add New Member</h3>
+                            <div className="flex gap-3 mb-4">
                                 {COLORS.map(c => (
                                     <button
                                         key={c.value}
                                         type="button"
                                         onClick={() => setSelectedColor(c.value)}
-                                        className={`w-8 h-8 rounded-full ${c.hex} border-2 transition-all ${selectedColor === c.value ? 'border-gray-600 dark:border-white scale-110' : 'border-transparent hover:scale-105'}`}
+                                        className={`w-12 h-12 rounded-full ${c.hex} border-[3px] transition-all ${selectedColor === c.value ? 'border-gray-600 dark:border-white scale-110' : 'border-transparent hover:scale-105'}`}
                                         title={c.label}
                                     />
                                 ))}
                             </div>
 
-                            <div className="flex flex-col md:flex-row gap-3">
+                            <div className="flex flex-col md:flex-row gap-4">
                                 <input
                                     type="text"
                                     value={newMemberName}
                                     onChange={(e) => setNewMemberName(e.target.value)}
-                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                                     placeholder="Name"
                                 />
                                 <input
-                                    type="text"
+                                    type="tel"
                                     value={newMemberPhone}
                                     onChange={(e) => setNewMemberPhone(e.target.value)}
-                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    placeholder="Phone (e.g. +1...)"
+                                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                    placeholder="Phone"
                                 />
                                 <button
                                     type="submit"
-                                    className="bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-primary/20"
+                                    className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-primary/20"
                                 >
-                                    <Plus size={18} />
+                                    <Plus size={24} />
                                     Add
                                 </button>
                             </div>
@@ -599,18 +606,18 @@ export function Settings() {
                     </div>
                 </div>
 
-                <div className="space-y-6">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Calendar Sync</h2>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">Subscribe to external calendars (iCal).</p>
+                <div className="space-y-8">
+                    <div className="pl-1">
+                        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">Calendar Sync</h2>
+                        <p className="text-base text-gray-500 dark:text-gray-400">Subscribe to external calendars (iCal).</p>
                     </div>
                     <CalendarSettings />
                 </div>
 
-                <div className="space-y-6 pb-12">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Screensaver Photos</h2>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">Upload photos to display when the screen is idle.</p>
+                <div className="space-y-8 pb-32">
+                    <div className="pl-1">
+                        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">Screensaver Photos</h2>
+                        <p className="text-base text-gray-500 dark:text-gray-400">Upload photos to display when the screen is idle.</p>
                     </div>
                     <PhotosSettings />
                 </div>
@@ -670,7 +677,7 @@ function PhotosSettings() {
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             <ConfirmDialog
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
@@ -679,13 +686,13 @@ function PhotosSettings() {
                 message="Are you sure you want to remove this photo?"
                 confirmText="Remove"
             />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="aspect-square rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-gray-50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-900"
+                    className="aspect-square rounded-[1.5rem] border-4 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-gray-50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-900 active:scale-95"
                 >
-                    <Upload size={24} />
-                    <span className="text-sm font-medium mt-2">Upload</span>
+                    <Upload size={32} />
+                    <span className="text-base font-bold mt-3">Upload</span>
                     <input
                         type="file"
                         multiple
@@ -696,14 +703,14 @@ function PhotosSettings() {
                     />
                 </div>
                 {photos.map(photo => (
-                    <div key={photo.id} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
-                        <img src={photo.url} alt="Screensaver" className="w-full h-full object-cover" />
+                    <div key={photo.id} className="relative group aspect-square rounded-[1.5rem] overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm">
+                        <img src={photo.url} alt="Screensaver" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <button
                                 onClick={() => handleDelete(photo.id)}
-                                className="p-2 bg-white dark:bg-gray-800 rounded-full text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                className="p-4 bg-white dark:bg-gray-800 rounded-full text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-90 transition-all shadow-lg"
                             >
-                                <Trash2 size={16} />
+                                <Trash2 size={24} />
                             </button>
                         </div>
                     </div>
