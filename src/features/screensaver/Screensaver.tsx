@@ -43,8 +43,10 @@ export default function Screensaver({ onInteraction }: ScreensaverProps) {
                             const zipRes = await fetch(`https://api.zippopotam.us/us/${data.weather_location.trim()}`);
                             if (zipRes.ok) {
                                 const zipData = await zipRes.json();
-                                latitude = parseFloat(zipData.places[0].latitude);
-                                longitude = parseFloat(zipData.places[0].longitude);
+                                if (zipData.places && zipData.places.length > 0) {
+                                    latitude = parseFloat(zipData.places[0].latitude);
+                                    longitude = parseFloat(zipData.places[0].longitude);
+                                }
                             }
                         } catch (e) {
                             console.error('Zip fetch failed', e);

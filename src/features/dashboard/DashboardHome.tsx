@@ -23,20 +23,10 @@ export function DashboardHome({ onNavigate }: DashboardHomeProps) {
             fetch('/api/chores').then(res => res.json()),
             fetch('/api/settings').then(res => res.json())
         ]).then(async ([choresData, settingsData]: [Record<string, Chore[]>, any]) => {
-            // Calc stats
-            let pending = 0;
-            let done = 0;
-            Object.values(choresData).flat().forEach(c => {
-                if (c.completed) done++;
-                else pending++;
-            });
+            // Stats
+            const pending = Object.values(choresData).flat().filter((c: any) => !c.completed).length;
+            const done = Object.values(choresData).flat().filter((c: any) => c.completed).length;
             setStats({ choresPending: pending, choresDone: done });
-
-            // Weather
-            if (settingsData.weather_location) {
-                // Simplified weather fetch reuse (better to pull a hook later)
-                // Just quick mock for dashboard freshness or use the same logic as Header
-            }
         });
     }, []);
 
