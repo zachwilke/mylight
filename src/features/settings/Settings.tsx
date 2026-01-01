@@ -658,14 +658,22 @@ export function Settings() {
                                                         <button
                                                             onClick={async () => {
                                                                 const newVisible = member.visible === false ? true : false;
+                                                                console.log(`[Settings] Toggling visibility for ${member.name} (ID: ${member.id}) to ${newVisible}`);
                                                                 try {
-                                                                    await fetch(`/api/family/${member.id}`, {
+                                                                    const res = await fetch(`/api/family/${member.id}`, {
                                                                         method: 'PUT',
                                                                         headers: { 'Content-Type': 'application/json' },
                                                                         body: JSON.stringify({ visible: newVisible })
                                                                     });
-                                                                    setMembers(members.map(m => m.id === member.id ? { ...m, visible: newVisible } : m));
-                                                                } catch (err) { console.error(err); }
+                                                                    const data = await res.json();
+                                                                    console.log('[Settings] Toggle response:', data);
+
+                                                                    if (res.ok) {
+                                                                        setMembers(members.map(m => m.id === member.id ? { ...m, visible: newVisible } : m));
+                                                                    } else {
+                                                                        console.error('[Settings] Toggle failed:', data);
+                                                                    }
+                                                                } catch (err) { console.error('[Settings] Toggle error:', err); }
                                                             }}
                                                             className={`p-1.5 rounded-md transition-colors ${member.visible !== false ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'}`}
                                                             title={member.visible !== false ? "Visible" : "Hidden"}

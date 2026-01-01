@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -137,6 +138,7 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 				if *body.Visible {
 					visibleInt = 1
 				}
+				log.Printf("Updating member %d visible to %d", id, visibleInt)
 				_, err := app.DB.Exec("UPDATE family_members SET visible = ? WHERE id = ?", visibleInt, id)
 				if err != nil {
 					jsonError(w, err.Error(), 500)

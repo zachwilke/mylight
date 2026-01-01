@@ -75,8 +75,10 @@ func main() {
 
 	// API Routes
 	mux.HandleFunc("/api/family", app.handleFamily)
+	mux.HandleFunc("/api/family/", app.handleFamily) // Handle /api/family/{id}
 	mux.HandleFunc("/api/settings", app.handleSettings)
 	mux.HandleFunc("/api/chores", app.handleChores)
+	mux.HandleFunc("/api/chores/", app.handleChoreToggle) // Handle /api/chores/{id}/toggle
 	mux.HandleFunc("/api/chores/reset", app.handleChoreReset)
 	mux.HandleFunc("/api/history", app.handleHistory)
 	mux.HandleFunc("/api/login", app.handleLogin)
