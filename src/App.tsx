@@ -16,7 +16,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('calendar');
   const [isIdle, setIsIdle] = useState(false);
   const [timeoutMinutes, setTimeoutMinutes] = useState(1);
-  const timeoutRef = useRef(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const IDLE_TIMEOUT = timeoutMinutes * 60 * 1000;
   const lastManualTriggerRef = useRef(0);
 
@@ -41,7 +41,10 @@ function App() {
       lastManualTriggerRef.current = Date.now();
       setIsIdle(true);
     };
-    const updateTimeoutHandler = (e) => setTimeoutMinutes(parseInt(e.detail) || 1);
+    const updateTimeoutHandler = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setTimeoutMinutes(parseInt(customEvent.detail) || 1);
+    };
 
     events.forEach(e => window.addEventListener(e, handler));
     window.addEventListener('trigger-screensaver', manualTriggerHandler);

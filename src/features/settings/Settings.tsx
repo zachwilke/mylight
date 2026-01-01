@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Save, User, Upload, MapPin, Edit2, X, Check, Moon, Sun, Monitor, Clock, Lock } from 'lucide-react';
+import { Plus, Trash2, Save, Upload, MapPin, Edit2, X, Check, Moon, Sun, Monitor, Clock, Lock } from 'lucide-react';
 import { UserAvatar } from '../../components/UserAvatar';
 import { CalendarSettings } from './CalendarSettings';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useTheme } from '../../hooks/useTheme';
+
+import { FamilyMember, Photo } from '../../types';
 
 const COLORS = [
     { label: 'Blue', value: 'bg-blue-100 text-blue-800', hex: 'bg-blue-100' },
@@ -24,8 +26,8 @@ export function Settings() {
     const [choreResetTime, setChoreResetTime] = useState('00:00');
     const [editCode, setEditCode] = useState('');
 
-    const [members, setMembers] = useState([]);
-    const [screensaverTimeout, setScreensaverTimeout] = useState(1);
+    const [members, setMembers] = useState<FamilyMember[]>([]);
+    const [screensaverTimeout, setScreensaverTimeout] = useState<number | string>(1);
     const [loading, setLoading] = useState(true);
 
     // Add Member State
@@ -34,17 +36,17 @@ export function Settings() {
     const [selectedColor, setSelectedColor] = useState(COLORS[0].value);
 
     // Edit Member State
-    const [editingMember, setEditingMember] = useState(null); // { id, name, phone, color }
+    const [editingMember, setEditingMember] = useState<FamilyMember | null>(null); // { id, name, phone, color }
 
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [pendingDeleteId, setPendingDeleteId] = useState(null);
+    const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
     // Fetch initial data
     useEffect(() => {
         Promise.all([
             fetch('/api/settings').then(res => res.json()),
             fetch('/api/family').then(res => res.json())
-        ]).then(([settingsData, familyData]) => {
+        ]).then(([settingsData, familyData]: [any, FamilyMember[]]) => {
             if (settingsData.family_name) setFamilyName(settingsData.family_name);
 
             if (settingsData.weather_location) {
@@ -183,7 +185,7 @@ export function Settings() {
         window.dispatchEvent(new CustomEvent('trigger-screensaver'));
     };
 
-    const addMember = async (e) => {
+    const addMember = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newMemberName.trim()) return;
 
@@ -203,7 +205,7 @@ export function Settings() {
         }
     };
 
-    const startEditing = (member) => {
+    const startEditing = (member: FamilyMember) => {
         setEditingMember({ ...member });
     };
 
@@ -234,14 +236,14 @@ export function Settings() {
         }
     };
 
-    const handleDeleteMember = (id) => {
+    const handleDeleteMember = (id: number) => {
         setPendingDeleteId(id);
         setShowDeleteConfirm(true);
     };
 
-    const fileInputRefs = useRef({});
+    const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
-    const handleAvatarUpload = async (id, file) => {
+    const handleAvatarUpload = async (id: number, file: File) => {
         if (!file) return;
         const formData = new FormData();
         formData.append('avatar', file);
@@ -259,7 +261,7 @@ export function Settings() {
         }
     };
 
-    const triggerFileInput = (id) => {
+    const triggerFileInput = (id: number) => {
         if (fileInputRefs.current[id]) {
             fileInputRefs.current[id].click();
         }
@@ -505,7 +507,7 @@ export function Settings() {
                                             />
                                             <input
                                                 type="tel"
-                                                value={editingMember.phone}
+                                                value={editingMember.phone || ''}
                                                 onChange={(e) => setEditingMember({ ...editingMember, phone: e.target.value })}
                                                 className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-lg"
                                                 placeholder="Phone (+1...)"
@@ -535,10 +537,14 @@ export function Settings() {
                                                 </div>
                                                 <input
                                                     type="file"
-                                                    ref={el => fileInputRefs.current[member.id] = el}
+                                                    ref={el => { fileInputRefs.current[member.id] = el; }}
                                                     className="hidden"
                                                     accept="image/*"
-                                                    onChange={(e) => handleAvatarUpload(member.id, e.target.files[0])}
+                                                    onChange={(e) => {
+                                                        if (e.target.files && e.target.files[0]) {
+                                                            handleAvatarUpload(member.id, e.target.files[0]);
+                                                        }
+                                                    }}
                                                 />
                                             </div>
                                             <div className="flex flex-col">
@@ -627,10 +633,10 @@ export function Settings() {
 }
 
 function PhotosSettings() {
-    const [photos, setPhotos] = useState([]);
-    const fileInputRef = useRef(null);
+    const [photos, setPhotos] = useState<Photo[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [pendingDeleteId, setPendingDeleteId] = useState(null);
+    const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
     useEffect(() => {
         fetchPhotos();
@@ -643,7 +649,7 @@ function PhotosSettings() {
             .catch(console.error);
     };
 
-    const handleUpload = async (e) => {
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
 
@@ -658,7 +664,7 @@ function PhotosSettings() {
                 body: formData
             });
             fetchPhotos();
-            e.target.value = null; // reset input
+            e.target.value = ''; // reset input
         } catch (err) { console.error(err); }
     };
 
@@ -671,7 +677,7 @@ function PhotosSettings() {
         } catch (err) { console.error(err); }
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = (id: number) => {
         setPendingDeleteId(id);
         setShowDeleteConfirm(true);
     };

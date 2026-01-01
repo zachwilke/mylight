@@ -1,12 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { Cloud, Droplets, Wind, Thermometer, Calendar, Eye, Sun, Gauge, Umbrella, ArrowUp, ArrowDown, CloudSun, CloudRain, CloudSnow, CloudLightning } from 'lucide-react';
+import { Cloud, Droplets, Wind, Eye, Sun, Gauge, Umbrella, ArrowUp, ArrowDown, CloudSun, CloudRain, CloudSnow, CloudLightning } from 'lucide-react';
 import { WeatherMap } from './WeatherMap';
 import { getCachedWeather } from '../../utils/weather';
 
-export function WeatherPage({ kiosk = false }) {
-    const [weather, setWeather] = useState(null);
-    const [forecast, setForecast] = useState([]);
-    const [location, setLocation] = useState(null);
+interface WeatherData {
+    temperatureAvg: number;
+    temperatureApparentAvg: number;
+    temperatureMax: number;
+    temperatureMin: number;
+    humidityAvg: number;
+    windSpeedAvg: number;
+    uvIndexMax: number;
+    visibilityAvg: number | null;
+    pressureSurfaceLevelAvg: number;
+    precipitationProbabilityAvg: number;
+    weatherCode: number;
+}
+
+interface ForecastDay {
+    time: string;
+    values: {
+        temperatureMax: number;
+        temperatureMin: number;
+        precipitationProbabilityAvg: number;
+        weatherCode: number;
+    }
+}
+
+interface LocationData {
+    name: string;
+    lat: number;
+    lng: number;
+}
+
+export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
+    const [weather, setWeather] = useState<WeatherData | null>(null);
+    const [forecast, setForecast] = useState<ForecastDay[]>([]);
+    const [location, setLocation] = useState<LocationData | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -60,7 +90,7 @@ export function WeatherPage({ kiosk = false }) {
 
                             if (omData && omData.daily && omData.current) {
                                 // Map Daily
-                                const mappedForecast = omData.daily.time.map((t, i) => ({
+                                const mappedForecast = omData.daily.time.map((t: string, i: number) => ({
                                     time: t,
                                     values: {
                                         temperatureMax: omData.daily.temperature_2m_max[i],
@@ -107,7 +137,7 @@ export function WeatherPage({ kiosk = false }) {
 
     }, []);
 
-    const getWeatherIcon = (code) => {
+    const getWeatherIcon = (code: number) => {
         if (code === 0) return <Sun className="text-amber-400" size={24} />;
         if (code >= 1 && code <= 3) return <CloudSun className="text-amber-400" size={24} />;
         if (code >= 45 && code <= 48) return <Cloud className="text-gray-400" size={24} />;
@@ -119,7 +149,7 @@ export function WeatherPage({ kiosk = false }) {
         return <CloudSun className="text-amber-400" size={24} />;
     };
 
-    const getWeatherLabel = (code) => {
+    const getWeatherLabel = (code: number) => {
         if (code === 0) return 'Sunny';
         if (code === 1) return 'Mainly Sunny';
         if (code === 2) return 'Partly Cloudy';

@@ -4,18 +4,26 @@ import { cn } from '../../lib/utils';
 import { UserAvatar } from '../../components/UserAvatar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
-export function ChoreChart({ kiosk = false }) {
-    const [chores, setChores] = useState({});
-    const [members, setMembers] = useState([]);
-    const [stars, setStars] = useState({});
+import { Chore, FamilyMember } from '@/types';
+
+interface Celebration {
+    x: number;
+    y: number;
+    id: number;
+}
+
+export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
+    const [chores, setChores] = useState<Record<string, Chore[]>>({});
+    const [members, setMembers] = useState<FamilyMember[]>([]);
+    const [stars, setStars] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [pendingDeleteId, setPendingDeleteId] = useState(null);
-    const [celebration, setCelebration] = useState(null); // { x, y, id }
+    const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+    const [celebration, setCelebration] = useState<Celebration | null>(null); // { x, y, id }
 
     const [isEditMode, setIsEditMode] = useState(false);
-    const [editCode, setEditCode] = useState(null); // The correct code from settings
+    const [editCode, setEditCode] = useState<string | null>(null); // The correct code from settings
     const [showUnlockModal, setShowUnlockModal] = useState(false);
     const [unlockInput, setUnlockInput] = useState('');
 
@@ -26,9 +34,9 @@ export function ChoreChart({ kiosk = false }) {
                 fetch('/api/family'),
                 fetch('/api/settings')
             ]);
-            const choresData = await choresRes.json();
-            const familyData = await familyRes.json();
-            const settingsData = await settingsRes.json();
+            const choresData: Record<string, Chore[]> = await choresRes.json();
+            const familyData: FamilyMember[] = await familyRes.json();
+            const settingsData: Record<string, string> = await settingsRes.json();
 
             setEditCode(settingsData.edit_code || null);
 
@@ -36,7 +44,7 @@ export function ChoreChart({ kiosk = false }) {
             setMembers(familyData);
 
             // Use stars from member data
-            const initialStars = {};
+            const initialStars: Record<string, number> = {};
             familyData.forEach(m => {
                 initialStars[m.name] = m.stars || 0;
             });
@@ -54,26 +62,26 @@ export function ChoreChart({ kiosk = false }) {
     }, []);
 
     // Helper to get member by name
-    const getMemberByName = (name) => members.find(m => m.name === name);
+    const getMemberByName = (name: string) => members.find(m => m.name === name);
 
-    const triggerCelebration = (x, y) => {
+    const triggerCelebration = (x: number, y: number) => {
         const id = Date.now();
         setCelebration({ x, y, id });
         setTimeout(() => setCelebration(null), 1000);
     };
 
-    const toggleChore = async (person, choreId, currentStatus, event) => {
+    const toggleChore = async (person: string, choreId: number, currentStatus: boolean, event: React.MouseEvent) => {
         if (isEditMode) return; // Disable toggling in edit mode to prevent accidental checks while managing
         const newStatus = !currentStatus;
 
         // Optimistic UI Update
         setChores(prev => {
-            const personChores = prev[person].map(chore => {
+            const personChores = prev[person]?.map(chore => {
                 if (chore.id === choreId) {
                     return { ...chore, completed: newStatus };
                 }
                 return chore;
-            });
+            }) || [];
             return { ...prev, [person]: personChores };
         });
 
@@ -99,7 +107,7 @@ export function ChoreChart({ kiosk = false }) {
         }
     };
 
-    const handleAddChore = async (choreData) => {
+    const handleAddChore = async (choreData: Partial<Chore>) => {
         await fetch('/api/chores', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -122,13 +130,13 @@ export function ChoreChart({ kiosk = false }) {
         }
     };
 
-    const handleDeleteChore = (e, choreId) => {
+    const handleDeleteChore = (e: React.MouseEvent, choreId: number) => {
         e.stopPropagation(); // Prevent toggling
         setPendingDeleteId(choreId);
         setShowDeleteConfirm(true);
     };
 
-    const handleUnlock = (e) => {
+    const handleUnlock = (e: React.FormEvent) => {
         e.preventDefault();
         if (unlockInput === editCode) {
             setIsEditMode(true);
@@ -329,10 +337,17 @@ export function ChoreChart({ kiosk = false }) {
     );
 }
 
-function ChoreModal({ isOpen, onClose, members, onSave }) {
+interface ChoreModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    members: FamilyMember[];
+    onSave: (chore: Partial<Chore>) => void;
+}
+
+function ChoreModal({ isOpen, onClose, members, onSave }: ChoreModalProps) {
     const [title, setTitle] = useState('');
-    const [timeOfDay, setTimeOfDay] = useState('Morning');
-    const [selectedMember, setSelectedMember] = useState(members[0]?.id);
+    const [timeOfDay, setTimeOfDay] = useState<'Morning' | 'Evening'>('Morning');
+    const [selectedMember, setSelectedMember] = useState<number>(members[0]?.id);
 
     // Reset when opening
     useEffect(() => {
@@ -345,10 +360,12 @@ function ChoreModal({ isOpen, onClose, members, onSave }) {
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ title, time_of_day: timeOfDay, member_id: selectedMember });
-        onClose();
+        if (selectedMember) {
+            onSave({ title, time_of_day: timeOfDay, member_id: selectedMember });
+            onClose();
+        }
     };
 
     return (
@@ -380,7 +397,7 @@ function ChoreModal({ isOpen, onClose, members, onSave }) {
                             <div className="relative">
                                 <select
                                     value={timeOfDay}
-                                    onChange={(e) => setTimeOfDay(e.target.value)}
+                                    onChange={(e) => setTimeOfDay(e.target.value as 'Morning' | 'Evening')}
                                     className="w-full px-4 py-3.5 rounded-xl border border-black/10 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white/50 dark:bg-black/20 text-gray-900 dark:text-white"
                                 >
                                     <option value="Morning" className="dark:bg-gray-800">Morning</option>

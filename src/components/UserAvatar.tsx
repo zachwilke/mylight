@@ -1,8 +1,15 @@
-import React from 'react';
+
 import { User } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { FamilyMember } from '../types';
 
-export function UserAvatar({ member, size = "md", className }) {
+interface UserAvatarProps {
+    member: FamilyMember | undefined;
+    size?: "sm" | "md" | "lg" | "xl";
+    className?: string;
+}
+
+export function UserAvatar({ member, size = "md", className }: UserAvatarProps) {
     const sizeClasses = {
         sm: "w-6 h-6",
         md: "w-10 h-10",

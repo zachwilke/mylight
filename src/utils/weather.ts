@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+
 
 const CACHE_duration = 30 * 60 * 1000; // 30 minutes in milliseconds
 const CACHE_KEY_PREFIX = 'mylight_weather_cache_';
@@ -9,7 +9,7 @@ const CACHE_KEY_PREFIX = 'mylight_weather_cache_';
  * @param {number} lng - Longitude
  * @returns {Promise<Object|null>} - Weather data or null if failed
  */
-export async function getCachedWeather(lat, lng) {
+export async function getCachedWeather(lat: number, lng: number) {
     if (!lat || !lng) return null;
 
     const key = `${CACHE_KEY_PREFIX}${lat.toFixed(4)}_${lng.toFixed(4)}`;

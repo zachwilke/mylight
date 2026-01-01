@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Meal, List } from '../../types';
 import {
     format,
     startOfMonth,
@@ -22,12 +23,12 @@ const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 
 export function MealPlanner() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
-    const [meals, setMeals] = useState([]);
+    const [meals, setMeals] = useState<Meal[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeId, setActiveId] = useState(null);
+    const [activeId, setActiveId] = useState<number | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedSlot, setSelectedSlot] = useState({ date: null, type: null });
-    const [currentMeal, setCurrentMeal] = useState(null);
+    const [selectedSlot, setSelectedSlot] = useState<{ date: Date | null; type: string | null }>({ date: null, type: null });
+    const [currentMeal, setCurrentMeal] = useState<Meal | null>(null);
     const [addingToShop, setAddingToShop] = useState(false);
 
     const sensors = useSensors(
@@ -59,17 +60,20 @@ export function MealPlanner() {
     const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
     const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
-    const handleCellClick = (date, type, meal) => {
+    const handleCellClick = (date: Date, type: string, meal: Meal | null) => {
         setSelectedSlot({ date, type });
         setCurrentMeal(meal);
         setIsModalOpen(true);
     };
 
-    const handleSaveMeal = async (mealData) => {
+    const handleSaveMeal = async (mealData: any) => {
+        if (!selectedSlot.date) return;
         const dateStr = format(selectedSlot.date, 'yyyy-MM-dd');
 
         if (mealData.delete) {
-            await fetch(`/api/meals/${currentMeal.id}`, { method: 'DELETE' });
+            if (currentMeal) {
+                await fetch(`/api/meals/${currentMeal.id}`, { method: 'DELETE' });
+            }
         } else {
             // Keep existing color if exists, else random
             const colors = ['bg-orange-100 text-orange-800', 'bg-green-100 text-green-800', 'bg-blue-100 text-blue-800', 'bg-purple-100 text-purple-800'];
@@ -89,11 +93,11 @@ export function MealPlanner() {
         fetchMeals();
     };
 
-    const handleDragStart = (event) => {
+    const handleDragStart = (event: any) => {
         setActiveId(event.active.id);
     };
 
-    const handleDragEnd = async (event) => {
+    const handleDragEnd = async (event: any) => {
         const { active, over } = event;
         setActiveId(null);
 
@@ -157,7 +161,7 @@ export function MealPlanner() {
             });
 
             fetchMeals();
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to move meal", err);
         }
     };
@@ -180,8 +184,8 @@ export function MealPlanner() {
             // Get 'Groceries' list ID - assumption: it exists or we fetch it.
             // For now, let's just fetch all lists and find 'Groceries'
             const listsRes = await fetch('/api/lists');
-            const lists = await listsRes.json();
-            let groceryList = lists.find(l => l.title === 'Groceries');
+            const lists: List[] = await listsRes.json();
+            let groceryList = lists.find((l: List) => l.title === 'Groceries');
 
             if (!groceryList) {
                 // create it
@@ -191,6 +195,10 @@ export function MealPlanner() {
                     body: JSON.stringify({ title: 'Groceries', icon: 'shopping-cart' })
                 });
                 groceryList = await res.json();
+            }
+
+            if (!groceryList) {
+                throw new Error("Could not find or create grocery list");
             }
 
             // Add items
@@ -204,7 +212,7 @@ export function MealPlanner() {
                 count++;
             }
             alert(`Added ${count} meals to Groceries!`);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
             alert(`Failed to add to shopping list: ${err.message}`);
         } finally {
@@ -257,7 +265,7 @@ export function MealPlanner() {
                         ))}
 
                         {/* Calendar Days */}
-                        {days.map((day, dayIdx) => {
+                        {days.map((day) => {
                             const dateStr = format(day, 'yyyy-MM-dd');
                             const isCurrentMonth = isSameMonth(day, currentMonth);
                             const isTodayDate = isSameDay(day, new Date());
@@ -303,7 +311,7 @@ export function MealPlanner() {
                                                     id={slotId}
                                                     type={type}
                                                     meal={meal}
-                                                    onClick={() => handleCellClick(day, type, meal)}
+                                                    onClick={() => handleCellClick(day, type, meal || null)}
                                                 />
                                             );
                                         })}
@@ -338,7 +346,14 @@ export function MealPlanner() {
     );
 }
 
-function MealSlot({ id, type, meal, onClick }) {
+interface MealSlotProps {
+    id: string;
+    type: string;
+    meal?: Meal;
+    onClick?: () => void;
+}
+
+function MealSlot({ id, type, meal, onClick }: MealSlotProps) {
     const { isOver, setNodeRef } = useDroppable({ id });
     const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
         id: meal ? meal.id : `empty-${id}`,

@@ -8,7 +8,7 @@ export function useTheme() {
     useEffect(() => {
         const root = window.document.documentElement;
 
-        const applyTheme = (t) => {
+        const applyTheme = (t: string) => {
             if (t === 'dark') {
                 root.classList.add('dark');
             } else if (t === 'light') {
@@ -35,5 +35,5 @@ export function useTheme() {
         }
     }, [theme]);
 
-    return [theme, setTheme];
+    return [theme, setTheme] as const;
 }

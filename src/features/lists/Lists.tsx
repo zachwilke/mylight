@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, CheckSquare, Plus, Trash2, List as ListIcon, Loader2, Share2, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { UserAvatar } from '../../components/UserAvatar';
 
-const LIST_COLORS = {
+
+import { List, ListItem } from '@/types';
+
+const LIST_COLORS: Record<string, string> = {
     'shopping-cart': 'bg-orange-400 text-white',
     'check-square': 'bg-blue-500 text-white',
     'list': 'bg-green-500 text-white',
     'default': 'bg-gray-400 text-white'
 };
 
-const TEXT_COLORS = {
+const TEXT_COLORS: Record<string, string> = {
     'shopping-cart': 'text-orange-400',
     'check-square': 'text-blue-500',
     'list': 'text-green-500',
@@ -18,9 +20,9 @@ const TEXT_COLORS = {
 };
 
 export function Lists() {
-    const [lists, setLists] = useState([]);
-    const [activeList, setActiveList] = useState(null);
-    const [items, setItems] = useState([]);
+    const [lists, setLists] = useState<List[]>([]);
+    const [activeList, setActiveList] = useState<List | null>(null);
+    const [items, setItems] = useState<ListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [newItemText, setNewItemText] = useState('');
     const [showNewListInput, setShowNewListInput] = useState(false);
@@ -29,7 +31,7 @@ export function Lists() {
 
     // Chat Features
     const [sendingChat, setSendingChat] = useState(false);
-    const [chatStatus, setChatStatus] = useState(null);
+    const [chatStatus, setChatStatus] = useState<'success' | 'error' | null>(null);
 
     // Fetch Lists
     useEffect(() => {
@@ -51,7 +53,7 @@ export function Lists() {
         }
     }, [activeList]);
 
-    const addItem = async (e) => {
+    const addItem = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newItemText.trim() || !activeList) return;
 
@@ -61,7 +63,7 @@ export function Lists() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ list_id: activeList.id, text: newItemText })
             });
-            const newItem = await res.json();
+            const newItem: ListItem = await res.json();
             setItems([...items, newItem]);
             setNewItemText('');
         } catch (err) {
@@ -69,7 +71,7 @@ export function Lists() {
         }
     };
 
-    const toggleItem = async (id, currentStatus) => {
+    const toggleItem = async (id: number, currentStatus: boolean) => {
         const updatedItems = items.map(i => i.id === id ? { ...i, completed: !currentStatus } : i);
         setItems(updatedItems);
 
@@ -84,7 +86,7 @@ export function Lists() {
         }
     };
 
-    const deleteItem = async (id) => {
+    const deleteItem = async (id: number) => {
         const updatedItems = items.filter(i => i.id !== id);
         setItems(updatedItems);
         try {
@@ -94,7 +96,7 @@ export function Lists() {
         }
     };
 
-    const createList = async (e) => {
+    const createList = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newListTitle.trim()) return;
 
@@ -104,7 +106,7 @@ export function Lists() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: newListTitle, icon: 'list' })
             });
-            const newList = await res.json();
+            const newList: List = await res.json();
             setLists([...lists, newList]);
             setActiveList(newList);
             setNewListTitle('');
@@ -115,6 +117,7 @@ export function Lists() {
     };
 
     const sendToChat = async () => {
+        if (!activeList) return;
         setSendingChat(true);
         setChatStatus(null);
 
@@ -142,14 +145,14 @@ export function Lists() {
         }
     };
 
-    const getIcon = (iconName) => {
+    const getIcon = (iconName: string) => {
         if (iconName === 'shopping-cart') return <ShoppingCart size={16} strokeWidth={2.5} />;
         if (iconName === 'check-square') return <CheckSquare size={16} strokeWidth={2.5} />;
         return <ListIcon size={16} strokeWidth={2.5} />;
     };
 
-    const getColorClass = (iconName) => LIST_COLORS[iconName] || LIST_COLORS['default'];
-    const getTextColorClass = (iconName) => TEXT_COLORS[iconName] || TEXT_COLORS['default'];
+    const getColorClass = (iconName: string) => LIST_COLORS[iconName] || LIST_COLORS['default'];
+    const getTextColorClass = (iconName: string) => TEXT_COLORS[iconName] || TEXT_COLORS['default'];
 
     if (loading) return <div className="p-8">Loading lists...</div>;
 

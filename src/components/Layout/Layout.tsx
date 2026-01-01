@@ -3,7 +3,13 @@ import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { Header } from './Header';
 
-export function Layout({ children, activeTab, onTabChange }) {
+interface LayoutProps {
+    children: React.ReactNode;
+    activeTab: string;
+    onTabChange: (tab: string) => void;
+}
+
+export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     return (

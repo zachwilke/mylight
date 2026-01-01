@@ -6,15 +6,17 @@ import { MonthGrid } from './components/MonthGrid';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EventModal } from './components/EventModal';
 
-export function CalendarView({ kiosk = false }) {
+import { Event } from '../../types';
+
+export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [view, setView] = useState('month'); // 'month' | 'week' | 'day'
+    const [view, setView] = useState<'month' | 'week' | 'day'>('month'); // 'month' | 'week' | 'day'
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    const [currentEvent, setCurrentEvent] = useState(null);
+    const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [pendingDeleteId, setPendingDeleteId] = useState(null);
+    const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
     const nextPeriod = () => {
         if (view === 'month') setCurrentDate(addMonths(currentDate, 1));
@@ -30,7 +32,7 @@ export function CalendarView({ kiosk = false }) {
 
     const today = () => setCurrentDate(new Date());
 
-    const handleSaveEvent = async (eventData) => {
+    const handleSaveEvent = async (eventData: Partial<Event>) => {
         try {
             const isEdit = !!currentEvent;
             const url = isEdit ? `/api/events/${currentEvent.id}` : '/api/events';
@@ -64,7 +66,7 @@ export function CalendarView({ kiosk = false }) {
         }
     };
 
-    const handleDeleteEvent = (id) => {
+    const handleDeleteEvent = (id: number) => {
         setPendingDeleteId(id);
         setShowDeleteConfirm(true);
     };
@@ -149,6 +151,7 @@ export function CalendarView({ kiosk = false }) {
                     <MonthGrid
                         currentDate={currentDate}
                         key={refreshTrigger}
+                        refreshTrigger={refreshTrigger}
                         onEventClick={(evt) => {
                             setCurrentEvent(evt);
                             setIsModalOpen(true);

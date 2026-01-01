@@ -3,9 +3,23 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInte
 import { cn } from '../../../lib/utils';
 import { UserAvatar } from '../../../components/UserAvatar';
 import { RRule } from 'rrule';
+import { Event, FamilyMember } from '../../../types';
 
-export function MonthGrid({ currentDate, onEventClick, refreshTrigger }) {
-    const [events, setEvents] = useState([]);
+interface MonthGridProps {
+    currentDate: Date;
+    onEventClick: (event: Event) => void;
+    refreshTrigger: number;
+}
+
+interface CalendarEvent extends Omit<Event, 'id'> {
+    id: number | string;
+    date: Date;
+    member?: FamilyMember;
+    original_id?: number;
+}
+
+export function MonthGrid({ currentDate, onEventClick, refreshTrigger }: MonthGridProps) {
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
 
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(monthStart);
@@ -19,23 +33,37 @@ export function MonthGrid({ currentDate, onEventClick, refreshTrigger }) {
         Promise.all([
             fetch('/api/family', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/events', { cache: 'no-store' }).then(res => res.json())
-        ]).then(([familyData, eventsData]) => {
+        ]).then(([familyData, eventsData]: [FamilyMember[], Event[]]) => {
             // Map family data
-            const memberMap = {};
-            familyData.forEach(m => memberMap[m.id] = m);
+            const memberMap: Record<number, FamilyMember> = {};
+            familyData.forEach(m => memberMap[m.id as number] = m);
 
-            const allEvents = [];
+            const allEvents: CalendarEvent[] = [];
 
             eventsData.forEach(evt => {
                 const evtDate = new Date(evt.start_date);
-                const member = memberMap[evt.member_id] || (evt.is_external ? { color: evt.color } : { color: 'bg-gray-100 text-gray-700' });
+                const member = memberMap[evt.member_id as number] || (evt.is_external ? {
+                    id: -1,
+                    name: 'External',
+                    color: evt.color || '',
+                    avatar: undefined,
+                    stars: 0,
+                    phone: ''
+                } as unknown as FamilyMember : {
+                    id: -1,
+                    name: 'Unknown',
+                    color: 'bg-gray-100 text-gray-700',
+                    avatar: undefined,
+                    stars: 0,
+                    phone: ''
+                } as unknown as FamilyMember);
 
                 // Check for recurrence rule (from local 'recurrence' or external 'rrule')
                 const recurrenceRule = evt.recurrence || evt.rrule;
 
                 if (recurrenceRule) {
                     try {
-                        const rule = RRule.fromString(recurrenceRule);
+                        RRule.fromString(recurrenceRule);
                         // RRule dates are usually UTC, need to handle timezone carefully.
                         // Ideally we pass `dtstart`.
                         // rrule library typically operates on UTC or local dates depending on input.
@@ -66,7 +94,7 @@ export function MonthGrid({ currentDate, onEventClick, refreshTrigger }) {
                         allEvents.push({ ...evt, date: evtDate, member });
                     }
                 } else {
-                    allEvents.push({ ...evt, date: evtDate, member });
+                    allEvents.push({ ...evt, date: evtDate, member, id: evt.id });
                 }
             });
 

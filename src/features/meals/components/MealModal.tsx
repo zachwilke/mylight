@@ -3,7 +3,18 @@ import { X, Utensils, Trash2, Save } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 
-export function MealModal({ isOpen, onClose, day, type, currentMeal, onSave }) {
+import { Meal } from '../../../types';
+
+interface MealModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    day: string;
+    type: string | null;
+    currentMeal: Meal | null;
+    onSave: (data: any) => Promise<void>;
+}
+
+export function MealModal({ isOpen, onClose, day, type, currentMeal, onSave }: MealModalProps) {
     const [title, setTitle] = useState('');
     const [loading, setLoading] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -18,7 +29,7 @@ export function MealModal({ isOpen, onClose, day, type, currentMeal, onSave }) {
 
     if (!isOpen) return null;
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         try {

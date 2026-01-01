@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning, Sun, Wind } from 'lucide-react';
-import { getRainViewerData, getCachedWeather } from '../../utils/weather';
+import { Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning, Sun } from 'lucide-react';
+import { getCachedWeather } from '../../utils/weather';
+import { Photo, CurrentWeather } from '../../types';
 
-export default function Screensaver({ onInteraction }) {
-    const [photos, setPhotos] = useState([]);
+interface ScreensaverProps {
+    onInteraction: () => void;
+}
+
+export default function Screensaver({ onInteraction }: ScreensaverProps) {
+    const [photos, setPhotos] = useState<Photo[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [time, setTime] = useState(new Date());
-    const [weather, setWeather] = useState(null);
+    const [weather, setWeather] = useState<CurrentWeather | null>(null);
 
     useEffect(() => {
         // Fetch photos
@@ -30,7 +35,7 @@ export default function Screensaver({ onInteraction }) {
                 const res = await fetch('/api/settings');
                 const data = await res.json();
                 if (data.weather_location) {
-                    let latitude, longitude;
+                    let latitude: number | undefined, longitude: number | undefined;
 
                     const isZip = /^\d{5}$/.test(data.weather_location.trim());
                     if (isZip) {
@@ -38,8 +43,8 @@ export default function Screensaver({ onInteraction }) {
                             const zipRes = await fetch(`https://api.zippopotam.us/us/${data.weather_location.trim()}`);
                             if (zipRes.ok) {
                                 const zipData = await zipRes.json();
-                                latitude = zipData.places[0].latitude;
-                                longitude = zipData.places[0].longitude;
+                                latitude = parseFloat(zipData.places[0].latitude);
+                                longitude = parseFloat(zipData.places[0].longitude);
                             }
                         } catch (e) {
                             console.error('Zip fetch failed', e);
@@ -87,7 +92,7 @@ export default function Screensaver({ onInteraction }) {
         return () => clearInterval(interval);
     }, [photos]);
 
-    const getWeatherIcon = (code) => {
+    const getWeatherIcon = (code: number) => {
         if (code === 0) return <Sun className="text-white" size={48} />;
         if (code >= 1 && code <= 3) return <CloudSun className="text-white" size={48} />;
         if (code >= 45 && code <= 48) return <Cloud className="text-white" size={48} />;
