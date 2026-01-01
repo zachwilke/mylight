@@ -462,3 +462,111 @@ func (app *App) handleAvatarUpload(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, map[string]interface{}{"success": true, "avatar": avatarURL})
 }
+
+// GET/POST /api/events
+func (app *App) handleEvents(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		rows, err := app.DB.Query("SELECT id, title, start_date, end_date, member_id, recurrence, description, location, is_all_day FROM events")
+		if err != nil {
+			jsonError(w, err.Error(), 500)
+			return
+		}
+		defer rows.Close()
+
+		events := []map[string]interface{}{}
+		for rows.Next() {
+			var id int
+			var title, startDate, recurrence string
+			var endDate, description, location sql.NullString
+			var memberID sql.NullInt64
+			var isAllDay sql.NullBool
+
+			if err := rows.Scan(&id, &title, &startDate, &endDate, &memberID, &recurrence, &description, &location, &isAllDay); err != nil {
+				continue
+			}
+
+			events = append(events, map[string]interface{}{
+				"id":          id,
+				"title":       title,
+				"start":       startDate,
+				"end":         endDate.String,
+				"memberId":    memberID.Int64,
+				"recurrence":  recurrence,
+				"description": description.String,
+				"location":    location.String,
+				"allDay":      isAllDay.Bool,
+			})
+		}
+		jsonResponse(w, events)
+
+	} else if r.Method == "POST" {
+		var body struct {
+			Title       string `json:"title"`
+			Start       string `json:"start"`
+			End         string `json:"end"`
+			MemberId    int    `json:"memberId"`
+			Recurrence  string `json:"recurrence"`
+			Description string `json:"description"`
+			Location    string `json:"location"`
+			AllDay      bool   `json:"allDay"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			jsonError(w, err.Error(), 400)
+			return
+		}
+
+		res, err := app.DB.Exec("INSERT INTO events (title, start_date, end_date, member_id, recurrence, description, location, is_all_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+			body.Title, body.Start, body.End, body.MemberId, body.Recurrence, body.Description, body.Location, body.AllDay)
+		if err != nil {
+			jsonError(w, err.Error(), 500)
+			return
+		}
+		id, _ := res.LastInsertId()
+		jsonResponse(w, map[string]interface{}{"success": true, "id": id})
+	}
+}
+
+// PUT/DELETE /api/events/:id
+func (app *App) handleEventDetail(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 4 {
+		jsonError(w, "Invalid path", 400)
+		return
+	}
+	idStr := parts[3]
+	id, _ := strconv.Atoi(idStr)
+
+	if r.Method == "PUT" {
+		var body struct {
+			Title       string `json:"title"`
+			Start       string `json:"start"`
+			End         string `json:"end"`
+			MemberId    int    `json:"memberId"`
+			Recurrence  string `json:"recurrence"`
+			Description string `json:"description"`
+			Location    string `json:"location"`
+			AllDay      bool   `json:"allDay"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			jsonError(w, err.Error(), 400)
+			return
+		}
+
+		_, err := app.DB.Exec("UPDATE events SET title=?, start_date=?, end_date=?, member_id=?, recurrence=?, description=?, location=?, is_all_day=? WHERE id=?",
+			body.Title, body.Start, body.End, body.MemberId, body.Recurrence, body.Description, body.Location, body.AllDay, id)
+
+		if err != nil {
+			jsonError(w, err.Error(), 500)
+			return
+		}
+		jsonResponse(w, map[string]bool{"success": true})
+
+	} else if r.Method == "DELETE" {
+		_, err := app.DB.Exec("DELETE FROM events WHERE id = ?", id)
+		if err != nil {
+			jsonError(w, err.Error(), 500)
+			return
+		}
+		jsonResponse(w, map[string]bool{"success": true})
+	}
+}
