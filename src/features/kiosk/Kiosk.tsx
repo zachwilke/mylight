@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
-import { WeatherPage } from '../weather/WeatherPage';
-import { CalendarView } from '../calendar/CalendarView';
-import { ChoreChart } from '../chores/ChoreChart';
+import { Outlet } from 'react-router-dom';
 import { KioskSidebar } from './KioskSidebar';
 
 export function Kiosk() {
-    const [activeTab, setActiveTab] = useState('chores');
     const [isCollapsed, setIsCollapsed] = useState(() => {
         const saved = localStorage.getItem('kiosk_sidebar_collapsed');
         return saved ? JSON.parse(saved) : false;
@@ -15,24 +12,9 @@ export function Kiosk() {
         localStorage.setItem('kiosk_sidebar_collapsed', JSON.stringify(isCollapsed));
     }, [isCollapsed]);
 
-    const renderContent = () => {
-        switch (activeTab) {
-            case 'weather':
-                return <WeatherPage kiosk={true} />;
-            case 'calendar':
-                return <CalendarView kiosk={true} />;
-            case 'chores':
-                return <ChoreChart kiosk={true} />;
-            default:
-                return <ChoreChart kiosk={true} />;
-        }
-    };
-
     return (
         <div className="h-screen w-screen bg-gray-50 dark:bg-gray-950 flex overflow-hidden">
             <KioskSidebar
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
                 isCollapsed={isCollapsed}
                 onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
             />
@@ -40,7 +22,7 @@ export function Kiosk() {
             <main className="flex-1 relative overflow-hidden transition-all duration-300">
                 <div className="absolute inset-0 p-6">
                     <div className="h-full w-full bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800 relative z-10">
-                        {renderContent()}
+                        <Outlet />
                     </div>
                 </div>
 

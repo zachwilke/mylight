@@ -1,4 +1,6 @@
 new:
 	git pull
+	npm install
 	npm run build
-	go run -C go-server .
+	cd go-server && go build -o server .
+	cd go-server && ./server

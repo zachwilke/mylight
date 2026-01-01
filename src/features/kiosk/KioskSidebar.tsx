@@ -1,18 +1,17 @@
 import { CloudSun, Calendar, CheckSquare, Menu } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { NavLink } from 'react-router-dom';
 
 interface KioskSidebarProps {
-    activeTab: string;
-    onTabChange: (tab: string) => void;
     isCollapsed: boolean;
     onToggleCollapse: () => void;
 }
 
-export function KioskSidebar({ activeTab, onTabChange, isCollapsed, onToggleCollapse }: KioskSidebarProps) {
+export function KioskSidebar({ isCollapsed, onToggleCollapse }: KioskSidebarProps) {
     const navItems = [
-        { id: 'weather', label: 'Weather', icon: CloudSun, color: 'text-blue-500' },
-        { id: 'calendar', label: 'Calendar', icon: Calendar, color: 'text-purple-500' },
-        { id: 'chores', label: 'Chores', icon: CheckSquare, color: 'text-green-500' },
+        { id: 'weather', label: 'Weather', icon: CloudSun, color: 'text-blue-500', path: '/kiosk/weather' },
+        { id: 'calendar', label: 'Calendar', icon: Calendar, color: 'text-purple-500', path: '/kiosk/calendar' },
+        { id: 'chores', label: 'Chores', icon: CheckSquare, color: 'text-green-500', path: '/kiosk/chores' },
     ];
 
     return (
@@ -40,38 +39,42 @@ export function KioskSidebar({ activeTab, onTabChange, isCollapsed, onToggleColl
             {/* Navigation */}
             <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
                 {navItems.map((item) => (
-                    <button
+                    <NavLink
                         key={item.id}
-                        onClick={() => onTabChange(item.id)}
-                        className={cn(
+                        to={item.path}
+                        className={({ isActive }) => cn(
                             "w-full flex items-center justify-start p-6 rounded-3xl transition-all duration-200 group relative overflow-hidden",
                             isCollapsed ? "justify-center p-0 h-16 w-16 mx-auto" : "gap-6",
-                            activeTab === item.id
+                            isActive
                                 ? "bg-gray-100 dark:bg-gray-800 shadow-inner"
                                 : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
                         )}
                     >
-                        <div className={cn(
-                            "p-3 rounded-2xl transition-transform duration-300 flex items-center justify-center shrink-0",
-                            activeTab === item.id ? "bg-white dark:bg-gray-700 shadow-sm scale-110" : "bg-gray-100 dark:bg-gray-800",
-                            item.color
-                        )}>
-                            <item.icon size={32} strokeWidth={2.5} />
-                        </div>
+                        {({ isActive }) => (
+                            <>
+                                <div className={cn(
+                                    "p-3 rounded-2xl transition-transform duration-300 flex items-center justify-center shrink-0",
+                                    isActive ? "bg-white dark:bg-gray-700 shadow-sm scale-110" : "bg-gray-100 dark:bg-gray-800",
+                                    item.color
+                                )}>
+                                    <item.icon size={32} strokeWidth={2.5} />
+                                </div>
 
-                        {!isCollapsed && (
-                            <span className={cn(
-                                "text-2xl font-bold tracking-tight text-gray-700 dark:text-gray-200",
-                                activeTab === item.id && "text-gray-900 dark:text-white"
-                            )}>
-                                {item.label}
-                            </span>
-                        )}
+                                {!isCollapsed && (
+                                    <span className={cn(
+                                        "text-2xl font-bold tracking-tight text-gray-700 dark:text-gray-200",
+                                        isActive && "text-gray-900 dark:text-white"
+                                    )}>
+                                        {item.label}
+                                    </span>
+                                )}
 
-                        {activeTab === item.id && (
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-12 bg-blue-500 rounded-r-full" />
+                                {isActive && (
+                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-12 bg-blue-500 rounded-r-full" />
+                                )}
+                            </>
                         )}
-                    </button>
+                    </NavLink>
                 ))}
             </nav>
 

@@ -3,23 +3,22 @@ import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 import { Calendar, CheckSquare, Settings, CloudSun, TrendingUp, LayoutDashboard, Search, Bell, LogOut } from 'lucide-react';
 import { NotificationPopover } from '../Notifications/NotificationPopover';
+import { NavLink, Outlet } from 'react-router-dom';
 
 interface DesktopLayoutProps {
-    children: React.ReactNode;
-    activeTab: string;
-    onTabChange: (tab: string) => void;
+    children?: React.ReactNode;
 }
 
 const NAV_ITEMS = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'calendar', label: 'Calendar', icon: Calendar },
-    { id: 'chores', label: 'Chores', icon: CheckSquare },
-    { id: 'history', label: 'History', icon: TrendingUp },
-    { id: 'weather', label: 'Weather', icon: CloudSun },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    { id: 'calendar', label: 'Calendar', icon: Calendar, path: '/calendar' },
+    { id: 'chores', label: 'Chores', icon: CheckSquare, path: '/chores' },
+    { id: 'history', label: 'History', icon: TrendingUp, path: '/history' },
+    { id: 'weather', label: 'Weather', icon: CloudSun, path: '/weather' },
+    { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
-export function DesktopLayout({ children, activeTab, onTabChange }: DesktopLayoutProps) {
+export function DesktopLayout({ children }: DesktopLayoutProps) {
     const { user, logout } = useAuth();
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
@@ -44,21 +43,24 @@ export function DesktopLayout({ children, activeTab, onTabChange }: DesktopLayou
                 <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                     {NAV_ITEMS.map((item) => {
                         const Icon = item.icon;
-                        const isActive = activeTab === item.id;
                         return (
-                            <button
+                            <NavLink
                                 key={item.id}
-                                onClick={() => onTabChange(item.id)}
-                                className={cn(
+                                to={item.path}
+                                className={({ isActive }) => cn(
                                     "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group text-sm font-medium",
                                     isActive
                                         ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-200"
                                         : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
                                 )}
                             >
-                                <Icon size={18} className={cn(isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500")} />
-                                {item.label}
-                            </button>
+                                {({ isActive }) => (
+                                    <>
+                                        <Icon size={18} className={cn(isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500")} />
+                                        {item.label}
+                                    </>
+                                )}
+                            </NavLink>
                         );
                     })}
                 </nav>
@@ -113,8 +115,8 @@ export function DesktopLayout({ children, activeTab, onTabChange }: DesktopLayou
 
                 {/* Page Content */}
                 <main className="flex-1 overflow-auto p-6 md:p-8">
-                    <div className={`mx-auto h-full ${activeTab === 'calendar' ? 'max-w-full' : 'max-w-7xl'}`}>
-                        {children}
+                    <div className="mx-auto h-full max-w-7xl">
+                        <Outlet />
                     </div>
                 </main>
             </div>

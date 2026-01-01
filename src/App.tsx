@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { DesktopLayout } from './components/Layout/DesktopLayout';
 import { CalendarView } from './features/calendar/CalendarView';
 import { ChoreChart } from './features/chores/ChoreChart';
@@ -12,33 +13,34 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './features/auth/LoginPage';
 import { Loader2 } from 'lucide-react';
 
-function AppContent() {
+function ProtectedRoute({ children, kiosk = false }: { children: React.ReactNode; kiosk?: boolean }) {
   const { user, isLoading } = useAuth();
-  // Default to dashboard for desktop, chores for kiosk (handled below)
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function KioskWrapper() {
   const [isIdle, setIsIdle] = useState(false);
   const [timeoutMinutes, setTimeoutMinutes] = useState(1);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const IDLE_TIMEOUT = timeoutMinutes * 60 * 1000;
   const lastManualTriggerRef = useRef(0);
 
-  // Determine mode based on URL
-  const isKiosk = window.location.pathname === '/kiosk';
-
-  // Set initial tab based on mode (if it's the first render)
-  useEffect(() => {
-    if (isKiosk && (activeTab === 'dashboard' || activeTab === 'settings')) {
-      setActiveTab('chores');
-    }
-  }, [isKiosk]);
-
   const resetIdleTimer = () => {
-    // Only run idle timer in Kiosk mode
-    if (!isKiosk) return;
-
-    // If we just manually triggered, ignore reset for 1 second to avoid immediate closure from the click/move
     if (Date.now() - lastManualTriggerRef.current < 1000) return;
-
     if (isIdle) setIsIdle(false);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
@@ -47,11 +49,7 @@ function AppContent() {
   };
 
   useEffect(() => {
-    if (!isKiosk) return;
-
-    // Initial timer
     resetIdleTimer();
-
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     const handler = () => resetIdleTimer();
     const manualTriggerHandler = () => {
@@ -67,7 +65,6 @@ function AppContent() {
     window.addEventListener('trigger-screensaver', manualTriggerHandler);
     window.addEventListener('update-timeout', updateTimeoutHandler);
 
-    // Fetch settings for timeout
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
@@ -83,60 +80,59 @@ function AppContent() {
       window.removeEventListener('trigger-screensaver', manualTriggerHandler);
       window.removeEventListener('update-timeout', updateTimeoutHandler);
     };
-  }, [isIdle, timeoutMinutes, isKiosk]);
+  }, [isIdle, timeoutMinutes]);
 
-  // Adjust active tab if settings is hidden and we are on it (fallback)
-  useEffect(() => {
-    if (isKiosk && activeTab === 'settings') {
-      setActiveTab('chores');
-    }
-  }, [isKiosk, activeTab]);
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard': return <DashboardHome onNavigate={setActiveTab} />;
-      case 'calendar': return <CalendarView />;
-      case 'chores': return <ChoreChart />;
-      case 'history': return <HistoryPage />;
-      case 'weather': return <WeatherPage />;
-      case 'settings': return <Settings />;
-      default: return <DashboardHome onNavigate={setActiveTab} />;
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <Loader2 className="animate-spin text-blue-600" size={48} />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <LoginPage />;
-  }
-
-  if (isKiosk) {
-    return (
-      <>
-        {isIdle && <Screensaver onInteraction={resetIdleTimer} />}
-        <Kiosk />
-      </>
-    );
-  }
-
-  // Desktop Admin View
   return (
-    <DesktopLayout activeTab={activeTab} onTabChange={setActiveTab}>
-      {renderContent()}
-    </DesktopLayout>
+    <>
+      {isIdle && <Screensaver onInteraction={resetIdleTimer} />}
+      <Kiosk />
+    </>
+  );
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* Kiosk Routes */}
+      <Route path="/kiosk" element={
+        <ProtectedRoute kiosk>
+          <KioskWrapper />
+        </ProtectedRoute>
+      }>
+        <Route index element={<Navigate to="chores" replace />} />
+        <Route path="chores" element={<ChoreChart kiosk={true} />} />
+        <Route path="calendar" element={<CalendarView kiosk={true} />} />
+        <Route path="weather" element={<WeatherPage kiosk={true} />} />
+      </Route>
+
+      {/* Desktop Routes */}
+      <Route path="/" element={
+        <ProtectedRoute>
+          <DesktopLayout />
+        </ProtectedRoute>
+      }>
+        <Route index element={<DashboardHome />} />
+        <Route path="calendar" element={<CalendarView />} />
+        <Route path="chores" element={<ChoreChart />} />
+        <Route path="history" element={<HistoryPage />} />
+        <Route path="weather" element={<WeatherPage />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
