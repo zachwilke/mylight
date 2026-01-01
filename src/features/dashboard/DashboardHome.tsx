@@ -135,32 +135,32 @@ export function DashboardHome() {
                         </button>
                     </div>
                 </div>
-            </div>
 
-            {/* Chores Overview */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-bold text-slate-800 dark:text-white">Chores Status</h2>
-                    <button onClick={() => navigate('/chores')} className="text-sm font-semibold text-blue-600 hover:text-blue-700">Manage</button>
-                </div>
-                <div className="space-y-4">
-                    {members.slice(0, 4).map(member => (
-                        <div key={member.id} className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <UserAvatar member={member} size="sm" />
-                                <span className="font-medium text-slate-700 dark:text-slate-300">{member.name}</span>
+
+                {/* Chores Overview */}
+                <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-lg font-bold text-slate-800 dark:text-white">Chores Status</h2>
+                        <button onClick={() => navigate('/chores')} className="text-sm font-semibold text-blue-600 hover:text-blue-700">Manage</button>
+                    </div>
+                    <div className="space-y-4">
+                        {members.slice(0, 4).map(member => (
+                            <div key={member.id} className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <UserAvatar member={member} size="sm" />
+                                    <span className="font-medium text-slate-700 dark:text-slate-300">{member.name}</span>
+                                </div>
+                                <div className="flex space-x-1">
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                    <div className="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                                </div>
                             </div>
-                            <div className="flex space-x-1">
-                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                <div className="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700"></div>
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
-        </div >
     );
 }
 
