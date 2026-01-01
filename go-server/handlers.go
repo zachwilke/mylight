@@ -37,6 +37,8 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 		}
 		defer rows.Close()
 
+		members := []map[string]interface{}{}
+
 		// Rerunning query with explicit columns
 		rows2, err := app.DB.Query("SELECT id, name, color, avatar, stars, phone, email, role, visible FROM family_members")
 		if err != nil {
