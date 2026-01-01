@@ -5,6 +5,7 @@ export interface FamilyMember {
     avatar: string | null;
     stars: number;
     phone: string | null;
+    visible: boolean;
 }
 
 export interface Chore {

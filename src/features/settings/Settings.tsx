@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Save, Upload, MapPin, Edit2, Moon, Sun, Monitor, Clock, Lock, Sparkles, Zap } from 'lucide-react';
+import { Plus, Trash2, Save, Upload, MapPin, Edit2, Moon, Sun, Monitor, Clock, Lock, Sparkles, Zap, Eye, EyeOff } from 'lucide-react';
 import { UserAvatar } from '../../components/UserAvatar';
 import { CalendarSettings } from './CalendarSettings';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -588,6 +588,7 @@ export function Settings() {
                                     <tr>
                                         <th className="px-6 py-3">Member</th>
                                         <th className="px-6 py-3">Contact</th>
+                                        <th className="px-6 py-3 text-center">Visible</th>
                                         <th className="px-6 py-3 text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -595,7 +596,7 @@ export function Settings() {
                                     {members.map(member => (
                                         <tr key={member.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                             {editingMember && editingMember.id === member.id ? (
-                                                <td colSpan={3} className="px-4 py-3 bg-blue-50/50 dark:bg-blue-900/10">
+                                                <td colSpan={4} className="px-4 py-3 bg-blue-50/50 dark:bg-blue-900/10">
                                                     <div className="flex items-center gap-3">
                                                         <input
                                                             type="text"
@@ -632,7 +633,6 @@ export function Settings() {
                                                         <div className="flex items-center gap-3">
                                                             <div className="relative group/avatar cursor-pointer" onClick={() => triggerFileInput(member.id)}>
                                                                 <UserAvatar member={member} size="sm" />
-                                                                {/* Assuming size='sm' exists or will fallback, but better check UserAvatar later. Using standard utility for now.*/}
                                                                 <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
                                                                     <Upload size={12} className="text-white" />
                                                                 </div>
@@ -648,11 +648,30 @@ export function Settings() {
                                                                     }}
                                                                 />
                                                             </div>
-                                                            <span className="font-medium text-slate-900 dark:text-white">{member.name}</span>
+                                                            <span className={`font-medium transition-colors ${member.visible === false ? 'text-slate-400 dark:text-slate-600 decoration-slate-400 line-through decoration-2' : 'text-slate-900 dark:text-white'}`}>{member.name}</span>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-3 text-slate-500 dark:text-slate-400">
                                                         {member.phone || '-'}
+                                                    </td>
+                                                    <td className="px-6 py-3 text-center">
+                                                        <button
+                                                            onClick={async () => {
+                                                                const newVisible = member.visible === false ? true : false;
+                                                                try {
+                                                                    await fetch(`/api/family/${member.id}`, {
+                                                                        method: 'PUT',
+                                                                        headers: { 'Content-Type': 'application/json' },
+                                                                        body: JSON.stringify({ visible: newVisible })
+                                                                    });
+                                                                    setMembers(members.map(m => m.id === member.id ? { ...m, visible: newVisible } : m));
+                                                                } catch (err) { console.error(err); }
+                                                            }}
+                                                            className={`p-1.5 rounded-md transition-colors ${member.visible !== false ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'}`}
+                                                            title={member.visible !== false ? "Visible" : "Hidden"}
+                                                        >
+                                                            {member.visible !== false ? <Eye size={16} /> : <EyeOff size={16} />}
+                                                        </button>
                                                     </td>
                                                     <td className="px-6 py-3 text-right">
                                                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

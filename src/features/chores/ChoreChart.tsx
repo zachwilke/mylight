@@ -311,6 +311,7 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
             )}>
                 {Object.entries(chores).map(([name, personChores]) => {
                     const member = getMemberByName(name);
+                    if (!member || member.visible === false) return null;
                     return (
                         <div
                             key={name}
@@ -324,7 +325,7 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
                                     <div className="mb-3 transform hover:scale-105 transition-transform duration-300">
                                         <UserAvatar member={member} size="xl" />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{name}</h3>
+                                    <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{name}</h3>
                                     <div className="inline-flex items-center gap-2 bg-white/80 dark:bg-black/40 px-4 py-1.5 rounded-full border border-yellow-200/50 dark:border-yellow-500/20 shadow-sm">
                                         <Star size={16} className="fill-yellow-400 text-yellow-400 drop-shadow-sm" />
                                         <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400 tabular-nums">{stars[name] || 0}</span>
@@ -335,7 +336,7 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
                                 <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
                                     {['Morning', 'Evening'].map((time) => (
                                         <div key={time}>
-                                            <h4 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 pl-2 opacity-80">{time}</h4>
+                                            <h4 className="text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 pl-2 opacity-80">{time}</h4>
                                             <div className="space-y-2.5">
                                                 {personChores.filter(c => c.time_of_day === time).map(chore => (
                                                     <div key={chore.id} className="relative group">
@@ -349,19 +350,19 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
                                                             )}
                                                         >
                                                             <span className={cn(
-                                                                "font-medium text-[15px] leading-snug line-clamp-2 transition-all relative z-10",
+                                                                "font-bold text-xl leading-snug line-clamp-2 transition-all relative z-10",
                                                                 chore.completed ? "text-gray-500 line-through" : "text-gray-800 dark:text-gray-100"
                                                             )}>
                                                                 {chore.title}
                                                             </span>
 
                                                             <div className={cn(
-                                                                "w-6 h-6 rounded-full border-[1.5px] flex items-center justify-center transition-all shrink-0 ml-3 shadow-inner relative z-10",
+                                                                "w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ml-4 shadow-inner relative z-10",
                                                                 chore.completed
                                                                     ? "bg-green-500 border-green-500 text-white scale-110"
                                                                     : "bg-white/50 border-gray-300 dark:border-gray-500 group-hover/btn:border-primary group-hover/btn:scale-110"
                                                             )}>
-                                                                {chore.completed && <Check size={14} strokeWidth={4} />}
+                                                                {chore.completed && <Check size={24} strokeWidth={4} />}
                                                             </div>
                                                         </button>
 
@@ -381,7 +382,7 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
                                                 ))}
                                                 {personChores.filter(c => c.time_of_day === time).length === 0 && (
                                                     <div className="text-center py-4 border-2 border-dashed border-black/5 dark:border-white/5 rounded-2xl">
-                                                        <p className="text-xs text-gray-400 italic">No chores</p>
+                                                        <p className="text-base text-gray-400 italic">No chores</p>
                                                     </div>
                                                 )}
                                             </div>

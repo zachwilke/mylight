@@ -1,28 +1,53 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { WeatherPage } from '../weather/WeatherPage';
 import { CalendarView } from '../calendar/CalendarView';
 import { ChoreChart } from '../chores/ChoreChart';
+import { KioskSidebar } from './KioskSidebar';
 
 export function Kiosk() {
+    const [activeTab, setActiveTab] = useState('chores');
+    const [isCollapsed, setIsCollapsed] = useState(() => {
+        const saved = localStorage.getItem('kiosk_sidebar_collapsed');
+        return saved ? JSON.parse(saved) : false;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('kiosk_sidebar_collapsed', JSON.stringify(isCollapsed));
+    }, [isCollapsed]);
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'weather':
+                return <WeatherPage kiosk={true} />;
+            case 'calendar':
+                return <CalendarView kiosk={true} />;
+            case 'chores':
+                return <ChoreChart kiosk={true} />;
+            default:
+                return <ChoreChart kiosk={true} />;
+        }
+    };
+
     return (
-        <div className="h-screen w-screen bg-gray-50 dark:bg-gray-950 flex flex-col p-4 gap-4 overflow-hidden">
-            {/* Top Row: Weather & Calendar */}
-            <div className="flex-1 flex gap-4 min-h-0">
-                {/* Weather: 30% width */}
-                <div className="w-[30%] bg-white dark:bg-gray-900 rounded-[2rem] shadow-sm overflow-hidden border border-gray-100 dark:border-gray-800">
-                    <WeatherPage kiosk={true} />
+        <div className="h-screen w-screen bg-gray-50 dark:bg-gray-950 flex overflow-hidden">
+            <KioskSidebar
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                isCollapsed={isCollapsed}
+                onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+            />
+
+            <main className="flex-1 relative overflow-hidden transition-all duration-300">
+                <div className="absolute inset-0 p-6">
+                    <div className="h-full w-full bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800 relative z-10">
+                        {renderContent()}
+                    </div>
                 </div>
 
-                {/* Calendar: 70% width */}
-                <div className="flex-1 bg-white dark:bg-gray-900 rounded-[2rem] shadow-sm overflow-hidden border border-gray-100 dark:border-gray-800">
-                    <CalendarView kiosk={true} />
-                </div>
-            </div>
-
-            {/* Bottom Row: Chores */}
-            <div className="h-[45%] bg-white dark:bg-gray-900 rounded-[2rem] shadow-sm overflow-hidden border border-gray-100 dark:border-gray-800">
-                <ChoreChart kiosk={true} />
-            </div>
+                {/* Background Decor */}
+                <div className="absolute -top-20 -right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+            </main>
         </div>
     );
 }

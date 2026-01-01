@@ -178,6 +178,7 @@ func initDB(path string) (*sql.DB, error) {
 		"ALTER TABLE family_members ADD COLUMN email TEXT;",
 		"ALTER TABLE family_members ADD COLUMN password_hash TEXT;",
 		"ALTER TABLE family_members ADD COLUMN role TEXT DEFAULT 'user';",
+		"ALTER TABLE family_members ADD COLUMN visible BOOLEAN DEFAULT 1;",
 	}
 	for _, m := range migrations {
 		db.Exec(m) // Ignore errors (like duplicate column)
