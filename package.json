@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"nodemon server/index.cjs\"",
+    "dev": "concurrently \"vite\" \"go run -C go-server .\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -16,24 +16,16 @@
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "concurrently": "^9.2.1",
-    "cors": "^2.8.5",
     "date-fns": "^4.1.0",
-    "express": "^5.2.1",
     "framer-motion": "^12.23.26",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.562.0",
-    "multer": "^2.0.2",
-    "node-cron": "^4.2.1",
-    "node-ical": "^0.22.1",
-    "nodemon": "^3.1.11",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-leaflet": "^5.0.0",
     "recharts": "^3.6.0",
     "rrule": "^2.8.1",
-    "sqlite3": "^5.1.7",
-    "tailwind-merge": "^3.4.0",
-    "twilio": "^5.11.1"
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

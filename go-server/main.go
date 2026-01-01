@@ -88,7 +88,66 @@ func initDB(path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return db, db.Ping()
+	if err := db.Ping(); err != nil {
+		return nil, err
+	}
+
+	// Initialize Schema
+	schema := `
+	CREATE TABLE IF NOT EXISTS family_members (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		color TEXT,
+		avatar TEXT,
+		stars INTEGER DEFAULT 0,
+		phone TEXT
+	);
+	CREATE TABLE IF NOT EXISTS chores (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT NOT NULL,
+		member_id INTEGER,
+		time_of_day TEXT,
+		completed BOOLEAN DEFAULT 0,
+		FOREIGN KEY(member_id) REFERENCES family_members(id)
+	);
+	CREATE TABLE IF NOT EXISTS chore_completions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		chore_id INTEGER,
+		member_id INTEGER,
+		completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(chore_id) REFERENCES chores(id),
+		FOREIGN KEY(member_id) REFERENCES family_members(id)
+	);
+	CREATE TABLE IF NOT EXISTS settings (
+		key TEXT PRIMARY KEY,
+		value TEXT
+	);
+	CREATE TABLE IF NOT EXISTS meals (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT,
+		date TEXT,
+		type TEXT,
+		color TEXT
+	);
+	CREATE TABLE IF NOT EXISTS events (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT,
+		start_date TEXT,
+		member_id INTEGER,
+		recurrence TEXT
+	);
+	CREATE TABLE IF NOT EXISTS calendar_subscriptions (
+		url TEXT PRIMARY KEY,
+		color TEXT
+	);
+	CREATE TABLE IF NOT EXISTS photos (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		url TEXT,
+		uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	`
+	_, err = db.Exec(schema)
+	return db, err
 }
 
 func (app *App) loadConfigAndSchedule() {

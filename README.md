@@ -16,8 +16,8 @@ MyLight is a modern, interactive family dashboard designed to organize your hous
 
 ## 🛠️ Tech Stack
 
--   **Frontend**: React, Vite, Tailwind CSS, Framer Motion, Lucide React
--   **Backend**: Node.js, Express
+-   **Frontend**: React (TypeScript), Vite, Tailwind CSS, Framer Motion, Lucide React
+-   **Backend**: Go
 -   **Database**: SQLite (local `mylight.db`)
 -   **File Storage**: Local filesystem (`uploads/` directory for avatars)
 
@@ -55,7 +55,7 @@ npm run dev
 ```
 
 -   **Frontend**: `http://localhost:5173`
--   **Backend**: `http://localhost:3000`
+-   **Backend**: `http://localhost:3000` (Go)
 
 The application should automatically open in your default browser.
 
@@ -71,7 +71,7 @@ To run the application in production mode:
 
 2.  **Start the Server**:
     ```bash
-    node server/index.cjs
+    go run ./go-server
     ```
     The server will serve the static files from `dist/` and handle API requests.
 
@@ -98,15 +98,15 @@ To access the application from other devices on your WiFi (like your phone or ta
 
 ```text
 mylight/
-├── server/
-│   ├── index.cjs       # Express server entry point
-│   ├── db.cjs          # SQLite database connection and schema
-│   └── uploads/        # Directory for uploaded user avatars
+├── go-server/
+│   ├── main.go         # Go server entry point
+│   ├── handlers.go     # API handlers
+│   └── models.go       # Data models
 ├── src/
-│   ├── components/     # Reusable UI components (Avatar, Layout, etc.)
-│   ├── features/       # Feature-specific code (Calendar, Chores, Meals, Settings)
-│   ├── App.jsx         # Main application component
-│   └── main.jsx        # React entry point
+│   ├── components/     # Reusable UI components (TSX)
+│   ├── features/       # Feature-specific code (TSX)
+│   ├── App.tsx         # Main application component
+│   └── main.tsx        # React entry point
 ├── mylight.db          # SQLite database file (created on first run)
 └── package.json        # Project dependencies and scripts
 ```

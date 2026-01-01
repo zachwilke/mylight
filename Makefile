@@ -1,4 +1,4 @@
 new:
 	git pull
 	npm run build
-	node server/index.cjs
+	go run -C go-server .
