@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Sun, Calendar, CheckCircle2, TrendingUp, Plus, ArrowRight } from 'lucide-react';
 import { getCachedWeather } from '../../utils/weather';
 import { Chore, FamilyMember } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 interface DashboardHomeProps {
     onNavigate: (tab: string) => void;
 }
 
 export function DashboardHome({ onNavigate }: DashboardHomeProps) {
+    const { user } = useAuth();
     const [greeting, setGreeting] = useState('');
     const [weather, setWeather] = useState<{ temp: number; label: string } | null>(null);
     const [stats, setStats] = useState({ choresPending: 0, choresDone: 0 });
@@ -34,7 +36,7 @@ export function DashboardHome({ onNavigate }: DashboardHomeProps) {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{greeting}, Admin</h1>
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{greeting}, {user?.name}!</h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">Here is what's happening in your household today.</p>
                 </div>
                 <div className="flex gap-3">

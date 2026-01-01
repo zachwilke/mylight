@@ -310,7 +310,7 @@ export function Settings() {
                 title="Delete Family Member"
                 message="Are you sure you want to delete this member? All their assigned chores and events will be deleted as well."
             />
-            <div className="max-w-4xl mx-auto space-y-8 pb-24">
+            <div className="max-w-full mx-auto space-y-8 pb-24">
 
                 {/* General Settings Section */}
                 <div className="space-y-4">

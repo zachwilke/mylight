@@ -3,10 +3,15 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -74,6 +79,11 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, members)
 
 	} else if r.Method == "POST" {
+		if strings.HasSuffix(r.URL.Path, "/avatar") {
+			app.handleAvatarUpload(w, r)
+			return
+		}
+
 		var body struct {
 			Name     string `json:"name"`
 			Email    string `json:"email"`
@@ -399,4 +409,56 @@ func (app *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 			"avatar": avatar.String,
 		},
 	})
+}
+
+// POST /api/family/:id/avatar
+func (app *App) handleAvatarUpload(w http.ResponseWriter, r *http.Request) {
+	// 1. Parse ID
+	parts := strings.Split(r.URL.Path, "/")
+	// Path: /api/family/{id}/avatar
+	if len(parts) < 5 {
+		jsonError(w, "Invalid path", 400)
+		return
+	}
+	idStr := parts[3]
+	id, _ := strconv.Atoi(idStr)
+
+	// 2. Parse File
+	r.ParseMultipartForm(10 << 20) // 10 MB
+	file, handler, err := r.FormFile("avatar")
+	if err != nil {
+		log.Printf("Error retrieving file: %v", err)
+		jsonError(w, "Error retrieving file", 400)
+		return
+	}
+	defer file.Close()
+
+	// 3. Save File
+	filename := fmt.Sprintf("avatar_%d_%d%s", id, time.Now().Unix(), filepath.Ext(handler.Filename))
+	dstPath := filepath.Join("../uploads", filename)
+
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		log.Printf("Error creating file: %v", err)
+		jsonError(w, "Error saving file", 500)
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		log.Printf("Error copying file: %v", err)
+		jsonError(w, "Error copying file", 500)
+		return
+	}
+
+	// 4. Update DB
+	avatarURL := fmt.Sprintf("/uploads/%s", filename)
+	_, err = app.DB.Exec("UPDATE family_members SET avatar = ? WHERE id = ?", avatarURL, id)
+	if err != nil {
+		log.Printf("Error updating db: %v", err)
+		jsonError(w, "Error updating db", 500)
+		return
+	}
+
+	jsonResponse(w, map[string]interface{}{"success": true, "avatar": avatarURL})
 }

@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '../../lib/utils';
-import { Calendar, CheckSquare, Settings, CloudSun, TrendingUp, LayoutDashboard, Search, Bell } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { Calendar, CheckSquare, Settings, CloudSun, TrendingUp, LayoutDashboard, Search, Bell, LogOut } from 'lucide-react';
+import { NotificationPopover } from '../Notifications/NotificationPopover';
 
 interface DesktopLayoutProps {
     children: React.ReactNode;
@@ -18,8 +20,19 @@ const NAV_ITEMS = [
 ];
 
 export function DesktopLayout({ children, activeTab, onTabChange }: DesktopLayoutProps) {
+    const { user, logout } = useAuth();
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
     return (
         <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-sm antialiased text-slate-900 dark:text-slate-100 selection:bg-blue-100 selection:text-blue-900">
+            {/* Backdrop for click-outside */}
+            {isNotificationsOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-transparent"
+                    onClick={() => setIsNotificationsOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
             <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col">
                 <div className="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-800/50">
@@ -51,13 +64,22 @@ export function DesktopLayout({ children, activeTab, onTabChange }: DesktopLayou
                 </nav>
 
                 <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500" />
-                        <div className="flex flex-col">
-                            <span className="text-xs font-semibold">Admin User</span>
-                            <span className="text-[10px] text-slate-500">Online</span>
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${user?.color ? `bg-${user.color.replace('step-', '')}-500` : 'bg-blue-500'}`}>
+                            {user?.avatar ? <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" /> : user?.name?.[0]}
+                        </div>
+                        <div className="flex flex-col overflow-hidden">
+                            <span className="text-xs font-semibold truncate">{user?.name}</span>
+                            <span className="text-[10px] text-slate-500 truncate">{user?.email}</span>
                         </div>
                     </div>
+                    <button
+                        onClick={logout}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors text-xs font-medium"
+                    >
+                        <LogOut size={14} />
+                        Sign Out
+                    </button>
                 </div>
             </aside>
 
@@ -73,17 +95,25 @@ export function DesktopLayout({ children, activeTab, onTabChange }: DesktopLayou
                             className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-slate-400"
                         />
                     </div>
-                    <div className="flex items-center gap-4">
-                        <button className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors relative">
+                    <div className="flex items-center gap-4 relative">
+                        <button
+                            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                            className={`p-2 rounded-full transition-colors relative z-50 ${isNotificationsOpen ? 'bg-slate-100 dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                        >
                             <Bell size={20} />
                             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900" />
                         </button>
+
+                        <NotificationPopover
+                            isOpen={isNotificationsOpen}
+                            onClose={() => setIsNotificationsOpen(false)}
+                        />
                     </div>
                 </header>
 
                 {/* Page Content */}
                 <main className="flex-1 overflow-auto p-6 md:p-8">
-                    <div className="max-w-7xl mx-auto h-full">
+                    <div className={`mx-auto h-full ${activeTab === 'calendar' ? 'max-w-full' : 'max-w-7xl'}`}>
                         {children}
                     </div>
                 </main>
