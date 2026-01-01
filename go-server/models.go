@@ -57,14 +57,17 @@ type Meal struct {
 }
 
 type Event struct {
-	ID         interface{} `json:"id"` // Can be int or string (external)
-	Title      string      `json:"title"`
-	StartDate  string      `json:"start_date"`
-	EndDate    *string     `json:"end_date"`
-	MemberID   *int        `json:"member_id"`
-	Recurrence *string     `json:"recurrence"`
-	Color      string      `json:"color,omitempty"`
-	IsExternal bool        `json:"is_external,omitempty"`
+	ID          interface{} `json:"id"` // Can be int or string (external)
+	Title       string      `json:"title"`
+	StartDate   string      `json:"start_date"`
+	EndDate     *string     `json:"end_date"`
+	MemberID    *int        `json:"member_id"`
+	Recurrence  *string     `json:"recurrence"`
+	Color       string      `json:"color,omitempty"`
+	IsExternal  bool        `json:"is_external,omitempty"`
+	Description string      `json:"description,omitempty"`
+	Location    string      `json:"location,omitempty"`
+	IsAllDay    bool        `json:"is_all_day"`
 }
 
 type List struct {

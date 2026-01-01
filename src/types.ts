@@ -34,6 +34,9 @@ export interface Event {
     rrule?: string;
     is_external?: boolean;
     color?: string;
+    description?: string;
+    location?: string;
+    is_all_day?: boolean;
 }
 
 export interface Photo {

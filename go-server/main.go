@@ -66,6 +66,8 @@ func main() {
 	mux.HandleFunc("/api/settings", app.handleSettings)
 	mux.HandleFunc("/api/chores", app.handleChores)
 	mux.HandleFunc("/api/chores/reset", app.handleChoreReset)
+	mux.HandleFunc("/api/history", app.handleHistory)
+	mux.HandleFunc("/api/login", app.handleLogin)
 
 	// CORS
 	c := cors.New(cors.Options{
@@ -100,7 +102,10 @@ func initDB(path string) (*sql.DB, error) {
 		color TEXT,
 		avatar TEXT,
 		stars INTEGER DEFAULT 0,
-		phone TEXT
+		phone TEXT,
+		email TEXT UNIQUE,
+		password_hash TEXT,
+		role TEXT DEFAULT 'user'
 	);
 	CREATE TABLE IF NOT EXISTS chores (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,7 +152,26 @@ func initDB(path string) (*sql.DB, error) {
 	);
 	`
 	_, err = db.Exec(schema)
-	return db, err
+	if err != nil {
+		return nil, err
+	}
+
+	// Migrations for new Event fields (simplistic approach: try add, ignore error)
+	migrations := []string{
+		"ALTER TABLE events ADD COLUMN end_date TEXT;",
+		"ALTER TABLE events ADD COLUMN description TEXT;",
+		"ALTER TABLE events ADD COLUMN location TEXT;",
+		"ALTER TABLE events ADD COLUMN is_all_day BOOLEAN DEFAULT 0;",
+		// Auth migrations
+		"ALTER TABLE family_members ADD COLUMN email TEXT;",
+		"ALTER TABLE family_members ADD COLUMN password_hash TEXT;",
+		"ALTER TABLE family_members ADD COLUMN role TEXT DEFAULT 'user';",
+	}
+	for _, m := range migrations {
+		db.Exec(m) // Ignore errors (like duplicate column)
+	}
+
+	return db, nil
 }
 
 func (app *App) loadConfigAndSchedule() {

@@ -1,24 +1,40 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout/Layout';
+import { DesktopLayout } from './components/Layout/DesktopLayout';
 import { CalendarView } from './features/calendar/CalendarView';
 import { ChoreChart } from './features/chores/ChoreChart';
 import { Settings } from './features/settings/Settings';
 import { WeatherPage } from './features/weather/WeatherPage';
+import { DashboardHome } from './features/dashboard/DashboardHome';
+import { Kiosk } from './features/kiosk/Kiosk';
 import Screensaver from './features/screensaver/Screensaver';
 import { useTheme } from './hooks/useTheme';
-import { Kiosk } from './features/kiosk/Kiosk';
 import { HistoryPage } from './features/history/HistoryPage';
 
 function App() {
   const [theme] = useTheme();
-  const [activeTab, setActiveTab] = useState('chores');
+  // Default to dashboard for desktop, chores for kiosk (handled below)
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [isIdle, setIsIdle] = useState(false);
   const [timeoutMinutes, setTimeoutMinutes] = useState(1);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const IDLE_TIMEOUT = timeoutMinutes * 60 * 1000;
   const lastManualTriggerRef = useRef(0);
 
+  // Determine mode based on URL
+  const isKiosk = window.location.pathname === '/kiosk';
+
+  // Set initial tab based on mode (if it's the first render)
+  useEffect(() => {
+    if (isKiosk && (activeTab === 'dashboard' || activeTab === 'settings')) {
+      setActiveTab('chores');
+    }
+  }, [isKiosk]);
+
   const resetIdleTimer = () => {
+    // Only run idle timer in Kiosk mode
+    if (!isKiosk) return;
+
     // If we just manually triggered, ignore reset for 1 second to avoid immediate closure from the click/move
     if (Date.now() - lastManualTriggerRef.current < 1000) return;
 
@@ -30,6 +46,8 @@ function App() {
   };
 
   useEffect(() => {
+    if (!isKiosk) return;
+
     // Initial timer
     resetIdleTimer();
 
@@ -64,10 +82,28 @@ function App() {
       window.removeEventListener('trigger-screensaver', manualTriggerHandler);
       window.removeEventListener('update-timeout', updateTimeoutHandler);
     };
-  }, [isIdle, timeoutMinutes]);
+  }, [isIdle, timeoutMinutes, isKiosk]);
 
-  // Simple routing for Kiosk
-  if (window.location.pathname === '/kiosk') {
+  // Adjust active tab if settings is hidden and we are on it (fallback)
+  useEffect(() => {
+    if (isKiosk && activeTab === 'settings') {
+      setActiveTab('chores');
+    }
+  }, [isKiosk, activeTab]);
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard': return <DashboardHome onNavigate={setActiveTab} />;
+      case 'calendar': return <CalendarView />;
+      case 'chores': return <ChoreChart />;
+      case 'history': return <HistoryPage />;
+      case 'weather': return <WeatherPage />;
+      case 'settings': return <Settings />;
+      default: return <DashboardHome onNavigate={setActiveTab} />;
+    }
+  };
+
+  if (isKiosk) {
     return (
       <>
         {isIdle && <Screensaver onInteraction={resetIdleTimer} />}
@@ -76,22 +112,11 @@ function App() {
     );
   }
 
+  // Desktop Admin View
   return (
-    <>
-      {isIdle && <Screensaver onInteraction={resetIdleTimer} />}
-      <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-        <div className="h-full w-full">
-          {/* Main Content Area */}
-          {activeTab === 'calendar' && <CalendarView />}
-
-          {activeTab === 'chores' && <ChoreChart />}
-          {activeTab === 'history' && <HistoryPage />}
-
-          {activeTab === 'weather' && <WeatherPage />}
-          {activeTab === 'settings' && <Settings />}
-        </div>
-      </Layout>
-    </>
+    <DesktopLayout activeTab={activeTab} onTabChange={setActiveTab}>
+      {renderContent()}
+    </DesktopLayout>
   );
 }
 

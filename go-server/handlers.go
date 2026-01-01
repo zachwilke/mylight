@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // -- Helpers --
@@ -24,6 +26,7 @@ func jsonError(w http.ResponseWriter, err string, code int) {
 // -- Handlers --
 
 // GET /api/family
+// GET/POST/PUT /api/family
 func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "GET" {
@@ -41,8 +44,8 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 			var color sql.NullString
 			var avatar sql.NullString
 			var stars int
-			var phone sql.NullString
-			if err := rows.Scan(&id, &name, &color, &avatar, &stars, &phone); err != nil {
+			var phone, email, passHash, role sql.NullString
+			if err := rows.Scan(&id, &name, &color, &avatar, &stars, &phone, &email, &passHash, &role); err != nil {
 				continue
 			}
 			members = append(members, map[string]interface{}{
@@ -52,9 +55,44 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 				"avatar": avatar.String,
 				"stars":  stars,
 				"phone":  phone.String,
+				"email":  email.String,
+				"role":   role.String,
+				// never return password_hash
 			})
 		}
 		jsonResponse(w, members)
+	} else if r.Method == "POST" {
+		// Import bcrypt at top of file, or assume it's implicit? No must add generic import or update file imports.
+		// For replace_file_content I need to be careful with imports.
+		// Let's assume I will update imports in a separate call or rely on Go auto-imports if I had an LSP (I don't).
+		// I will just write the body here and then I'll fix imports.
+
+		var body struct {
+			Name     string `json:"name"`
+			Email    string `json:"email"`
+			Password string `json:"password"`
+			Role     string `json:"role"`
+			Color    string `json:"color"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			jsonError(w, err.Error(), 400)
+			return
+		}
+
+		hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
+		if err != nil {
+			jsonError(w, "Error hashing password", 500)
+			return
+		}
+
+		res, err := app.DB.Exec("INSERT INTO family_members (name, email, password_hash, role, color, stars) VALUES (?, ?, ?, ?, ?, 0)",
+			body.Name, body.Email, string(hash), body.Role, body.Color)
+		if err != nil {
+			jsonError(w, err.Error(), 500)
+			return
+		}
+		id, _ := res.LastInsertId()
+		jsonResponse(w, map[string]interface{}{"success": true, "id": id})
 	}
 }
 

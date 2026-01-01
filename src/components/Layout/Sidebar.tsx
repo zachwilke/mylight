@@ -10,7 +10,9 @@ const NAV_ITEMS = [
     { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
-export function Sidebar({ activeTab, onTabChange }) {
+export function Sidebar({ activeTab, onTabChange, showSettings = true }) {
+    const visibleItems = showSettings ? NAV_ITEMS : NAV_ITEMS.filter(item => item.id !== 'settings');
+
     return (
         <aside className="hidden md:flex w-24 lg:w-72 bg-transparent flex-col items-center lg:items-stretch py-8 h-full z-20 transition-all duration-300">
             <div className="mb-10 px-6 flex justify-center lg:justify-start items-center">
@@ -24,7 +26,7 @@ export function Sidebar({ activeTab, onTabChange }) {
             </div>
 
             <nav className="flex-1 w-full px-4 space-y-3">
-                {NAV_ITEMS.map((item) => {
+                {visibleItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
 

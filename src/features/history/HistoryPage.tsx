@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
-import { Calendar, TrendingUp, Award, Clock } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, Award, Calendar } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { FamilyMember } from '../../types';
 
 interface HistoryRow {
     date: string;
@@ -14,11 +15,16 @@ interface ChartDataPoint {
     [key: string]: string | number;
 }
 
+const COLORS = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#6366f1'];
+
 export function HistoryPage() {
     const [period, setPeriod] = useState('week'); // 'week', 'month', 'year'
     const [data, setData] = useState<ChartDataPoint[]>([]);
+    const [pieData, setPieData] = useState<{ name: string; value: number }[]>([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<Record<string, number>>({});
+    const [members, setMembers] = useState<string[]>([]);
+    const [totalChores, setTotalChores] = useState(0);
 
     const fetchHistory = async () => {
         setLoading(true);
@@ -26,26 +32,36 @@ export function HistoryPage() {
             const res = await fetch(`/api/history?period=${period}`);
             const rawData: HistoryRow[] = await res.json();
 
-            // Process data for Recharts
-            // Data format: { date: '2023-10-01', 'Max': 2, 'Mia': 1 }
+            // Process Data
             const chartDataObj: Record<string, ChartDataPoint> = {};
             const memberStats: Record<string, number> = {};
+            const uniqueMembers = new Set<string>();
+            let globalTotal = 0;
 
             rawData.forEach(row => {
-                if (!chartDataObj[row.date]) {
-                    chartDataObj[row.date] = { date: row.date };
+                const d = row.date;
+                if (!chartDataObj[d]) {
+                    chartDataObj[d] = { date: d };
                 }
-                chartDataObj[row.date][row.member_name] = row.count;
+                chartDataObj[d][row.member_name] = row.count;
 
-                if (!memberStats[row.member_name]) {
-                    memberStats[row.member_name] = 0;
-                }
-                memberStats[row.member_name] += row.count;
+                memberStats[row.member_name] = (memberStats[row.member_name] || 0) + row.count;
+                uniqueMembers.add(row.member_name);
+                globalTotal += row.count;
             });
 
+            // Sort by date
             const chartData = Object.values(chartDataObj).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+            // Pie Data
+            const pie = Object.entries(memberStats).map(([name, value]) => ({ name, value }));
+
             setData(chartData);
             setStats(memberStats);
+            setMembers(Array.from(uniqueMembers));
+            setPieData(pie);
+            setTotalChores(globalTotal);
+
         } catch (err) {
             console.error("Failed to fetch history", err);
         } finally {
@@ -57,27 +73,24 @@ export function HistoryPage() {
         fetchHistory();
     }, [period]);
 
-    const colors = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
-    const members = Object.keys(stats);
-
     return (
-        <div className="h-full flex flex-col p-6 overflow-y-auto custom-scrollbar">
-            <div className="flex items-center justify-between mb-8">
+        <div className="h-full flex flex-col p-6 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-950">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Efficiency History</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Track chore completion and star progress</p>
+                    <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Performance History</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">Visualize household efficiency and individual contributions.</p>
                 </div>
 
-                <div className="flex bg-white/40 dark:bg-black/20 backdrop-blur-md p-1 rounded-2xl border border-white/40 dark:border-white/5 shadow-sm">
+                <div className="flex bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm self-start md:self-auto">
                     {['week', 'month', 'year'].map((p) => (
                         <button
                             key={p}
                             onClick={() => setPeriod(p)}
                             className={cn(
-                                "px-6 py-2 rounded-xl text-sm font-bold transition-all capitalize",
+                                "px-5 py-2 rounded-lg text-sm font-semibold transition-all capitalize",
                                 period === p
-                                    ? "bg-white dark:bg-white/10 text-primary shadow-sm ring-1 ring-black/5"
-                                    : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                                    ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm"
+                                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                             )}
                         >
                             {p}
@@ -86,97 +99,157 @@ export function HistoryPage() {
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {members.length > 0 ? members.map((name, idx) => (
-                    <div key={name} className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl p-6 rounded-[2rem] border border-white/50 dark:border-white/10 shadow-lg shadow-black/5">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${colors[idx % colors.length]}20`, color: colors[idx % colors.length] }}>
-                                <Award size={20} />
+            {/* Top Stats Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Leaderboard Donut */}
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Contribution Split</h3>
+                    <div className="flex-1 min-h-[200px] relative">
+                        {loading ? (
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-400">Loading...</div>
+                        ) : totalChores > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={pieData}
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {pieData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                    />
+                                    <Legend verticalAlign="bottom" height={36} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">No data for this period</div>
+                        )}
+                        {/* Center Text */}
+                        {totalChores > 0 && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
+                                <span className="text-3xl font-bold text-slate-900 dark:text-white">{totalChores}</span>
+                                <span className="text-xs font-medium text-slate-500 uppercase">Total</span>
                             </div>
-                            <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Total Done</span>
-                        </div>
-                        <h4 className="text-2xl font-bold text-gray-900 dark:text-white">{name}</h4>
-                        <div className="mt-2 flex items-baseline gap-2">
-                            <span className="text-4xl font-black text-primary drop-shadow-sm">{stats[name]}</span>
-                            <span className="text-sm font-medium text-gray-500">chores</span>
-                        </div>
+                        )}
                     </div>
-                )) : (
-                    <div className="col-span-full py-12 text-center bg-white/20 dark:bg-black/10 rounded-[2rem] border-2 border-dashed border-black/5 dark:border-white/5">
-                        <TrendingUp size={48} className="mx-auto text-gray-300 mb-4" />
-                        <p className="text-gray-500 italic">No history data yet. Start doing some chores!</p>
-                    </div>
-                )}
-            </div>
-
-            {/* Chart */}
-            <div className="flex-1 bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl p-8 rounded-[2rem] border border-white/50 dark:border-white/10 shadow-lg shadow-black/5 min-h-[400px]">
-                <div className="flex items-center gap-3 mb-8">
-                    <div className="p-2 bg-primary/10 rounded-xl text-primary">
-                        <TrendingUp size={24} />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Activity Overview</h3>
                 </div>
 
-                <div className="h-[350px] w-full">
+                {/* Leaderboard List */}
+                <div className="lg:col-span-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                    <div className="relative z-10 h-full flex flex-col">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                                <Award size={24} className="text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold">Top Performers</h3>
+                                <p className="text-indigo-100 text-sm">Most completed chores this {period}</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {members.sort((a, b) => stats[b] - stats[a]).slice(0, 3).map((name, idx) => (
+                                <div key={name} className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10 flex flex-col justify-between">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <span className={cn(
+                                            "text-xs font-bold px-2 py-1 rounded-full",
+                                            idx === 0 ? "bg-yellow-400 text-yellow-900" :
+                                                idx === 1 ? "bg-slate-300 text-slate-900" :
+                                                    "bg-orange-300 text-orange-900"
+                                        )}>
+                                            #{idx + 1}
+                                        </span>
+                                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+                                            {name[0]}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-lg font-bold truncate">{name}</h4>
+                                        <p className="text-indigo-100 text-sm">{stats[name]} chores</p>
+                                    </div>
+                                </div>
+                            ))}
+                            {members.length === 0 && (
+                                <div className="col-span-full flex items-center justify-center h-32 text-indigo-100 italic">No activity yet</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Chart */}
+            <div className="flex-1 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm min-h-[400px] flex flex-col">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400">
+                        <TrendingUp size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Activity Timeline</h3>
+                        <p className="text-slate-500 text-sm">Daily completion breakdown</p>
+                    </div>
+                </div>
+
+                <div className="flex-1 w-full min-h-[300px]">
                     {loading ? (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">Loading charts...</div>
+                        <div className="w-full h-full flex items-center justify-center text-slate-400">Loading chart...</div>
                     ) : data.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={data}>
-                                <defs>
-                                    {members.map((name, idx) => (
-                                        <linearGradient key={`grad-${name}`} id={`color-${name}`} x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor={colors[idx % colors.length]} stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor={colors[idx % colors.length]} stopOpacity={0} />
-                                        </linearGradient>
-                                    ))}
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                            <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                 <XAxis
                                     dataKey="date"
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fill: '#9ca3af', fontSize: 12 }}
+                                    tick={{ fill: '#64748b', fontSize: 12 }}
                                     dy={10}
                                     tickFormatter={(val) => {
                                         const d = new Date(val);
                                         return period === 'year'
                                             ? d.toLocaleDateString(undefined, { month: 'short' })
-                                            : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                                            : d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
                                     }}
                                 />
                                 <YAxis
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fill: '#9ca3af', fontSize: 12 }}
+                                    tick={{ fill: '#64748b', fontSize: 12 }}
                                 />
                                 <Tooltip
+                                    cursor={{ fill: 'rgba(0,0,0,0.02)' }}
                                     contentStyle={{
-                                        backgroundColor: 'rgba(255,255,255,0.8)',
-                                        backdropFilter: 'blur(10px)',
-                                        border: 'none',
-                                        borderRadius: '16px',
-                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                                        backgroundColor: '#fff',
+                                        borderRadius: '12px',
+                                        border: '1px solid #e2e8f0',
+                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                        fontSize: '14px'
                                     }}
+                                    className="dark:bg-slate-800 dark:border-slate-700"
                                 />
-                                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                                <Legend wrapperStyle={{ paddingTop: '20px' }} />
                                 {members.map((name, idx) => (
-                                    <Area
+                                    <Bar
                                         key={name}
-                                        type="monotone"
                                         dataKey={name}
-                                        stroke={colors[idx % colors.length]}
-                                        strokeWidth={3}
-                                        fillOpacity={1}
-                                        fill={`url(#color-${name})`}
+                                        stackId="a"
+                                        fill={COLORS[idx % COLORS.length]}
+                                        radius={[4, 4, 0, 0]} // only top radius for stacked looks weird in middle, but Recharts handles it?
+                                    // Actually for stacked bars, usually only top-most gets radius. Recharts doesn't easy support conditional radius in stack.
+                                    // Let's remove radius for stack.
                                     />
                                 ))}
-                            </AreaChart>
+                            </BarChart>
                         </ResponsiveContainer>
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 italic">Not enough data to display graph</div>
+                        <div className="w-full h-full flex items-center justify-center text-slate-400 italic">
+                            No data available for this period
+                        </div>
                     )}
                 </div>
             </div>

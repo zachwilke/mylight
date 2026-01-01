@@ -27,6 +27,20 @@
       /* Base scale up */
     }
   }
+
+  @keyframes celebration-flash {
+    0% { background-color: rgba(255, 0, 0, 0.3); }
+    20% { background-color: rgba(255, 255, 0, 0.3); }
+    40% { background-color: rgba(0, 255, 0, 0.3); }
+    60% { background-color: rgba(0, 255, 255, 0.3); }
+    80% { background-color: rgba(0, 0, 255, 0.3); }
+    100% { background-color: rgba(255, 0, 255, 0.3); }
+  }
+
+  .celebration-overlay {
+    animation: celebration-flash 0.5s infinite;
+    @apply fixed inset-0 pointer-events-none z-[100];
+  }
 }
 
 @layer utilities {

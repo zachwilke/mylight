@@ -9,10 +9,12 @@ const NAV_ITEMS = [
     { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
-export function MobileNav({ activeTab, onTabChange }) {
+export function MobileNav({ activeTab, onTabChange, showSettings = true }) {
+    const visibleItems = showSettings ? NAV_ITEMS : NAV_ITEMS.filter(item => item.id !== 'settings');
+
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 px-2 py-2 pb-safe flex justify-between items-center z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-            {NAV_ITEMS.map((item) => {
+            {visibleItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
 

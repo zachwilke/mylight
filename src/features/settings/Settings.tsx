@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Save, Upload, MapPin, Edit2, X, Check, Moon, Sun, Monitor, Clock, Lock } from 'lucide-react';
+import { Plus, Trash2, Save, Upload, MapPin, Edit2, Moon, Sun, Monitor, Clock, Lock, Sparkles, Zap } from 'lucide-react';
 import { UserAvatar } from '../../components/UserAvatar';
 import { CalendarSettings } from './CalendarSettings';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -25,6 +25,8 @@ export function Settings() {
     const [longitude, setLongitude] = useState('');
     const [choreResetTime, setChoreResetTime] = useState('00:00');
     const [editCode, setEditCode] = useState('');
+    const [enableConfetti, setEnableConfetti] = useState(true);
+    const [enableMajorCelebration, setEnableMajorCelebration] = useState(true);
 
     const [members, setMembers] = useState<FamilyMember[]>([]);
     const [screensaverTimeout, setScreensaverTimeout] = useState<number | string>(1);
@@ -32,6 +34,8 @@ export function Settings() {
 
     // Add Member State
     const [newMemberName, setNewMemberName] = useState('');
+    const [newMemberEmail, setNewMemberEmail] = useState('');
+    const [newMemberPassword, setNewMemberPassword] = useState('');
     const [newMemberPhone, setNewMemberPhone] = useState('');
     const [selectedColor, setSelectedColor] = useState(COLORS[0].value);
 
@@ -40,6 +44,8 @@ export function Settings() {
 
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+
+    const [webhookUrl, setWebhookUrl] = useState('');
 
     // Fetch initial data
     useEffect(() => {
@@ -69,6 +75,12 @@ export function Settings() {
             if (settingsData.edit_code) {
                 setEditCode(settingsData.edit_code);
             }
+            if (settingsData.enable_confetti !== undefined) {
+                setEnableConfetti(settingsData.enable_confetti === 'true');
+            }
+            if (settingsData.enable_major_celebration !== undefined) {
+                setEnableMajorCelebration(settingsData.enable_major_celebration === 'true');
+            }
 
             setMembers(familyData);
             setLoading(false);
@@ -88,14 +100,6 @@ export function Settings() {
         }
     };
 
-    const [webhookUrl, setWebhookUrl] = useState('');
-
-    useEffect(() => {
-        if (!loading) {
-            // Already fetched settings in initial effect.
-            // But I didn't save it to state. I should update the initial fetch to set this.
-        }
-    }, [loading]);
 
     const saveWebhookUrl = async () => {
         if (!webhookUrl) return;
@@ -163,6 +167,26 @@ export function Settings() {
         }
     };
 
+    const saveAnimations = async () => {
+        try {
+            await Promise.all([
+                fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'enable_confetti', value: enableConfetti.toString() })
+                }),
+                fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'enable_major_celebration', value: enableMajorCelebration.toString() })
+                })
+            ]);
+            alert("Animation Settings Saved!");
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
 
 
     const saveScreensaverTimeout = async () => {
@@ -187,17 +211,25 @@ export function Settings() {
 
     const addMember = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMemberName.trim()) return;
+        if (!newMemberName.trim() || !newMemberPassword.trim()) return;
 
         try {
             const res = await fetch('/api/family', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newMemberName, phone: newMemberPhone, color: selectedColor })
+                body: JSON.stringify({
+                    name: newMemberName,
+                    phone: newMemberPhone,
+                    email: newMemberEmail,
+                    password: newMemberPassword,
+                    color: selectedColor
+                })
             });
             const newMember = await res.json();
             setMembers([...members, newMember]);
             setNewMemberName('');
+            setNewMemberEmail('');
+            setNewMemberPassword('');
             setNewMemberPhone('');
             setSelectedColor(COLORS[0].value);
         } catch (err) {
@@ -270,7 +302,7 @@ export function Settings() {
     if (loading) return <div className="p-8">Loading settings...</div>;
 
     return (
-        <div className="h-full overflow-y-auto bg-gray-50/50 dark:bg-black/20 custom-scrollbar">
+        <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950 custom-scrollbar p-6">
             <ConfirmDialog
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
@@ -278,353 +310,442 @@ export function Settings() {
                 title="Delete Family Member"
                 message="Are you sure you want to delete this member? All their assigned chores and events will be deleted as well."
             />
-            <div className="max-w-4xl mx-auto p-6 md:p-10 space-y-10 md:space-y-14 pb-24">
-                <div className="space-y-8">
-                    <div className="pl-1">
-                        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">General Settings</h2>
-                        <p className="text-base text-gray-500 dark:text-gray-400">Update your family's profile and preferences.</p>
+            <div className="max-w-4xl mx-auto space-y-8 pb-24">
+
+                {/* General Settings Section */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight">General Settings</h2>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Update your family's profile and preferences.</p>
+                        </div>
                     </div>
 
-                    <div className="bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-8">
-                        <div>
-                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-3 ml-1">Family Name</label>
-                            <div className="flex gap-4">
-                                <input
-                                    type="text"
-                                    value={familyName}
-                                    onChange={(e) => setFamilyName(e.target.value)}
-                                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-gray-400"
-                                    placeholder="e.g. The Miller Family"
-                                />
-                                <button
-                                    onClick={saveFamilyName}
-                                    className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-3 shadow-lg shadow-primary/20"
-                                >
-                                    <Save size={22} />
-                                    Save
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-3 ml-1">Display Theme</label>
-                            <div className="flex gap-4">
-                                {[
-                                    { id: 'light', label: 'Light', icon: Sun },
-                                    { id: 'dark', label: 'Dark', icon: Moon },
-                                    { id: 'system', label: 'System', icon: Monitor },
-                                ].map((option) => (
+                    <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 space-y-6 shadow-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Family Name</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={familyName}
+                                        onChange={(e) => setFamilyName(e.target.value)}
+                                        className="flex-1 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                                        placeholder="e.g. The Miller Family"
+                                    />
                                     <button
-                                        key={option.id}
-                                        onClick={() => setTheme(option.id)}
-                                        className={`flex-1 flex items-center justify-center gap-3 px-6 py-5 rounded-2xl border-2 transition-all active:scale-95 ${theme === option.id
-                                            ? 'bg-primary/10 border-primary text-primary'
-                                            : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'
-                                            }`}
+                                        onClick={saveFamilyName}
+                                        className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
                                     >
-                                        <option.icon size={24} className={theme === option.id ? "fill-current" : ""} />
-                                        <span className="font-bold text-lg">{option.label}</span>
+                                        <Save size={16} />
+                                        Save
                                     </button>
-                                ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Display Theme</label>
+                                <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-md">
+                                    {[
+                                        { id: 'light', label: 'Light', icon: Sun },
+                                        { id: 'dark', label: 'Dark', icon: Moon },
+                                        { id: 'system', label: 'System', icon: Monitor },
+                                    ].map((option) => (
+                                        <button
+                                            key={option.id}
+                                            onClick={() => setTheme(option.id)}
+                                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-all ${theme === option.id
+                                                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                                                }`}
+                                        >
+                                            <option.icon size={16} />
+                                            {option.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-3 ml-1">Weather Location (Coordinates)</label>
-                            <div className="flex gap-4">
-                                <div className="flex-1 flex gap-4">
+                        <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Weather Location (Coordinates)</label>
+                            <div className="flex gap-2">
+                                <div className="flex-1 flex gap-2">
                                     <div className="flex-1 relative">
-                                        <MapPin size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input
                                             type="text"
                                             inputMode="decimal"
                                             value={latitude}
                                             onChange={(e) => setLatitude(e.target.value)}
-                                            className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-gray-400"
-                                            placeholder="Lat"
+                                            className="w-full pl-9 pr-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                                            placeholder="Latitude"
                                         />
                                     </div>
                                     <div className="flex-1 relative">
-                                        <MapPin size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input
                                             type="text"
                                             inputMode="decimal"
                                             value={longitude}
                                             onChange={(e) => setLongitude(e.target.value)}
-                                            className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-gray-400"
-                                            placeholder="Lng"
+                                            className="w-full pl-9 pr-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                                            placeholder="Longitude"
                                         />
                                     </div>
                                 </div>
                                 <button
                                     onClick={saveLocation}
-                                    className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-3 shadow-lg shadow-primary/20"
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
                                 >
-                                    <Save size={22} />
+                                    <Save size={16} />
                                     Save
                                 </button>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-8">
-                        <div>
-                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-2 ml-1">Chore Reset Time</label>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-1">Set the time when chores automatically reset.</p>
-                            <div className="flex flex-col md:flex-row gap-4">
-                                <div className="flex-1 relative">
-                                    <Clock size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        type="time"
-                                        value={choreResetTime}
-                                        onChange={(e) => setChoreResetTime(e.target.value)}
-                                        className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                    />
-                                </div>
-                                <div className="flex gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 dark:border-slate-800 pt-6">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Chore Reset Time</label>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="time"
+                                            value={choreResetTime}
+                                            onChange={(e) => setChoreResetTime(e.target.value)}
+                                            className="w-full pl-9 pr-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                        />
+                                    </div>
                                     <button
                                         onClick={saveChoreResetTime}
-                                        className="flex-1 md:flex-none bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-primary/20"
+                                        className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-md font-medium text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                                     >
-                                        <Save size={22} />
-                                        Save
+                                        <Save size={16} />
                                     </button>
                                     <button
                                         onClick={manualResetChores}
-                                        className="flex-1 md:flex-none bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-red-500/10"
+                                        className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2 rounded-md font-medium text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                                        title="Reset All Chores Now"
                                     >
-                                        <Trash2 size={22} />
-                                        Reset Now
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Edit Passcode</label>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={editCode}
+                                            onChange={(e) => setEditCode(e.target.value)}
+                                            className="w-full pl-9 pr-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder:text-slate-400"
+                                            placeholder="e.g. 1234"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={saveEditCode}
+                                        className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                    >
+                                        <Save size={16} />
+                                        Save
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div className="bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-8">
-                        <div>
-                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-2 ml-1">Edit Passcode</label>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-1">Set a code to protect editing chores (leave empty for no protection).</p>
-                            <div className="flex gap-4">
-                                <div className="flex-1 relative">
-                                    <Lock size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        value={editCode}
-                                        onChange={(e) => setEditCode(e.target.value)}
-                                        className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-gray-400"
-                                        placeholder="e.g. 1234"
-                                    />
+                {/* Animations Section */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight">Animations</h2>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
+                        <div className="flex items-center justify-between py-2">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md text-blue-600 dark:text-blue-400">
+                                    <Sparkles size={18} />
                                 </div>
-                                <button
-                                    onClick={saveEditCode}
-                                    className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-3 shadow-lg shadow-primary/20"
-                                >
-                                    <Save size={22} />
-                                    Save
-                                </button>
+                                <div>
+                                    <p className="text-sm font-medium text-slate-900 dark:text-white">Confetti on Checkoff</p>
+                                    <p className="text-xs text-slate-500">Play small confetti effect when completing a task.</p>
+                                </div>
                             </div>
+                            <button
+                                onClick={() => setEnableConfetti(!enableConfetti)}
+                                className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${enableConfetti ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}`}
+                            >
+                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${enableConfetti ? 'left-6' : 'left-1'}`} />
+                            </button>
+                        </div>
+                        <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
+                        <div className="flex items-center justify-between py-2">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-md text-purple-600 dark:text-purple-400">
+                                    <Zap size={18} />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-slate-900 dark:text-white">Major Celebration</p>
+                                    <p className="text-xs text-slate-500">Fireworks and light show when all chores are done.</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setEnableMajorCelebration(!enableMajorCelebration)}
+                                className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${enableMajorCelebration ? 'bg-purple-600' : 'bg-slate-200 dark:bg-slate-700'}`}
+                            >
+                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${enableMajorCelebration ? 'left-6' : 'left-1'}`} />
+                            </button>
+                        </div>
+                        <div className="pt-4 flex justify-end border-t border-slate-100 dark:border-slate-800">
+                            <button
+                                onClick={saveAnimations}
+                                className="bg-slate-900 dark:bg-slate-700 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-slate-800 transition-colors flex items-center gap-2"
+                            >
+                                <Save size={16} />
+                                Save Preferences
+                            </button>
                         </div>
                     </div>
+                </div>
 
-                    <div className="bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-8">
-                        <div>
-                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-3 ml-1">Screensaver Settings</label>
-                            <div className="flex flex-col md:flex-row gap-4">
-                                <div className="flex-1 flex gap-4">
+                {/* Screensaver & Integrations */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight">Screensaver</h2>
+                        <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm h-full">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Idle Timeout (Minutes)</label>
+                                <div className="flex gap-2">
                                     <input
                                         type="number"
                                         min="1"
-                                        inputMode="numeric"
                                         value={screensaverTimeout}
                                         onChange={(e) => setScreensaverTimeout(e.target.value)}
-                                        className="flex-1 px-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                        placeholder="Timeout (minutes)"
+                                        className="w-20 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                                     />
                                     <button
                                         onClick={saveScreensaverTimeout}
-                                        className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-3 shadow-lg shadow-primary/20 whitespace-nowrap"
+                                        className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-md font-medium text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                                     >
-                                        <Save size={22} />
-                                        Save Timeout
+                                        <Save size={16} />
+                                    </button>
+                                    <button
+                                        onClick={triggerScreensaver}
+                                        className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-md font-medium text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Monitor size={16} />
+                                        Test
                                     </button>
                                 </div>
-                                <button
-                                    onClick={triggerScreensaver}
-                                    className="bg-charcoal dark:bg-gray-700 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-charcoal/90 dark:hover:bg-gray-600 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg whitespace-nowrap"
-                                >
-                                    <Monitor size={22} />
-                                    Go to Screensaver
-                                </button>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-8">
-                        <div>
-                            <label className="block text-base font-bold text-gray-900 dark:text-gray-100 mb-2 ml-1">Google Chat Webhook</label>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-1">Paste the webhook URL for your family chat space.</p>
-                            <div className="flex gap-4">
-                                <input
-                                    type="url"
-                                    value={webhookUrl}
-                                    onChange={(e) => setWebhookUrl(e.target.value)}
-                                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-gray-400"
-                                    placeholder="https://chat.googleapis.com..."
-                                />
-                                <button
-                                    onClick={saveWebhookUrl}
-                                    className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-3 shadow-lg shadow-primary/20"
-                                >
-                                    <Save size={22} />
-                                    Save
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-8">
-                    <div className="pl-1">
-                        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">Family Members</h2>
-                        <p className="text-base text-gray-500 dark:text-gray-400">Manage who appears on the chore chart and calendar.</p>
                     </div>
 
                     <div className="space-y-4">
-                        {members.map(member => (
-                            <div key={member.id} className="flex items-center justify-between p-5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-[1.5rem] shadow-sm active:scale-[0.99] transition-transform duration-200">
-                                {editingMember && editingMember.id === member.id ? (
-                                    <div className="flex-1 flex items-center gap-4">
-                                        <div className="flex-1 space-y-3">
-                                            <input
-                                                type="text"
-                                                value={editingMember.name}
-                                                onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
-                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-lg"
-                                                placeholder="Name"
-                                            />
-                                            <input
-                                                type="tel"
-                                                value={editingMember.phone || ''}
-                                                onChange={(e) => setEditingMember({ ...editingMember, phone: e.target.value })}
-                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-lg"
-                                                placeholder="Phone (+1...)"
-                                            />
-                                            <div className="flex gap-2">
-                                                {COLORS.map(c => (
-                                                    <button
-                                                        key={c.value}
-                                                        onClick={() => setEditingMember({ ...editingMember, color: c.value })}
-                                                        className={`w-10 h-10 rounded-full ${c.hex} border-[3px] ${editingMember.color === c.value ? 'border-gray-600 dark:border-white' : 'border-transparent'}`}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col gap-3">
-                                            <button onClick={saveEditing} className="p-4 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 active:scale-90 transition-all"><Check size={24} /></button>
-                                            <button onClick={() => setEditingMember(null)} className="p-4 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 active:scale-90 transition-all"><X size={24} /></button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="flex items-center gap-5 min-w-0">
-                                            <div className="relative group cursor-pointer" onClick={() => triggerFileInput(member.id)}>
-                                                <UserAvatar member={member} size="xl" />
-                                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Upload size={20} className="text-white" />
-                                                </div>
-                                                <input
-                                                    type="file"
-                                                    ref={el => { fileInputRefs.current[member.id] = el; }}
-                                                    className="hidden"
-                                                    accept="image/*"
-                                                    onChange={(e) => {
-                                                        if (e.target.files && e.target.files[0]) {
-                                                            handleAvatarUpload(member.id, e.target.files[0]);
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-xl text-gray-900 dark:text-white truncate mb-0.5">{member.name}</span>
-                                                {member.phone && <span className="text-sm text-gray-400 dark:text-gray-500 font-medium">{member.phone}</span>}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <button
-                                                onClick={() => startEditing(member)}
-                                                className="p-4 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-2xl transition-all active:scale-90"
-                                            >
-                                                <Edit2 size={24} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteMember(member.id)}
-                                                className="p-4 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all active:scale-90"
-                                            >
-                                                <Trash2 size={24} />
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        ))}
-
-                        <form onSubmit={addMember} className="pt-6 space-y-6 bg-white dark:bg-gray-900 shadow-sm shadow-black/5 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Add New Member</h3>
-                            <div className="flex gap-3 mb-4">
-                                {COLORS.map(c => (
-                                    <button
-                                        key={c.value}
-                                        type="button"
-                                        onClick={() => setSelectedColor(c.value)}
-                                        className={`w-12 h-12 rounded-full ${c.hex} border-[3px] transition-all ${selectedColor === c.value ? 'border-gray-600 dark:border-white scale-110' : 'border-transparent hover:scale-105'}`}
-                                        title={c.label}
+                        <h2 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight">Integrations</h2>
+                        <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm h-full">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Google Chat Webhook</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="url"
+                                        value={webhookUrl}
+                                        onChange={(e) => setWebhookUrl(e.target.value)}
+                                        className="flex-1 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder:text-slate-400"
+                                        placeholder="https://chat.googleapis.com..."
                                     />
-                                ))}
+                                    <button
+                                        onClick={saveWebhookUrl}
+                                        className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                    >
+                                        <Save size={16} />
+                                        Save
+                                    </button>
+                                </div>
                             </div>
-
-                            <div className="flex flex-col md:flex-row gap-4">
-                                <input
-                                    type="text"
-                                    value={newMemberName}
-                                    onChange={(e) => setNewMemberName(e.target.value)}
-                                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                    placeholder="Name"
-                                />
-                                <input
-                                    type="tel"
-                                    value={newMemberPhone}
-                                    onChange={(e) => setNewMemberPhone(e.target.value)}
-                                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                    placeholder="Phone"
-                                />
-                                <button
-                                    type="submit"
-                                    className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-primary/20"
-                                >
-                                    <Plus size={24} />
-                                    Add
-                                </button>
-                            </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
 
-                <div className="space-y-8">
-                    <div className="pl-1">
-                        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">Calendar Sync</h2>
-                        <p className="text-base text-gray-500 dark:text-gray-400">Subscribe to external calendars (iCal).</p>
+                {/* Family Members */}
+                {/* Family Members */}
+                <div className="space-y-6 pt-12 border-t border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight">Family Members</h2>
+                        <span className="text-sm text-slate-500">Manage your household</span>
                     </div>
+
+                    <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-medium">
+                                    <tr>
+                                        <th className="px-6 py-3">Member</th>
+                                        <th className="px-6 py-3">Contact</th>
+                                        <th className="px-6 py-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {members.map(member => (
+                                        <tr key={member.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                            {editingMember && editingMember.id === member.id ? (
+                                                <td colSpan={3} className="px-4 py-3 bg-blue-50/50 dark:bg-blue-900/10">
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="text"
+                                                            value={editingMember.name}
+                                                            onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
+                                                            className="w-40 px-3 py-2 rounded-md border border-slate-300 text-sm"
+                                                            placeholder="Name"
+                                                        />
+                                                        <input
+                                                            type="tel"
+                                                            value={editingMember.phone || ''}
+                                                            onChange={(e) => setEditingMember({ ...editingMember, phone: e.target.value })}
+                                                            className="w-40 px-3 py-2 rounded-md border border-slate-300 text-sm"
+                                                            placeholder="Phone"
+                                                        />
+                                                        <div className="flex gap-1">
+                                                            {COLORS.map(c => (
+                                                                <button
+                                                                    key={c.value}
+                                                                    onClick={() => setEditingMember({ ...editingMember, color: c.value })}
+                                                                    className={`w-6 h-6 rounded-full ${c.hex} border-2 ${editingMember.color === c.value ? 'border-slate-600' : 'border-transparent'}`}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                        <div className="flex gap-2 ml-auto">
+                                                            <button onClick={saveEditing} className="px-3 py-1.5 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700">Save</button>
+                                                            <button onClick={() => setEditingMember(null)} className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded text-xs font-bold hover:bg-slate-300">Cancel</button>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            ) : (
+                                                <>
+                                                    <td className="px-6 py-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="relative group/avatar cursor-pointer" onClick={() => triggerFileInput(member.id)}>
+                                                                <UserAvatar member={member} size="sm" />
+                                                                {/* Assuming size='sm' exists or will fallback, but better check UserAvatar later. Using standard utility for now.*/}
+                                                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                                                                    <Upload size={12} className="text-white" />
+                                                                </div>
+                                                                <input
+                                                                    type="file"
+                                                                    ref={el => { fileInputRefs.current[member.id] = el; }}
+                                                                    className="hidden"
+                                                                    accept="image/*"
+                                                                    onChange={(e) => {
+                                                                        if (e.target.files && e.target.files[0]) {
+                                                                            handleAvatarUpload(member.id, e.target.files[0]);
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <span className="font-medium text-slate-900 dark:text-white">{member.name}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-3 text-slate-500 dark:text-slate-400">
+                                                        {member.phone || '-'}
+                                                    </td>
+                                                    <td className="px-6 py-3 text-right">
+                                                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button onClick={() => startEditing(member)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            <button onClick={() => handleDeleteMember(member.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete">
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            )}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-t border-slate-200 dark:border-slate-800">
+                            <form onSubmit={addMember} className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
+                                <div className="space-y-3">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Basic Info</label>
+                                    <div className="space-y-3">
+                                        <input
+                                            type="text"
+                                            value={newMemberName}
+                                            onChange={(e) => setNewMemberName(e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
+                                            placeholder="Name"
+                                            required
+                                        />
+                                        <input
+                                            type="tel"
+                                            value={newMemberPhone}
+                                            onChange={(e) => setNewMemberPhone(e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
+                                            placeholder="Phone (Optional)"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Credentials</label>
+                                    <div className="space-y-3">
+                                        <input
+                                            type="email"
+                                            value={newMemberEmail}
+                                            onChange={(e) => setNewMemberEmail(e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
+                                            placeholder="Email"
+                                            required
+                                        />
+                                        <input
+                                            type="password"
+                                            value={newMemberPassword}
+                                            onChange={(e) => setNewMemberPassword(e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
+                                            placeholder="Password"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex flex-col justify-between">
+                                    <div className="space-y-3">
+                                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Appearance</label>
+                                        <div className="flex flex-wrap gap-3">
+                                            {COLORS.map(c => (
+                                                <button
+                                                    key={c.value}
+                                                    type="button"
+                                                    onClick={() => setSelectedColor(c.value)}
+                                                    className={`w-10 h-10 rounded-full ${c.hex} transition-all ${selectedColor === c.value ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'hover:scale-110'}`}
+                                                    title={c.label}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <button type="submit" className="mt-6 w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 h-[46px] rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-95 shadow-lg shadow-slate-200 dark:shadow-none flex items-center justify-center gap-2">
+                                        <Plus size={18} />
+                                        Add Member
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight">External Calendars</h2>
                     <CalendarSettings />
                 </div>
 
-                <div className="space-y-8 pb-32">
-                    <div className="pl-1">
-                        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">Screensaver Photos</h2>
-                        <p className="text-base text-gray-500 dark:text-gray-400">Upload photos to display when the screen is idle.</p>
-                    </div>
+                <div className="space-y-4 pb-20">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight">Screensaver Photos</h2>
                     <PhotosSettings />
                 </div>
             </div>
@@ -674,6 +795,7 @@ function PhotosSettings() {
             await fetch(`/api/photos/${pendingDeleteId}`, { method: 'DELETE' });
             setPhotos(photos.filter(p => p.id !== pendingDeleteId));
             setPendingDeleteId(null);
+            setShowDeleteConfirm(false);
         } catch (err) { console.error(err); }
     };
 
@@ -683,7 +805,7 @@ function PhotosSettings() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
             <ConfirmDialog
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
@@ -692,13 +814,13 @@ function PhotosSettings() {
                 message="Are you sure you want to remove this photo?"
                 confirmText="Remove"
             />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="aspect-square rounded-[1.5rem] border-4 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-gray-50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-900 active:scale-95"
+                    className="aspect-square rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50/50 cursor-pointer transition-all"
                 >
-                    <Upload size={32} />
-                    <span className="text-base font-bold mt-3">Upload</span>
+                    <Upload size={24} />
+                    <span className="text-xs font-semibold mt-2">Upload</span>
                     <input
                         type="file"
                         multiple
@@ -709,14 +831,14 @@ function PhotosSettings() {
                     />
                 </div>
                 {photos.map(photo => (
-                    <div key={photo.id} className="relative group aspect-square rounded-[1.5rem] overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm">
-                        <img src={photo.url} alt="Screensaver" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <div key={photo.id} className="relative group aspect-square rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+                        <img src={photo.url} alt="Screensaver" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <button
                                 onClick={() => handleDelete(photo.id)}
-                                className="p-4 bg-white dark:bg-gray-800 rounded-full text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-90 transition-all shadow-lg"
+                                className="p-2 bg-white rounded-full text-red-600 hover:bg-red-50 transition-colors shadow-sm"
                             >
-                                <Trash2 size={24} />
+                                <Trash2 size={16} />
                             </button>
                         </div>
                     </div>

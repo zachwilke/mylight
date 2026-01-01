@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Star, Check, Plus, Trash2, X, Sparkles, Lock, Unlock } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { cn } from '../../lib/utils';
 import { UserAvatar } from '../../components/UserAvatar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -21,6 +22,8 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
     const [celebration, setCelebration] = useState<Celebration | null>(null); // { x, y, id }
+
+    const [showMajorCelebration, setShowMajorCelebration] = useState(false);
 
     const [isEditMode, setIsEditMode] = useState(false);
     const [editCode, setEditCode] = useState<string | null>(null); // The correct code from settings
@@ -67,12 +70,56 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
     const triggerCelebration = (x: number, y: number) => {
         const id = Date.now();
         setCelebration({ x, y, id });
+
+        // Fire confetti from the click position
+        const normalizedX = x / window.innerWidth;
+        const normalizedY = y / window.innerHeight;
+
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { x: normalizedX, y: normalizedY },
+            zIndex: 100 // Ensure it's above other elements
+        });
+
         setTimeout(() => setCelebration(null), 1000);
+    };
+
+    const triggerMajorCelebration = () => {
+        setShowMajorCelebration(true);
+        const duration = 3000;
+        const end = Date.now() + duration;
+
+        // Fireworks effect
+        (function frame() {
+            confetti({
+                particleCount: 5,
+                angle: 60,
+                spread: 55,
+                origin: { x: 0 },
+                colors: ['#ff0000', '#00ff00', '#0000ff']
+            });
+            confetti({
+                particleCount: 5,
+                angle: 120,
+                spread: 55,
+                origin: { x: 1 },
+                colors: ['#ff0000', '#00ff00', '#0000ff']
+            });
+
+            if (Date.now() < end) {
+                requestAnimationFrame(frame);
+            } else {
+                setShowMajorCelebration(false);
+            }
+        }());
     };
 
     const toggleChore = async (person: string, choreId: number, currentStatus: boolean, event: React.MouseEvent) => {
         if (isEditMode) return; // Disable toggling in edit mode to prevent accidental checks while managing
         const newStatus = !currentStatus;
+
+        let allCompleted = false;
 
         // Optimistic UI Update
         setChores(prev => {
@@ -82,6 +129,11 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
                 }
                 return chore;
             }) || [];
+
+            // Allow state update to finish then check completion
+            // Actually check using the derived list
+            allCompleted = personChores.every(c => c.completed);
+
             return { ...prev, [person]: personChores };
         });
 
@@ -93,7 +145,21 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
 
         // Celebration if completing
         if (newStatus && event) {
-            triggerCelebration(event.clientX, event.clientY);
+            // We need to check completion status based on the NEW state
+            // The state update hasn't happened yet in this closure, but we calculated it above.
+            // However `setChores` is functional so we can't extract the value out easily unless we duplicate logic
+            // or use a ref/effect.
+            // SIMPLER APPROACH: replicate the check locally
+            const personChores = chores[person] || [];
+            const updatedPersonChores = personChores.map(chore =>
+                chore.id === choreId ? { ...chore, completed: newStatus } : chore
+            );
+
+            if (updatedPersonChores.length > 0 && updatedPersonChores.every(c => c.completed)) {
+                triggerMajorCelebration();
+            } else {
+                triggerCelebration(event.clientX, event.clientY);
+            }
         }
 
         try {
@@ -165,6 +231,7 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
 
     return (
         <div className="h-full overflow-hidden flex flex-col bg-transparent">
+            {showMajorCelebration && <div className="celebration-overlay" />}
             {celebration && (
                 <div
                     className="fixed pointer-events-none z-50 animate-ping opacity-0"

@@ -7,14 +7,15 @@ interface LayoutProps {
     children: React.ReactNode;
     activeTab: string;
     onTabChange: (tab: string) => void;
+    showSettings?: boolean;
 }
 
-export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
+export function Layout({ children, activeTab, onTabChange, showSettings = true }: LayoutProps) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     return (
         <div className="flex h-screen w-full bg-transparent overflow-hidden relative transition-colors duration-300">
-            {isSidebarOpen && <Sidebar activeTab={activeTab} onTabChange={onTabChange} />}
+            {isSidebarOpen && <Sidebar activeTab={activeTab} onTabChange={onTabChange} showSettings={showSettings} />}
 
             <main className="flex-1 flex flex-col h-full relative overflow-hidden w-full">
                 <Header isSidebarOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
@@ -25,7 +26,7 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
                 </div>
             </main>
 
-            <MobileNav activeTab={activeTab} onTabChange={onTabChange} />
+            <MobileNav activeTab={activeTab} onTabChange={onTabChange} showSettings={showSettings} />
         </div>
     );
 }
