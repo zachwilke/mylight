@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, Check, Plus, Trash2, X, Sparkles, Lock, Unlock } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { UserAvatar } from '../../components/UserAvatar';
