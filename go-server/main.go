@@ -83,6 +83,7 @@ func main() {
 	mux.HandleFunc("/api/history", app.handleHistory)
 	mux.HandleFunc("/api/events", app.handleEvents)
 	mux.HandleFunc("/api/events/", app.handleEventDetail)
+	mux.HandleFunc("/api/search", app.handleSearch)
 	mux.HandleFunc("/api/login", app.handleLogin)
 
 	// CORS
