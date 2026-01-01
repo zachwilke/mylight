@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Layout } from './components/Layout/Layout';
 import { DesktopLayout } from './components/Layout/DesktopLayout';
 import { CalendarView } from './features/calendar/CalendarView';
 import { ChoreChart } from './features/chores/ChoreChart';
@@ -8,11 +7,13 @@ import { WeatherPage } from './features/weather/WeatherPage';
 import { DashboardHome } from './features/dashboard/DashboardHome';
 import { Kiosk } from './features/kiosk/Kiosk';
 import Screensaver from './features/screensaver/Screensaver';
-import { useTheme } from './hooks/useTheme';
 import { HistoryPage } from './features/history/HistoryPage';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoginPage } from './features/auth/LoginPage';
+import { Loader2 } from 'lucide-react';
 
-function App() {
-  const [theme] = useTheme();
+function AppContent() {
+  const { user, isLoading } = useAuth();
   // Default to dashboard for desktop, chores for kiosk (handled below)
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isIdle, setIsIdle] = useState(false);
@@ -20,6 +21,18 @@ function App() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const IDLE_TIMEOUT = timeoutMinutes * 60 * 1000;
   const lastManualTriggerRef = useRef(0);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   // Determine mode based on URL
   const isKiosk = window.location.pathname === '/kiosk';
@@ -120,4 +133,10 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}

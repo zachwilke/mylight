@@ -1,11 +1,11 @@
 {
     "name": "MyLight Family Dashboard",
     "short_name": "MyLight",
-    "start_url": "/",
+    "start_url": "/kiosk",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#ffffff",
-    "orientation": "portrait",
+    "orientation": "landscape",
     "icons": [
         {
             "src": "/calendar-icon.png",
