@@ -30,7 +30,8 @@ func jsonError(w http.ResponseWriter, err string, code int) {
 func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "GET" {
-		rows, err := app.DB.Query("SELECT * FROM family_members")
+		// Explicitly select columns to ensure correct scanning
+		rows, err := app.DB.Query("SELECT id, name, color, avatar, stars, phone, email, role, visible FROM family_members")
 		if err != nil {
 			jsonError(w, err.Error(), 500)
 			return
@@ -39,15 +40,7 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 
 		members := []map[string]interface{}{}
 
-		// Rerunning query with explicit columns
-		rows2, err := app.DB.Query("SELECT id, name, color, avatar, stars, phone, email, role, visible FROM family_members")
-		if err != nil {
-			jsonError(w, err.Error(), 500)
-			return
-		}
-		defer rows2.Close()
-
-		for rows2.Next() {
+		for rows.Next() {
 			var id int
 			var name string
 			var color sql.NullString
@@ -56,10 +49,7 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 			var phone, email, role sql.NullString
 			var visible sql.NullBool
 
-			if err := rows2.Scan(&id, &name, &color, &avatar, &stars, &phone, &email, &role, &visible); err != nil {
-				// if visible column is missing (migration run pending restart), treat as true
-				// But we did migration in main.go.
-				// Just continue
+			if err := rows.Scan(&id, &name, &color, &avatar, &stars, &phone, &email, &role, &visible); err != nil {
 				continue
 			}
 
@@ -143,7 +133,11 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 			// For visible toggle we likely just send visible.
 
 			if body.Visible != nil {
-				_, err := app.DB.Exec("UPDATE family_members SET visible = ? WHERE id = ?", *body.Visible, id)
+				visibleInt := 0
+				if *body.Visible {
+					visibleInt = 1
+				}
+				_, err := app.DB.Exec("UPDATE family_members SET visible = ? WHERE id = ?", visibleInt, id)
 				if err != nil {
 					jsonError(w, err.Error(), 500)
 					return
