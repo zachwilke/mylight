@@ -58,7 +58,7 @@ func (app *App) handleHistory(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	var history []HistoryRow
+	history := []HistoryRow{}
 	for rows.Next() {
 		var h HistoryRow
 		if err := rows.Scan(&h.Date, &h.MemberName, &h.Count); err != nil {
