@@ -26,3 +26,5 @@ dist-ssr
 # Database and Uploads
 mylight.db
 uploads/
+go-server/mylight
+go-server/server_bin
