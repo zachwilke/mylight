@@ -18,7 +18,7 @@ interface CalendarEvent extends Omit<Event, 'id'> {
     original_id?: number;
 }
 
-export function MonthGrid({ currentDate, onEventClick, refreshTrigger }: MonthGridProps) {
+export function MonthGrid({ currentDate, onEventClick, refreshTrigger, onDayDoubleClick }: MonthGridProps) {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
 
     const monthStart = startOfMonth(currentDate);
@@ -134,6 +134,7 @@ export function MonthGrid({ currentDate, onEventClick, refreshTrigger }: MonthGr
                     return (
                         <div
                             key={day.toString()}
+                            onDoubleClick={() => onDayDoubleClick && onDayDoubleClick(day)}
                             className={cn(
                                 "border-r border-b border-gray-50 dark:border-gray-700 p-1 md:p-2 relative flex flex-col gap-1 transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-700/50 cursor-pointer",
                                 !isSameMonth(day, monthStart) && "bg-gray-50/30 dark:bg-gray-900/30 text-gray-300 dark:text-gray-600",

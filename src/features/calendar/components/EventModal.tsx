@@ -10,10 +10,11 @@ interface EventModalProps {
     onClose: () => void;
     onSave: (event: Partial<Event>) => void;
     currentEvent: Event | null;
+    initialDate?: Date | null;
     onDelete: (id: number | string) => void;
 }
 
-export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete }: EventModalProps) {
+export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete, initialDate }: EventModalProps) {
     const [title, setTitle] = useState('');
 
     // Date/Time State
@@ -64,7 +65,21 @@ export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete }: 
             } else {
                 // Reset for new event
                 setTitle('');
-                const now = new Date();
+                const now = initialDate ? new Date(initialDate) : new Date();
+                // If initialDate provided, use it (it might be midnight from default date)
+                // If it came from double click on day, it's 00:00:00 local time of that day usually
+
+                // If initialDate is provided, let's keep time as current time (if today) or 12:00?
+                // Usually calendar click implies full day or specific slot. Monthly view click -> Day
+                // Let's set default time to now's time or 9am? Existing code used 'now'.
+
+                // If initialDate is different day than today, maybe set to 9AM or just keep using 'now' time on that date?
+                if (initialDate) {
+                    // Keep the time from 'now' but change date
+                    const timeNow = new Date();
+                    now.setHours(timeNow.getHours(), timeNow.getMinutes());
+                }
+
                 const nextHour = addHours(now, 1);
 
                 setStartDate(format(now, 'yyyy-MM-dd'));
@@ -78,7 +93,7 @@ export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete }: 
                 setIsAllDay(false);
             }
         }
-    }, [isOpen, currentEvent]);
+    }, [isOpen, currentEvent, initialDate]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

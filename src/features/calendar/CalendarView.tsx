@@ -15,6 +15,7 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
+    const [initialDate, setInitialDate] = useState<Date | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
@@ -46,6 +47,7 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
 
             setIsModalOpen(false);
             setCurrentEvent(null);
+            setInitialDate(null);
             setRefreshTrigger(prev => prev + 1);
         } catch (err) {
             console.error(err);
@@ -82,9 +84,14 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
             />
             <EventModal
                 isOpen={isModalOpen}
-                onClose={() => { setIsModalOpen(false); setCurrentEvent(null); }}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setCurrentEvent(null);
+                    setInitialDate(null);
+                }}
                 onSave={handleSaveEvent}
                 currentEvent={currentEvent}
+                initialDate={initialDate}
                 onDelete={handleDeleteEvent}
             />
 
@@ -154,6 +161,10 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
                         refreshTrigger={refreshTrigger}
                         onEventClick={(evt) => {
                             setCurrentEvent(evt);
+                            setIsModalOpen(true);
+                        }}
+                        onDayDoubleClick={(date) => {
+                            setInitialDate(date);
                             setIsModalOpen(true);
                         }}
                     />
