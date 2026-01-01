@@ -502,13 +502,13 @@ func (app *App) handleEvents(w http.ResponseWriter, r *http.Request) {
 	} else if r.Method == "POST" {
 		var body struct {
 			Title       string `json:"title"`
-			Start       string `json:"start"`
-			End         string `json:"end"`
-			MemberId    int    `json:"memberId"`
+			Start       string `json:"start_date"`
+			End         string `json:"end_date"`
+			MemberId    int    `json:"member_id"`
 			Recurrence  string `json:"recurrence"`
 			Description string `json:"description"`
 			Location    string `json:"location"`
-			AllDay      bool   `json:"allDay"`
+			AllDay      bool   `json:"is_all_day"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			jsonError(w, err.Error(), 400)
@@ -539,13 +539,13 @@ func (app *App) handleEventDetail(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "PUT" {
 		var body struct {
 			Title       string `json:"title"`
-			Start       string `json:"start"`
-			End         string `json:"end"`
-			MemberId    int    `json:"memberId"`
+			Start       string `json:"start_date"`
+			End         string `json:"end_date"`
+			MemberId    int    `json:"member_id"`
 			Recurrence  string `json:"recurrence"`
 			Description string `json:"description"`
 			Location    string `json:"location"`
-			AllDay      bool   `json:"allDay"`
+			AllDay      bool   `json:"is_all_day"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			jsonError(w, err.Error(), 400)
