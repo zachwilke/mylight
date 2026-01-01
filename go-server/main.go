@@ -57,9 +57,21 @@ func main() {
 	// 5. Setup Router
 	mux := http.NewServeMux()
 
-	// Static Files
+	// Static Files (Uploads)
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(UploadsDir))))
-	// TODO: Serve React Dist
+
+	// Serve React Frontend (SPA)
+	frontendFS := http.FileServer(http.Dir("../dist"))
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check if file exists in dist
+		path := "../dist" + r.URL.Path
+		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			frontendFS.ServeHTTP(w, r)
+			return
+		}
+		// Otherwise serve index.html for client-side routing
+		http.ServeFile(w, r, "../dist/index.html")
+	}))
 
 	// API Routes
 	mux.HandleFunc("/api/family", app.handleFamily)
