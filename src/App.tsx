@@ -22,18 +22,6 @@ function AppContent() {
   const IDLE_TIMEOUT = timeoutMinutes * 60 * 1000;
   const lastManualTriggerRef = useRef(0);
 
-  if (isLoading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <Loader2 className="animate-spin text-blue-600" size={48} />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <LoginPage />;
-  }
-
   // Determine mode based on URL
   const isKiosk = window.location.pathname === '/kiosk';
 
@@ -115,6 +103,18 @@ function AppContent() {
       default: return <DashboardHome onNavigate={setActiveTab} />;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   if (isKiosk) {
     return (
