@@ -282,3 +282,55 @@ func (app *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, map[string]bool{"success": true})
 	}
 }
+
+// POST /api/login
+func (app *App) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+
+	var body struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		jsonError(w, err.Error(), 400)
+		return
+	}
+
+	var id int
+	var name string
+	var hash string
+	var role string
+	var avatar sql.NullString
+
+	// Look up by email
+	err := app.DB.QueryRow("SELECT id, name, password_hash, role, avatar FROM family_members WHERE email = ?", body.Email).Scan(&id, &name, &hash, &role, &avatar)
+	if err == sql.ErrNoRows {
+		jsonError(w, "Invalid credentials", 401)
+		return
+	} else if err != nil {
+		jsonError(w, err.Error(), 500)
+		return
+	}
+
+	// Compare Hash
+	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.Password))
+	if err != nil {
+		jsonError(w, "Invalid credentials", 401)
+		return
+	}
+
+	// Success
+	jsonResponse(w, map[string]interface{}{
+		"success": true,
+		"user": map[string]interface{}{
+			"id":     id,
+			"name":   name,
+			"role":   role,
+			"email":  body.Email,
+			"avatar": avatar.String,
+		},
+	})
+}
