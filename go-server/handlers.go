@@ -488,13 +488,13 @@ func (app *App) handleEvents(w http.ResponseWriter, r *http.Request) {
 			events = append(events, map[string]interface{}{
 				"id":          id,
 				"title":       title,
-				"start":       startDate,
-				"end":         endDate.String,
-				"memberId":    memberID.Int64,
+				"start_date":  startDate,
+				"end_date":    endDate.String,
+				"member_id":   memberID.Int64,
 				"recurrence":  recurrence,
 				"description": description.String,
 				"location":    location.String,
-				"allDay":      isAllDay.Bool,
+				"is_all_day":  isAllDay.Bool,
 			})
 		}
 		jsonResponse(w, events)
