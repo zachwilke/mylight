@@ -37,7 +37,7 @@ export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete, in
                 .then(res => res.json())
                 .then(data => {
                     setMembers(data);
-                    if (!currentEvent && data.length > 0 && !memberId) setMemberId(data[0].id);
+                    if (!currentEvent && data.length > 0 && memberId === '') setMemberId(data[0].id);
                 });
 
             if (currentEvent) {
@@ -57,7 +57,7 @@ export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete, in
                     setEndTime(format(end, 'HH:mm'));
                 }
 
-                setMemberId(currentEvent.member_id || (members.length > 0 ? members[0].id : ''));
+                setMemberId(currentEvent.member_id === undefined ? (members.length > 0 ? members[0].id : '') : currentEvent.member_id);
                 setRecurrence(currentEvent.recurrence || '');
                 setLocation(currentEvent.location || '');
                 setDescription(currentEvent.description || '');
@@ -273,6 +273,7 @@ export function EventModal({ isOpen, onClose, onSave, currentEvent, onDelete, in
                                     value={memberId}
                                     onChange={e => setMemberId(e.target.value)}
                                 >
+                                    <option value="0" className="dark:bg-gray-800">Everyone</option>
                                     {members.map(m => (
                                         <option key={m.id} value={m.id} className="dark:bg-gray-800">{m.name}</option>
                                     ))}

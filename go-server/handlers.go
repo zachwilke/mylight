@@ -515,8 +515,18 @@ func (app *App) handleEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Start Date Parsing
+		// Assuming strict ISO from frontend, but we might want to ensure it's valid?
+		// Postgres/SQLite usually handle ISO strings fine.
+
+		// Handle MemberID 0 as NULL
+		var memberID interface{} = body.MemberId
+		if body.MemberId == 0 {
+			memberID = nil
+		}
+
 		res, err := app.DB.Exec("INSERT INTO events (title, start_date, end_date, member_id, recurrence, description, location, is_all_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-			body.Title, body.Start, body.End, body.MemberId, body.Recurrence, body.Description, body.Location, body.AllDay)
+			body.Title, body.Start, body.End, memberID, body.Recurrence, body.Description, body.Location, body.AllDay)
 		if err != nil {
 			jsonError(w, err.Error(), 500)
 			return
@@ -552,8 +562,13 @@ func (app *App) handleEventDetail(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		var memberID interface{} = body.MemberId
+		if body.MemberId == 0 {
+			memberID = nil
+		}
+
 		_, err := app.DB.Exec("UPDATE events SET title=?, start_date=?, end_date=?, member_id=?, recurrence=?, description=?, location=?, is_all_day=? WHERE id=?",
-			body.Title, body.Start, body.End, body.MemberId, body.Recurrence, body.Description, body.Location, body.AllDay, id)
+			body.Title, body.Start, body.End, memberID, body.Recurrence, body.Description, body.Location, body.AllDay, id)
 
 		if err != nil {
 			jsonError(w, err.Error(), 500)
