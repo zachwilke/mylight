@@ -80,7 +80,6 @@ func main() {
 	mux.HandleFunc("/api/chores", app.handleChores)
 	mux.HandleFunc("/api/chores/", app.handleChoreToggle) // Handle /api/chores/{id}/toggle
 	mux.HandleFunc("/api/chores/reset", app.handleChoreReset)
-	mux.HandleFunc("/api/chores/reset", app.handleChoreReset)
 	mux.HandleFunc("/api/history", app.handleHistory)
 	mux.HandleFunc("/api/events", app.handleEvents)
 	mux.HandleFunc("/api/events/", app.handleEventDetail)
