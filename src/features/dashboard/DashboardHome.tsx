@@ -135,25 +135,55 @@ export function DashboardHome() {
                         </button>
                     </div>
                 </div>
-                const colors: any = {
-                    blue: "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400",
-                green: "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400",
-                purple: "text-purple-600 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400",
-                orange: "text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400",
+            </div>
+
+            {/* Chores Overview */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white">Chores Status</h2>
+                    <button onClick={() => navigate('/chores')} className="text-sm font-semibold text-blue-600 hover:text-blue-700">Manage</button>
+                </div>
+                <div className="space-y-4">
+                    {members.slice(0, 4).map(member => (
+                        <div key={member.id} className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <UserAvatar member={member} size="sm" />
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{member.name}</span>
+                            </div>
+                            <div className="flex space-x-1">
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                <div className="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+        </div >
+    );
+}
+
+function StatCard({ label, value, icon: Icon, trend, color }: any) {
+    const colors: any = {
+        blue: "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400",
+        green: "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400",
+        purple: "text-purple-600 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400",
+        orange: "text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400",
     };
 
-                return (
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-200 group">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className={`p - 2 rounded - lg ${colors[color]} `}>
-                            <Icon size={20} />
-                        </div>
-                        <span className="text-xs font-medium text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-full">{trend}</span>
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
-                        <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-1 group-hover:scale-[1.02] transition-transform origin-left">{value}</h4>
-                    </div>
+    return (
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-200 group">
+            <div className="flex items-center justify-between mb-4">
+                <div className={`p-2 rounded-lg ${colors[color]}`}>
+                    <Icon size={20} />
                 </div>
-                );
+                <span className="text-xs font-medium text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-full">{trend}</span>
+            </div>
+            <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
+                <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-1 group-hover:scale-[1.02] transition-transform origin-left">{value}</h4>
+            </div>
+        </div>
+    );
 }
