@@ -5,14 +5,6 @@ import { Calendar, CheckSquare, Settings, CloudSun, TrendingUp, LayoutDashboard,
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 
-interface SearchResultItem {
-    id: number;
-    title?: string;
-    name?: string;
-    type: 'event' | 'chore' | 'member';
-    details?: string;
-}
-
 function SearchResults() {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<{ events: any[], chores: any[], members: any[] } | null>(null);
@@ -49,7 +41,7 @@ function SearchResults() {
         return () => clearTimeout(timer);
     }, [query]);
 
-    const handleSelect = (type: string, id: number) => {
+    const handleSelect = (type: string) => {
         setIsOpen(false);
         setQuery('');
         if (type === 'event') navigate('/calendar');
@@ -83,7 +75,7 @@ function SearchResults() {
                             {results.events.map((e: any) => (
                                 <button
                                     key={`e-${e.id}`}
-                                    onClick={() => handleSelect('event', e.id)}
+                                    onClick={() => handleSelect('event')}
                                     className="w-full text-left px-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors"
                                 >
                                     <div className="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-lg">
@@ -105,7 +97,7 @@ function SearchResults() {
                             {results.chores.map((c: any) => (
                                 <button
                                     key={`c-${c.id}`}
-                                    onClick={() => handleSelect('chore', c.id)}
+                                    onClick={() => handleSelect('chore')}
                                     className="w-full text-left px-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors"
                                 >
                                     <div className={`p-2 rounded-lg ${c.completed ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
@@ -127,7 +119,7 @@ function SearchResults() {
                             {results.members.map((m: any) => (
                                 <button
                                     key={`m-${m.id}`}
-                                    onClick={() => handleSelect('member', m.id)}
+                                    onClick={() => handleSelect('member')}
                                     className="w-full text-left px-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors"
                                 >
                                     <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200">
