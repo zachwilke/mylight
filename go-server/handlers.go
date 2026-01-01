@@ -37,7 +37,7 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 		}
 		defer rows.Close()
 
-		var members []map[string]interface{}
+		members := []map[string]interface{}{}
 		for rows.Next() {
 			var id int
 			var name string
