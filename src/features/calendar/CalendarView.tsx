@@ -5,6 +5,8 @@ import { cn } from '../../lib/utils';
 import { MonthGrid } from './components/MonthGrid';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EventModal } from './components/EventModal';
+import { WeekView } from './components/WeekView';
+import { DayView } from './components/DayView';
 
 import { Event } from '../../types';
 
@@ -152,8 +154,7 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
                 </div>
             )}
 
-            import {WeekView} from './components/WeekView';
-            import {DayView} from './components/DayView';
+
 
             // ... (existing imports, but make sure to include these)
 
