@@ -3,8 +3,14 @@ import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { Header } from './Header';
 
-export function Layout({ children, activeTab, onTabChange }) {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+interface LayoutProps {
+    children: React.ReactNode;
+    activeTab: string;
+    onTabChange: (tab: string) => void;
+}
+
+export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     return (
         <div className="flex h-screen w-full bg-transparent overflow-hidden relative transition-colors duration-300">

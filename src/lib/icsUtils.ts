@@ -1,8 +1,9 @@
-import { format } from 'date-fns';
 
-export function generateICS(event) {
-    const formatDate = (date) => {
-        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+export function generateICS(event: any) {
+    const formatDate = (date: string | Date) => {
+        const d = typeof date === 'string' ? new Date(date) : date;
+        return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     };
 
     const now = new Date();
@@ -34,7 +35,7 @@ export function generateICS(event) {
     return lines.join('\r\n');
 }
 
-export function downloadICS(event) {
+export function downloadICS(event: any) {
     const icsContent = generateICS(event);
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');

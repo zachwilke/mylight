@@ -20,7 +20,12 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
-function MapController({ coords }) {
+interface WeatherMapProps {
+    lat: number;
+    lng: number;
+}
+
+function MapController({ coords }: { coords: { lat: number; lng: number } | null }) {
     const map = useMap();
     useEffect(() => {
         if (coords) {
@@ -30,15 +35,15 @@ function MapController({ coords }) {
     return null;
 }
 
-export function WeatherMap({ lat, lng }) {
-    const [apiData, setApiData] = useState(null);
-    const [activeLayer, setActiveLayer] = useState('radar'); // 'radar' or 'satellite'
-    const [frames, setFrames] = useState([]);
+export function WeatherMap({ lat, lng }: WeatherMapProps) {
+    const [apiData, setApiData] = useState<any>(null);
+    const [activeLayer, setActiveLayer] = useState<'radar' | 'satellite'>('radar'); // 'radar' or 'satellite'
+    const [frames, setFrames] = useState<any[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [theme] = useTheme();
     const [host, setHost] = useState('https://tilecache.rainviewer.com');
-    const playerRef = useRef(null);
+    const playerRef = useRef<number | null>(null);
 
     // Determine if we are effectively in dark mode
     const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -59,7 +64,7 @@ export function WeatherMap({ lat, lng }) {
         if (!apiData) return;
 
         const data = apiData;
-        let allFrames = [];
+        let allFrames: any[] = [];
         let startingIndex = 0;
 
         if (activeLayer === 'radar') {
@@ -90,25 +95,25 @@ export function WeatherMap({ lat, lng }) {
 
     useEffect(() => {
         if (isPlaying) {
-            playerRef.current = setInterval(() => {
+            playerRef.current = window.setInterval(() => {
                 setCurrentIndex(prev => {
                     const next = prev + 1;
                     if (next >= frames.length) {
-                        return 0; // Loop
+                        return 0; // Loop // @ts-ignore
                     }
                     return next;
                 });
             }, 500); // 500ms per frame
         } else {
-            clearInterval(playerRef.current);
+            if (playerRef.current) window.clearInterval(playerRef.current);
         }
-        return () => clearInterval(playerRef.current);
+        return () => { if (playerRef.current) window.clearInterval(playerRef.current); };
     }, [isPlaying, frames]);
 
     const togglePlay = () => setIsPlaying(!isPlaying);
 
     // Formatting time for display
-    const formatTime = (ts) => {
+    const formatTime = (ts: number) => {
         return new Date(ts * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     };
 

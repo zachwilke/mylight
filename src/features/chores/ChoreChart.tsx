@@ -1,21 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, Check, Plus, Trash2, X, Sparkles, Lock, Unlock } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { cn } from '../../lib/utils';
 import { UserAvatar } from '../../components/UserAvatar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
-export function ChoreChart({ kiosk = false }) {
-    const [chores, setChores] = useState({});
-    const [members, setMembers] = useState([]);
+import { Chore, FamilyMember } from '@/types';
+
+interface Celebration {
+    x: number;
+    y: number;
+    id: number;
+}
+
+export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
+    const [chores, setChores] = useState<Record<string, Chore[]>>({});
+    const [members, setMembers] = useState<FamilyMember[]>([]);
+    const [stars, setStars] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [pendingDeleteId, setPendingDeleteId] = useState(null);
-    const [celebration, setCelebration] = useState(null); // { x, y, id }
+    const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+    const [celebration, setCelebration] = useState<Celebration | null>(null); // { x, y, id }
 
     const [isEditMode, setIsEditMode] = useState(false);
-    const [editCode, setEditCode] = useState(null); // The correct code from settings
+    const [editCode, setEditCode] = useState<string | null>(null); // The correct code from settings
     const [showUnlockModal, setShowUnlockModal] = useState(false);
     const [unlockInput, setUnlockInput] = useState('');
 
@@ -26,14 +34,21 @@ export function ChoreChart({ kiosk = false }) {
                 fetch('/api/family'),
                 fetch('/api/settings')
             ]);
-            const choresData = await choresRes.json();
-            const familyData = await familyRes.json();
-            const settingsData = await settingsRes.json();
+            const choresData: Record<string, Chore[]> = await choresRes.json();
+            const familyData: FamilyMember[] = await familyRes.json();
+            const settingsData: Record<string, string> = await settingsRes.json();
 
             setEditCode(settingsData.edit_code || null);
 
             setChores(choresData);
             setMembers(familyData);
+
+            // Use stars from member data
+            const initialStars: Record<string, number> = {};
+            familyData.forEach(m => {
+                initialStars[m.name] = m.stars || 0;
+            });
+            setStars(initialStars);
 
         } catch (err) {
             console.error("Failed to fetch data", err);
@@ -47,38 +62,34 @@ export function ChoreChart({ kiosk = false }) {
     }, []);
 
     // Helper to get member by name
-    const getMemberByName = (name) => members.find(m => m.name === name);
+    const getMemberByName = (name: string) => members.find(m => m.name === name);
 
-    const triggerCelebration = (x, y) => {
-        // High quality confetti at the click location
-        const rect = {
-            x: x / window.innerWidth,
-            y: y / window.innerHeight
-        };
-
-        confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: rect,
-            colors: ['#0ea5e9', '#85d941', '#f59e0b', '#ec4899', '#8b5cf6'],
-            disableForReducedMotion: true
-        });
+    const triggerCelebration = (x: number, y: number) => {
+        const id = Date.now();
+        setCelebration({ x, y, id });
+        setTimeout(() => setCelebration(null), 1000);
     };
 
-    const toggleChore = async (person, choreId, currentStatus, event) => {
+    const toggleChore = async (person: string, choreId: number, currentStatus: boolean, event: React.MouseEvent) => {
         if (isEditMode) return; // Disable toggling in edit mode to prevent accidental checks while managing
         const newStatus = !currentStatus;
 
         // Optimistic UI Update
         setChores(prev => {
-            const personChores = prev[person].map(chore => {
+            const personChores = prev[person]?.map(chore => {
                 if (chore.id === choreId) {
                     return { ...chore, completed: newStatus };
                 }
                 return chore;
-            });
+            }) || [];
             return { ...prev, [person]: personChores };
         });
+
+        // Update Stars (Optimistically)
+        setStars(prev => ({
+            ...prev,
+            [person]: Math.max(0, (prev[person] || 0) + (newStatus ? 1 : -1))
+        }));
 
         // Celebration if completing
         if (newStatus && event) {
@@ -96,7 +107,7 @@ export function ChoreChart({ kiosk = false }) {
         }
     };
 
-    const handleAddChore = async (choreData) => {
+    const handleAddChore = async (choreData: Partial<Chore>) => {
         await fetch('/api/chores', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -119,13 +130,13 @@ export function ChoreChart({ kiosk = false }) {
         }
     };
 
-    const handleDeleteChore = (e, choreId) => {
+    const handleDeleteChore = (e: React.MouseEvent, choreId: number) => {
         e.stopPropagation(); // Prevent toggling
         setPendingDeleteId(choreId);
         setShowDeleteConfirm(true);
     };
 
-    const handleUnlock = (e) => {
+    const handleUnlock = (e: React.FormEvent) => {
         e.preventDefault();
         if (unlockInput === editCode) {
             setIsEditMode(true);
@@ -154,6 +165,16 @@ export function ChoreChart({ kiosk = false }) {
 
     return (
         <div className="h-full overflow-hidden flex flex-col bg-transparent">
+            {celebration && (
+                <div
+                    className="fixed pointer-events-none z-50 animate-ping opacity-0"
+                    style={{ left: celebration.x, top: celebration.y }}
+                >
+                    <div className="absolute -top-4 -left-4 text-yellow-500"><Star size={32} fill="currentColor" /></div>
+                    <div className="absolute -top-8 left-2 text-blue-500"><Sparkles size={24} /></div>
+                    <div className="absolute top-2 -right-6 text-purple-500"><Sparkles size={20} /></div>
+                </div>
+            )}
 
             <ConfirmDialog
                 isOpen={showDeleteConfirm}
@@ -189,7 +210,7 @@ export function ChoreChart({ kiosk = false }) {
 
             {!kiosk && (
                 <div className="flex items-center justify-between px-6 py-6 shrink-0">
-                    <h2 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">Chore Chart</h2>
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight drop-shadow-sm">Chore Chart</h2>
                     <div className="flex items-center gap-3">
                         <button
                             onClick={requestEditMode}
@@ -226,7 +247,7 @@ export function ChoreChart({ kiosk = false }) {
                     return (
                         <div
                             key={name}
-                            className="w-full md:w-[400px] md:min-w-[400px] lg:flex-1 p-0 flex flex-col shrink-0 snap-center"
+                            className="w-full md:w-[320px] md:min-w-[320px] lg:flex-1 p-0 flex flex-col shrink-0 snap-center"
                         >
                             {/* Glass Card for Member */}
                             <div className="h-full bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-[2rem] border border-white/50 dark:border-white/10 shadow-lg shadow-black/5 flex flex-col overflow-hidden">
@@ -236,14 +257,18 @@ export function ChoreChart({ kiosk = false }) {
                                     <div className="mb-3 transform hover:scale-105 transition-transform duration-300">
                                         <UserAvatar member={member} size="xl" />
                                     </div>
-                                    <h3 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">{name}</h3>
+                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{name}</h3>
+                                    <div className="inline-flex items-center gap-2 bg-white/80 dark:bg-black/40 px-4 py-1.5 rounded-full border border-yellow-200/50 dark:border-yellow-500/20 shadow-sm">
+                                        <Star size={16} className="fill-yellow-400 text-yellow-400 drop-shadow-sm" />
+                                        <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400 tabular-nums">{stars[name] || 0}</span>
+                                    </div>
                                 </div>
 
                                 {/* Chores Scroll Area */}
                                 <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
                                     {['Morning', 'Evening'].map((time) => (
                                         <div key={time}>
-                                            <h4 className="text-[11px] md:text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 pl-2 opacity-80">{time}</h4>
+                                            <h4 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 pl-2 opacity-80">{time}</h4>
                                             <div className="space-y-2.5">
                                                 {personChores.filter(c => c.time_of_day === time).map(chore => (
                                                     <div key={chore.id} className="relative group">
@@ -257,19 +282,19 @@ export function ChoreChart({ kiosk = false }) {
                                                             )}
                                                         >
                                                             <span className={cn(
-                                                                "font-medium text-[15px] md:text-xl leading-snug line-clamp-2 transition-all relative z-10",
+                                                                "font-medium text-[15px] leading-snug line-clamp-2 transition-all relative z-10",
                                                                 chore.completed ? "text-gray-500 line-through" : "text-gray-800 dark:text-gray-100"
                                                             )}>
                                                                 {chore.title}
                                                             </span>
 
                                                             <div className={cn(
-                                                                "w-6 h-6 md:w-10 md:h-10 rounded-full border-[1.5px] flex items-center justify-center transition-all shrink-0 ml-3 shadow-inner relative z-10",
+                                                                "w-6 h-6 rounded-full border-[1.5px] flex items-center justify-center transition-all shrink-0 ml-3 shadow-inner relative z-10",
                                                                 chore.completed
                                                                     ? "bg-green-500 border-green-500 text-white scale-110"
                                                                     : "bg-white/50 border-gray-300 dark:border-gray-500 group-hover/btn:border-primary group-hover/btn:scale-110"
                                                             )}>
-                                                                {!!chore.completed && <Check size={20} className="md:w-6 md:h-6" strokeWidth={4} />}
+                                                                {chore.completed && <Check size={14} strokeWidth={4} />}
                                                             </div>
                                                         </button>
 
@@ -312,10 +337,17 @@ export function ChoreChart({ kiosk = false }) {
     );
 }
 
-function ChoreModal({ isOpen, onClose, members, onSave }) {
+interface ChoreModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    members: FamilyMember[];
+    onSave: (chore: Partial<Chore>) => void;
+}
+
+function ChoreModal({ isOpen, onClose, members, onSave }: ChoreModalProps) {
     const [title, setTitle] = useState('');
-    const [timeOfDay, setTimeOfDay] = useState('Morning');
-    const [selectedMember, setSelectedMember] = useState(members[0]?.id);
+    const [timeOfDay, setTimeOfDay] = useState<'Morning' | 'Evening'>('Morning');
+    const [selectedMember, setSelectedMember] = useState<number>(members[0]?.id);
 
     // Reset when opening
     useEffect(() => {
@@ -328,10 +360,12 @@ function ChoreModal({ isOpen, onClose, members, onSave }) {
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ title, time_of_day: timeOfDay, member_id: selectedMember });
-        onClose();
+        if (selectedMember) {
+            onSave({ title, time_of_day: timeOfDay, member_id: selectedMember });
+            onClose();
+        }
     };
 
     return (
@@ -363,7 +397,7 @@ function ChoreModal({ isOpen, onClose, members, onSave }) {
                             <div className="relative">
                                 <select
                                     value={timeOfDay}
-                                    onChange={(e) => setTimeOfDay(e.target.value)}
+                                    onChange={(e) => setTimeOfDay(e.target.value as 'Morning' | 'Evening')}
                                     className="w-full px-4 py-3.5 rounded-xl border border-black/10 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white/50 dark:bg-black/20 text-gray-900 dark:text-white"
                                 >
                                     <option value="Morning" className="dark:bg-gray-800">Morning</option>

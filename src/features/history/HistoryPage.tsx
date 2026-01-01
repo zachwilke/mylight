@@ -3,22 +3,33 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Calendar, TrendingUp, Award, Clock } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
+interface HistoryRow {
+    date: string;
+    member_name: string;
+    count: number;
+}
+
+interface ChartDataPoint {
+    date: string;
+    [key: string]: string | number;
+}
+
 export function HistoryPage() {
     const [period, setPeriod] = useState('week'); // 'week', 'month', 'year'
-    const [data, setData] = useState([]);
+    const [data, setData] = useState<ChartDataPoint[]>([]);
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({});
+    const [stats, setStats] = useState<Record<string, number>>({});
 
     const fetchHistory = async () => {
         setLoading(true);
         try {
             const res = await fetch(`/api/history?period=${period}`);
-            const rawData = await res.json();
+            const rawData: HistoryRow[] = await res.json();
 
             // Process data for Recharts
             // Data format: { date: '2023-10-01', 'Max': 2, 'Mia': 1 }
-            const chartDataObj = {};
-            const memberStats = {};
+            const chartDataObj: Record<string, ChartDataPoint> = {};
+            const memberStats: Record<string, number> = {};
 
             rawData.forEach(row => {
                 if (!chartDataObj[row.date]) {
@@ -32,7 +43,7 @@ export function HistoryPage() {
                 memberStats[row.member_name] += row.count;
             });
 
-            const chartData = Object.values(chartDataObj).sort((a, b) => new Date(a.date) - new Date(b.date));
+            const chartData = Object.values(chartDataObj).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
             setData(chartData);
             setStats(memberStats);
         } catch (err) {

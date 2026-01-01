@@ -1,12 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { Cloud, Droplets, Wind, Thermometer, Calendar, Eye, Sun, Gauge, Umbrella, ArrowUp, ArrowDown, CloudSun, CloudRain, CloudSnow, CloudLightning } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Cloud, Droplets, Wind, Eye, Sun, Gauge, Umbrella, ArrowUp, ArrowDown, CloudSun, CloudRain, CloudSnow, CloudLightning } from 'lucide-react';
 import { WeatherMap } from './WeatherMap';
 import { getCachedWeather } from '../../utils/weather';
 
-export function WeatherPage({ kiosk = false }) {
-    const [weather, setWeather] = useState(null);
-    const [forecast, setForecast] = useState([]);
-    const [location, setLocation] = useState(null);
+interface WeatherData {
+    temperatureAvg: number;
+    temperatureApparentAvg: number;
+    temperatureMax: number;
+    temperatureMin: number;
+    humidityAvg: number;
+    windSpeedAvg: number;
+    uvIndexMax: number;
+    visibilityAvg: number | null;
+    pressureSurfaceLevelAvg: number;
+    precipitationProbabilityAvg: number;
+    weatherCode: number;
+}
+
+interface ForecastDay {
+    time: string;
+    values: {
+        temperatureMax: number;
+        temperatureMin: number;
+        precipitationProbabilityAvg: number;
+        weatherCode: number;
+    }
+}
+
+interface LocationData {
+    name: string;
+    lat: number;
+    lng: number;
+}
+
+export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
+    const [weather, setWeather] = useState<WeatherData | null>(null);
+    const [forecast, setForecast] = useState<ForecastDay[]>([]);
+    const [location, setLocation] = useState<LocationData | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -60,7 +90,7 @@ export function WeatherPage({ kiosk = false }) {
 
                             if (omData && omData.daily && omData.current) {
                                 // Map Daily
-                                const mappedForecast = omData.daily.time.map((t, i) => ({
+                                const mappedForecast = omData.daily.time.map((t: string, i: number) => ({
                                     time: t,
                                     values: {
                                         temperatureMax: omData.daily.temperature_2m_max[i],
@@ -107,19 +137,19 @@ export function WeatherPage({ kiosk = false }) {
 
     }, []);
 
-    const getWeatherIcon = (code) => {
-        if (code === 0) return <Sun className="text-amber-400" size={32} />;
-        if (code >= 1 && code <= 3) return <CloudSun className="text-amber-400" size={32} />;
-        if (code >= 45 && code <= 48) return <Cloud className="text-gray-400" size={32} />;
-        if (code >= 51 && code <= 67) return <CloudRain className="text-blue-400" size={32} />;
-        if (code >= 71 && code <= 77) return <CloudSnow className="text-sky-200" size={32} />;
-        if (code >= 80 && code <= 82) return <CloudRain className="text-blue-500" size={32} />;
-        if (code >= 85 && code <= 86) return <CloudSnow className="text-sky-200" size={32} />;
-        if (code >= 95 && code <= 99) return <CloudLightning className="text-purple-500" size={32} />;
-        return <CloudSun className="text-amber-400" size={32} />;
+    const getWeatherIcon = (code: number) => {
+        if (code === 0) return <Sun className="text-amber-400" size={24} />;
+        if (code >= 1 && code <= 3) return <CloudSun className="text-amber-400" size={24} />;
+        if (code >= 45 && code <= 48) return <Cloud className="text-gray-400" size={24} />;
+        if (code >= 51 && code <= 67) return <CloudRain className="text-blue-400" size={24} />;
+        if (code >= 71 && code <= 77) return <CloudSnow className="text-sky-200" size={24} />;
+        if (code >= 80 && code <= 82) return <CloudRain className="text-blue-500" size={24} />;
+        if (code >= 85 && code <= 86) return <CloudSnow className="text-sky-200" size={24} />;
+        if (code >= 95 && code <= 99) return <CloudLightning className="text-purple-500" size={24} />;
+        return <CloudSun className="text-amber-400" size={24} />;
     };
 
-    const getWeatherLabel = (code) => {
+    const getWeatherLabel = (code: number) => {
         if (code === 0) return 'Sunny';
         if (code === 1) return 'Mainly Sunny';
         if (code === 2) return 'Partly Cloudy';
@@ -158,7 +188,7 @@ export function WeatherPage({ kiosk = false }) {
                         </div>
                         {weather && (
                             <div className="text-right">
-                                <span className="text-4xl md:text-6xl font-bold text-charcoal dark:text-gray-100">{Math.round(weather.temperatureAvg)}°</span>
+                                <span className="text-4xl font-bold text-charcoal dark:text-gray-100">{Math.round(weather.temperatureAvg)}°</span>
                             </div>
                         )}
                     </div>
@@ -216,19 +246,19 @@ export function WeatherPage({ kiosk = false }) {
                                     {getWeatherIcon(weather.weatherCode)}
                                     <span className="text-lg font-medium text-gray-600 dark:text-gray-300">{getWeatherLabel(weather.weatherCode)}</span>
                                 </div>
-                                <span className="text-7xl md:text-9xl font-bold text-charcoal dark:text-gray-100 tracking-tighter">
+                                <span className="text-7xl font-bold text-charcoal dark:text-gray-100 tracking-tighter">
                                     {Math.round(weather.temperatureAvg)}°
                                 </span>
-                                <div className="text-gray-500 dark:text-gray-400 font-medium mt-1 md:text-xl">
+                                <div className="text-gray-500 dark:text-gray-400 font-medium mt-1">
                                     Feels like {Math.round(weather.temperatureApparentAvg)}°
                                 </div>
                             </div>
-                            <div className="text-right space-y-2">
-                                <div className="flex items-center justify-end gap-2 text-orange-500 font-bold md:text-2xl">
-                                    <ArrowUp size={24} /> {Math.round(weather.temperatureMax)}°
+                            <div className="text-right space-y-1">
+                                <div className="flex items-center justify-end gap-2 text-orange-500 font-bold">
+                                    <ArrowUp size={16} /> {Math.round(weather.temperatureMax)}°
                                 </div>
-                                <div className="flex items-center justify-end gap-2 text-blue-500 font-bold md:text-2xl">
-                                    <ArrowDown size={24} /> {Math.round(weather.temperatureMin)}°
+                                <div className="flex items-center justify-end gap-2 text-blue-500 font-bold">
+                                    <ArrowDown size={16} /> {Math.round(weather.temperatureMin)}°
                                 </div>
                             </div>
                         </div>
@@ -240,8 +270,8 @@ export function WeatherPage({ kiosk = false }) {
                                     <Droplets size={20} />
                                 </div>
                                 <div>
-                                    <div className="text-xs md:text-sm text-gray-400 dark:text-gray-500 font-bold uppercase">Humidity</div>
-                                    <div className="font-bold text-gray-700 dark:text-gray-200 md:text-xl">{weather.humidityAvg}%</div>
+                                    <div className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Humidity</div>
+                                    <div className="font-bold text-gray-700 dark:text-gray-200">{weather.humidityAvg}%</div>
                                 </div>
                             </div>
                             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl flex items-center gap-3 border border-transparent dark:border-gray-700">
@@ -298,15 +328,15 @@ export function WeatherPage({ kiosk = false }) {
                     {forecast.map((day) => {
                         const date = new Date(day.time);
                         return (
-                            <div key={day.time} className="flex items-center justify-between p-4 md:p-6 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group">
+                            <div key={day.time} className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-16 text-center">
-                                        <div className="text-xs md:text-sm font-bold text-gray-400 dark:text-gray-500 uppercase">{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                                        <div className="text-lg md:text-2xl font-bold text-gray-700 dark:text-gray-200">{date.getDate()}</div>
+                                    <div className="w-12 text-center">
+                                        <div className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                                        <div className="text-lg font-bold text-gray-700 dark:text-gray-200">{date.getDate()}</div>
                                     </div>
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-3">
                                         {getWeatherIcon(day.values.weatherCode)}
-                                        <span className="text-sm md:text-xl font-medium text-gray-700 dark:text-gray-300">
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                             {getWeatherLabel(day.values.weatherCode)}
                                         </span>
                                     </div>

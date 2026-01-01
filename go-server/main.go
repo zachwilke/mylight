@@ -1,0 +1,172 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/robfig/cron/v3"
+	"github.com/rs/cors"
+	_ "modernc.org/sqlite"
+)
+
+const (
+	Port       = ":3000"
+	UploadsDir = "../uploads"
+	DbPath     = "../mylight.db" // Using root DB
+)
+
+// AppState holds the application state
+type App struct {
+	DB   *sql.DB
+	Cron *cron.Cron
+	mu   sync.Mutex
+}
+
+func main() {
+	// 1. Setup Directories
+	if err := os.MkdirAll(UploadsDir, 0755); err != nil {
+		log.Fatal("Failed to create uploads dir:", err)
+	}
+
+	// 2. Initialize DB
+	db, err := initDB(DbPath)
+	if err != nil {
+		log.Fatal("Failed to init DB:", err)
+	}
+	defer db.Close()
+
+	app := &App{
+		DB:   db,
+		Cron: cron.New(),
+	}
+
+	// 3. Start Scheduler
+	app.Cron.Start()
+	defer app.Cron.Stop()
+
+	// 4. Initialize Config/Schedule
+	app.loadConfigAndSchedule()
+
+	// 5. Setup Router
+	mux := http.NewServeMux()
+
+	// Static Files
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(UploadsDir))))
+	// TODO: Serve React Dist
+
+	// API Routes
+	mux.HandleFunc("/api/family", app.handleFamily)
+	mux.HandleFunc("/api/settings", app.handleSettings)
+	mux.HandleFunc("/api/chores", app.handleChores)
+	mux.HandleFunc("/api/chores/reset", app.handleChoreReset)
+
+	// CORS
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:3000"}, // Vite & Self
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+	})
+
+	handler := c.Handler(mux)
+
+	log.Printf("Server running on http://localhost%s", Port)
+	if err := http.ListenAndServe(Port, handler); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func initDB(path string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, err
+	}
+	return db, db.Ping()
+}
+
+func (app *App) loadConfigAndSchedule() {
+	// Load reset time from settings
+	var resetTime string
+	err := app.DB.QueryRow("SELECT value FROM settings WHERE key = 'chore_reset_time'").Scan(&resetTime)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("Failed to load reset time: %v", err)
+	}
+	if resetTime == "" {
+		resetTime = "00:00"
+	}
+
+	app.rescheduleReset(resetTime)
+
+	// Default check on startup
+	app.checkAndResetChores()
+}
+
+func (app *App) checkAndResetChores() {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+
+	today := time.Now().Format("2006-01-02")
+	log.Printf("[Chore Reset] Checking reset for %s", today)
+
+	var lastReset string
+	err := app.DB.QueryRow("SELECT value FROM settings WHERE key = 'last_chore_reset'").Scan(&lastReset)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("Error checking last reset: %v", err)
+		return
+	}
+
+	if lastReset != today {
+		log.Println("[Chore Reset] Performing reset...")
+		_, err := app.DB.Exec("UPDATE chores SET completed = 0")
+		if err != nil {
+			log.Printf("Error resetting chores: %v", err)
+			return
+		}
+		_, err = app.DB.Exec("INSERT OR REPLACE INTO settings (key, value) VALUES ('last_chore_reset', ?)", today)
+		if err != nil {
+			log.Printf("Error updating last reset date: %v", err)
+		}
+		log.Println("[Chore Reset] Reset complete.")
+	} else {
+		log.Println("[Chore Reset] Already reset for today.")
+	}
+}
+
+// RescheduleReset handles the cron job update
+func (app *App) rescheduleReset(timeStr string) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+
+	// Clear existing jobs (simplification: we assume only one cron job for now)
+	elements := app.Cron.Entries()
+	for _, e := range elements {
+		app.Cron.Remove(e.ID)
+	}
+
+	// timeStr format: "HH:MM"
+	parts := strings.Split(timeStr, ":")
+	if len(parts) != 2 {
+		log.Printf("Invalid time format: %s", timeStr)
+		return
+	}
+	hour, _ := strconv.Atoi(parts[0])
+	minute, _ := strconv.Atoi(parts[1])
+
+	// Cron: minute hour * * *
+	spec := fmt.Sprintf("%d %d * * *", minute, hour)
+	log.Printf("[Cron] Scheduling reset for %s (%s)", timeStr, spec)
+
+	_, err := app.Cron.AddFunc(spec, func() {
+		app.checkAndResetChores()
+	})
+	if err != nil {
+		log.Printf("[Cron] Failed to schedule: %v", err)
+	}
+}

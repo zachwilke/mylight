@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar } from 'lucide-react';
+import { Trash2, Calendar } from 'lucide-react';
+import { CalendarSubscription } from '../../types';
 
 const PRESET_COLORS = [
     { label: 'Gray', value: 'bg-gray-200 text-gray-800' },
@@ -12,12 +13,12 @@ const PRESET_COLORS = [
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 export function CalendarSettings() {
-    const [calendars, setCalendars] = useState([]);
+    const [calendars, setCalendars] = useState<CalendarSubscription[]>([]);
     const [newUrl, setNewUrl] = useState('');
     const [newName, setNewName] = useState('');
     const [newColor, setNewColor] = useState(PRESET_COLORS[0].value);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [pendingDeleteId, setPendingDeleteId] = useState(null);
+    const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
     useEffect(() => {
         fetch('/api/calendars')
@@ -26,7 +27,7 @@ export function CalendarSettings() {
             .catch(console.error);
     }, []);
 
-    const addCalendar = async (e) => {
+    const addCalendar = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newUrl) return;
 
@@ -53,7 +54,7 @@ export function CalendarSettings() {
         } catch (err) { console.error(err); }
     };
 
-    const handleDeleteCalendar = (id) => {
+    const handleDeleteCalendar = (id: number) => {
         setPendingDeleteId(id);
         setShowDeleteConfirm(true);
     };
