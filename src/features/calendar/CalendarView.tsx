@@ -152,6 +152,13 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
                 </div>
             )}
 
+            import {WeekView} from './components/WeekView';
+            import {DayView} from './components/DayView';
+
+            // ... (existing imports, but make sure to include these)
+
+            // ... (inside CalendarView)
+
             {/* Calendar Grid Content */}
             <div className="flex-1 overflow-hidden">
                 {view === 'month' && (
@@ -169,9 +176,28 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
                         }}
                     />
                 )}
-                {view === 'week' && <div className="p-10 text-center text-gray-400">Week View Placeholder</div>}
-                {view === 'day' && <div className="p-10 text-center text-gray-400">Day View Placeholder</div>}
+                {view === 'week' && (
+                    <WeekView
+                        currentDate={currentDate}
+                        refreshTrigger={refreshTrigger}
+                        onEventClick={(evt) => {
+                            setCurrentEvent(evt);
+                            setIsModalOpen(true);
+                        }}
+                    />
+                )}
+                {view === 'day' && (
+                    <DayView
+                        currentDate={currentDate}
+                        refreshTrigger={refreshTrigger}
+                        onEventClick={(evt) => {
+                            setCurrentEvent(evt);
+                            setIsModalOpen(true);
+                        }}
+                    />
+                )}
             </div>
         </div>
     );
 }
+
