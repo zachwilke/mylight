@@ -156,9 +156,6 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
 
 
 
-            // ... (existing imports, but make sure to include these)
-
-            // ... (inside CalendarView)
 
             {/* Calendar Grid Content */}
             <div className="flex-1 overflow-hidden">
