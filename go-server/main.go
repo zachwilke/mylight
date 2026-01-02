@@ -206,15 +206,15 @@ func (app *App) loadConfigAndSchedule() {
 	app.rescheduleReset(resetTime)
 
 	// Default check on startup
-	app.checkAndResetChores()
+	app.checkAndResetChores(false)
 }
 
-func (app *App) checkAndResetChores() {
+func (app *App) checkAndResetChores(force bool) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
 
 	today := time.Now().Format("2006-01-02")
-	log.Printf("[Chore Reset] Checking reset for %s", today)
+	log.Printf("[Chore Reset] Checking reset for %s (force: %v)", today, force)
 
 	var lastReset string
 	err := app.DB.QueryRow("SELECT value FROM settings WHERE key = 'last_chore_reset'").Scan(&lastReset)
@@ -223,7 +223,7 @@ func (app *App) checkAndResetChores() {
 		return
 	}
 
-	if lastReset != today {
+	if force || lastReset != today {
 		log.Println("[Chore Reset] Performing reset...")
 		_, err := app.DB.Exec("UPDATE chores SET completed = 0")
 		if err != nil {
@@ -265,7 +265,7 @@ func (app *App) rescheduleReset(timeStr string) {
 	log.Printf("[Cron] Scheduling reset for %s (%s)", timeStr, spec)
 
 	_, err := app.Cron.AddFunc(spec, func() {
-		app.checkAndResetChores()
+		app.checkAndResetChores(false)
 	})
 	if err != nil {
 		log.Printf("[Cron] Failed to schedule: %v", err)
