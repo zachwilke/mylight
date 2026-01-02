@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, Mail, Loader2, ArrowRight } from 'lucide-react';
 
@@ -8,6 +9,10 @@ export function LoginPage() {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { login } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const from = (location.state as any)?.from?.pathname || "/";
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -29,6 +34,7 @@ export function LoginPage() {
 
             if (data.success && data.user) {
                 login(data.user);
+                navigate(from, { replace: true });
             } else {
                 throw new Error('Invalid response from server');
             }
