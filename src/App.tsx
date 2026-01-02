@@ -65,6 +65,21 @@ function KioskWrapper() {
     window.addEventListener('trigger-screensaver', manualTriggerHandler);
     window.addEventListener('update-timeout', updateTimeoutHandler);
 
+    // SSE Connection for Autorefresh
+    const eventSource = new EventSource('/api/updates');
+    eventSource.onmessage = (event) => {
+      console.log('[SSE] Received update:', event.data);
+      window.dispatchEvent(new CustomEvent('system-update', { detail: event.data }));
+    };
+    eventSource.onerror = (err) => {
+      console.error('[SSE] Connection error:', err);
+      eventSource.close();
+      // Retry after 5 seconds
+      setTimeout(() => {
+        window.location.reload(); // Hard reload on connection failure to be safe
+      }, 5000);
+    };
+
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
@@ -79,6 +94,7 @@ function KioskWrapper() {
       events.forEach(e => window.removeEventListener(e, handler));
       window.removeEventListener('trigger-screensaver', manualTriggerHandler);
       window.removeEventListener('update-timeout', updateTimeoutHandler);
+      eventSource.close();
     };
   }, [isIdle, timeoutMinutes]);
 

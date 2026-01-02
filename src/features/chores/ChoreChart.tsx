@@ -62,6 +62,9 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
 
     useEffect(() => {
         fetchData();
+
+        window.addEventListener('system-update', fetchData);
+        return () => window.removeEventListener('system-update', fetchData);
     }, []);
 
     // Helper to get member by name
@@ -119,8 +122,6 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
         if (isEditMode) return; // Disable toggling in edit mode to prevent accidental checks while managing
         const newStatus = !currentStatus;
 
-        let allCompleted = false;
-
         // Optimistic UI Update
         setChores(prev => {
             const personChores = prev[person]?.map(chore => {
@@ -129,10 +130,6 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
                 }
                 return chore;
             }) || [];
-
-            // Allow state update to finish then check completion
-            // Actually check using the derived list
-            allCompleted = personChores.every(c => c.completed);
 
             return { ...prev, [person]: personChores };
         });

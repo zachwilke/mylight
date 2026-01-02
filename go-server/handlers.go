@@ -110,6 +110,7 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		id, _ := res.LastInsertId()
+		app.Broker.Notify("update")
 		jsonResponse(w, map[string]interface{}{"success": true, "id": id})
 
 	} else if r.Method == "PUT" {
@@ -165,6 +166,7 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 				app.DB.Exec("UPDATE family_members SET color = ? WHERE id = ?", body.Color, id)
 			}
 
+			app.Broker.Notify("update")
 			jsonResponse(w, map[string]bool{"success": true})
 		} else {
 			jsonError(w, "Missing ID", 400)
@@ -233,6 +235,7 @@ func (app *App) handleChores(w http.ResponseWriter, r *http.Request) {
 		id, _ := res.LastInsertId()
 		c.ID = int(id)
 		c.Completed = false
+		app.Broker.Notify("update")
 		jsonResponse(w, c)
 	}
 }
@@ -311,6 +314,7 @@ func (app *App) handleChoreToggle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	app.Broker.Notify("update")
 	jsonResponse(w, map[string]bool{"success": true})
 }
 
@@ -321,6 +325,7 @@ func (app *App) handleChoreReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	app.checkAndResetChores(true) // Force reset
+	app.Broker.Notify("update")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
@@ -355,6 +360,7 @@ func (app *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 		if s.Key == "chore_reset_time" {
 			app.rescheduleReset(s.Value) // Logic in main.go
 		}
+		app.Broker.Notify("update")
 		jsonResponse(w, map[string]bool{"success": true})
 	}
 }
@@ -460,6 +466,7 @@ func (app *App) handleAvatarUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	app.Broker.Notify("update")
 	jsonResponse(w, map[string]interface{}{"success": true, "avatar": avatarURL})
 }
 
@@ -532,6 +539,7 @@ func (app *App) handleEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		id, _ := res.LastInsertId()
+		app.Broker.Notify("update")
 		jsonResponse(w, map[string]interface{}{"success": true, "id": id})
 	}
 }
@@ -574,6 +582,7 @@ func (app *App) handleEventDetail(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, err.Error(), 500)
 			return
 		}
+		app.Broker.Notify("update")
 		jsonResponse(w, map[string]bool{"success": true})
 
 	} else if r.Method == "DELETE" {
@@ -582,6 +591,7 @@ func (app *App) handleEventDetail(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, err.Error(), 500)
 			return
 		}
+		app.Broker.Notify("update")
 		jsonResponse(w, map[string]bool{"success": true})
 	}
 }

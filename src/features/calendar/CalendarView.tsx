@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { format, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, isSameMonth, isSameDay, addDays } from 'date-fns';
+import { format, addMonths, subMonths, isSameDay, addDays } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MonthGrid } from './components/MonthGrid';
@@ -20,6 +20,13 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
     const [initialDate, setInitialDate] = useState<Date | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+
+    const triggerRefresh = () => setRefreshTrigger(prev => prev + 1);
+
+    React.useEffect(() => {
+        window.addEventListener('system-update', triggerRefresh);
+        return () => window.removeEventListener('system-update', triggerRefresh);
+    }, []);
 
     const nextPeriod = () => {
         if (view === 'month') setCurrentDate(addMonths(currentDate, 1));

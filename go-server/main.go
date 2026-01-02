@@ -24,9 +24,80 @@ const (
 
 // AppState holds the application state
 type App struct {
-	DB   *sql.DB
-	Cron *cron.Cron
-	mu   sync.Mutex
+	DB     *sql.DB
+	Cron   *cron.Cron
+	Broker *Broker
+	mu     sync.Mutex
+}
+
+// Broker manages SSE connections
+type Broker struct {
+	notifier       chan string
+	newClients     chan chan string
+	closingClients chan chan string
+	clients        map[chan string]bool
+}
+
+func NewBroker() *Broker {
+	return &Broker{
+		notifier:       make(chan string, 1),
+		newClients:     make(chan chan string),
+		closingClients: make(chan chan string),
+		clients:        make(map[chan string]bool),
+	}
+}
+
+func (b *Broker) Start() {
+	for {
+		select {
+		case s := <-b.newClients:
+			b.clients[s] = true
+			log.Printf("Client added. %d registered clients", len(b.clients))
+		case s := <-b.closingClients:
+			delete(b.clients, s)
+			log.Printf("Removed client. %d registered clients", len(b.clients))
+		case event := <-b.notifier:
+			for clientMessageChan := range b.clients {
+				clientMessageChan <- event
+			}
+		}
+	}
+}
+
+func (b *Broker) Notify(msg string) {
+	b.notifier <- msg
+}
+
+func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	messageChan := make(chan string)
+	b.newClients <- messageChan
+
+	defer func() {
+		b.closingClients <- messageChan
+	}()
+
+	notify := r.Context().Done()
+
+	for {
+		select {
+		case <-notify:
+			return
+		case msg := <-messageChan:
+			fmt.Fprintf(w, "data: %s\n\n", msg)
+			flusher.Flush()
+		}
+	}
 }
 
 func main() {
@@ -42,9 +113,13 @@ func main() {
 	}
 	defer db.Close()
 
+	broker := NewBroker()
+	go broker.Start()
+
 	app := &App{
-		DB:   db,
-		Cron: cron.New(),
+		DB:     db,
+		Cron:   cron.New(),
+		Broker: broker,
 	}
 
 	// 3. Start Scheduler
@@ -85,6 +160,7 @@ func main() {
 	mux.HandleFunc("/api/events/", app.handleEventDetail)
 	mux.HandleFunc("/api/search", app.handleSearch)
 	mux.HandleFunc("/api/login", app.handleLogin)
+	mux.HandleFunc("/api/updates", app.Broker.ServeHTTP)
 
 	// CORS
 	c := cors.New(cors.Options{
