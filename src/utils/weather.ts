@@ -56,6 +56,7 @@ export async function getCachedWeather(lat: number, lng: number) {
     }
 }
 
+
 /**
  * Fetches RainViewer metadata with caching.
  * @returns {Promise<Object|null>} - RainViewer data or null if failed
@@ -94,6 +95,51 @@ export async function getRainViewerData() {
         }
 
         return data;
+    } catch (err) {
+        console.error(err);
+        return null;
+    }
+}
+
+/**
+ * Fetches reverse geocoding data to get town name from coordinates.
+ * Using api.bigdatacloud.net (free, no key).
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @returns {Promise<string|null>} - Town/City name or null
+ */
+export async function getReverseGeocoding(lat: number, lng: number): Promise<string | null> {
+    if (!lat || !lng) return null;
+
+    const key = `${CACHE_KEY_PREFIX}revgeo_${lat.toFixed(4)}_${lng.toFixed(4)}`;
+
+    // 1. Check Cache (Cache forever basically, or long time)
+    try {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+            return cached;
+        }
+    } catch (e) {
+        console.warn('RevGeo cache read failed', e);
+    }
+
+    // 2. Fetch Fresh Data
+    try {
+        const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+        if (!res.ok) throw new Error('Reverse geocoding fetch failed');
+        const data = await res.json();
+
+        // Extract best available name
+        const name = data.locality || data.city || data.principalSubdivision || 'Unknown Location';
+
+        // 3. Update Cache
+        try {
+            localStorage.setItem(key, name);
+        } catch (e) {
+            console.warn('RevGeo cache write failed', e);
+        }
+
+        return name;
     } catch (err) {
         console.error(err);
         return null;

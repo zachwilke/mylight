@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Cloud, Droplets, Wind, Eye, Sun, Gauge, Umbrella, ArrowUp, ArrowDown, CloudSun, CloudRain, CloudSnow, CloudLightning } from 'lucide-react';
 import { WeatherMap } from './WeatherMap';
-import { getCachedWeather } from '../../utils/weather';
+import { getCachedWeather, getReverseGeocoding } from '../../utils/weather';
 
 interface WeatherData {
     temperatureAvg: number;
@@ -85,6 +85,15 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
 
                     if (lat && lng) {
                         try {
+                            // Fetch Town Name if we only have generic coordinate name or it's "Local Coordinates"
+                            // If we already set a name via zip/geocoding, we might want to keep it, 
+                            // but for "Local Coordinates" manually set, we try to fetch a better name.
+                            if (!location?.name || location.name === 'Local Coordinates') {
+                                getReverseGeocoding(lat, lng).then(name => {
+                                    if (name) setLocation(prev => prev ? { ...prev, name } : { name, lat, lng });
+                                });
+                            }
+
                             // Fetch Forecast with Cache
                             const omData = await getCachedWeather(lat, lng);
 
@@ -194,34 +203,48 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
                     </div>
                 </div>
 
-                {weather && (
-                    <div className="px-6 py-2 grid grid-cols-2 gap-2 text-xs">
-                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                            <Droplets size={14} className="text-blue-500" />
-                            <span>{weather.humidityAvg}%</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                            <Wind size={14} className="text-gray-400" />
-                            <span>{Math.round(weather.windSpeedAvg)} mph</span>
-                        </div>
-                    </div>
-                )}
-
-                <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1 custom-scrollbar">
-                    {forecast.map((day) => {
-                        const date = new Date(day.time);
-                        return (
-                            <div key={day.time} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-                                <div className="text-xs font-bold text-gray-400 dark:text-gray-500 w-8">{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                                <div className="flex items-center gap-2">
-                                    {getWeatherIcon(day.values.weatherCode)}
+                <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-4 px-6 pb-6">
+                    {/* Left Panel: Weather Details and Forecast */}
+                    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                        {weather && (
+                            <div className="py-2 grid grid-cols-2 gap-2 text-xs shrink-0">
+                                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                                    <Droplets size={14} className="text-blue-500" />
+                                    <span>{weather.humidityAvg}%</span>
                                 </div>
-                                <div className="text-xs font-bold text-gray-800 dark:text-gray-200 w-16 text-right">
-                                    {Math.round(day.values.temperatureMax)}° <span className="text-gray-400 font-normal">/ {Math.round(day.values.temperatureMin)}°</span>
+                                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                                    <Wind size={14} className="text-gray-400" />
+                                    <span>{Math.round(weather.windSpeedAvg)} mph</span>
                                 </div>
                             </div>
-                        );
-                    })}
+                        )}
+
+                        <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-2">
+                            {forecast.map((day) => {
+                                const date = new Date(day.time);
+                                return (
+                                    <div key={day.time} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                                        <div className="text-xs font-bold text-gray-400 dark:text-gray-500 w-8">{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                                        <div className="flex items-center gap-2">
+                                            {getWeatherIcon(day.values.weatherCode)}
+                                        </div>
+                                        <div className="text-xs font-bold text-gray-800 dark:text-gray-200 w-16 text-right">
+                                            {Math.round(day.values.temperatureMax)}° <span className="text-gray-400 font-normal">/ {Math.round(day.values.temperatureMin)}°</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Right Panel: Radar */}
+                    <div className="w-full md:w-1/2 h-full rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 relative z-0">
+                        {location ? (
+                            <WeatherMap lat={location.lat} lng={location.lng} />
+                        ) : (
+                            <div className="h-full w-full bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                        )}
+                    </div>
                 </div>
             </div>
         );
