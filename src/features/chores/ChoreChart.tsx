@@ -340,7 +340,7 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
                                                         <button
                                                             onClick={(e) => toggleChore(name, chore.id, chore.completed, e)}
                                                             className={cn(
-                                                                "w-full text-left p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between group/btn relative overflow-hidden",
+                                                                "w-full text-left p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between group/btn relative overflow-hidden kiosk-touch",
                                                                 chore.completed
                                                                     ? "bg-black/5 dark:bg-white/5 border-transparent opacity-60"
                                                                     : "bg-white/60 dark:bg-white/5 border-white/50 dark:border-white/5 hover:bg-white/80 dark:hover:bg-white/10 hover:shadow-md hover:scale-[1.02]"

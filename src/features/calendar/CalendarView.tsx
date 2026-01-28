@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { format, addMonths, subMonths, isSameDay, addDays } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { MonthGrid } from './components/MonthGrid';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -154,11 +155,35 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
             )}
 
             {kiosk && (
-                <div className="p-6 pb-2 shrink-0 flex items-center justify-between">
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-6 pb-2 shrink-0 flex items-center justify-between"
+                >
                     <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
                         {format(currentDate, 'MMMM yyyy')}
                     </h2>
-                </div>
+                    <div className="flex items-center gap-2 glass-panel rounded-xl p-1">
+                        <button
+                            onClick={prevPeriod}
+                            className="p-2 hover:bg-white/50 dark:hover:bg-white/10 rounded-lg transition-all kiosk-touch"
+                        >
+                            <ChevronLeft size={20} className="text-gray-600 dark:text-gray-300" />
+                        </button>
+                        <button
+                            onClick={today}
+                            className="px-3 py-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white kiosk-touch"
+                        >
+                            Today
+                        </button>
+                        <button
+                            onClick={nextPeriod}
+                            className="p-2 hover:bg-white/50 dark:hover:bg-white/10 rounded-lg transition-all kiosk-touch"
+                        >
+                            <ChevronRight size={20} className="text-gray-600 dark:text-gray-300" />
+                        </button>
+                    </div>
+                </motion.div>
             )}
 
 

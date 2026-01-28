@@ -43,6 +43,33 @@
   }
 }
 
+@layer components {
+  /* Glassmorphic card - default rounded with blur and shadows */
+  .glass-card {
+    @apply bg-white/70 dark:bg-gray-900/60 backdrop-blur-xl rounded-3xl border border-white/40 dark:border-white/10 shadow-glass;
+  }
+
+  /* Glassmorphic card with pastel gradient */
+  .glass-card-pastel {
+    @apply backdrop-blur-xl rounded-3xl border border-white/40 dark:border-white/10 shadow-glass;
+    background: linear-gradient(135deg, rgba(214, 228, 229, 0.6) 0%, rgba(245, 225, 218, 0.6) 100%);
+  }
+
+  .dark .glass-card-pastel {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 37, 37, 0.6) 100%);
+  }
+
+  /* Sidebar-specific glass styling */
+  .glass-sidebar {
+    @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl border-r border-white/30 dark:border-white/10 shadow-glass-lg;
+  }
+
+  /* Kiosk touch targets - minimum 48px for accessibility */
+  .kiosk-touch {
+    @apply min-h-[48px] min-w-[48px];
+  }
+}
+
 @layer utilities {
   .glass {
     @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-lg shadow-black/5;
