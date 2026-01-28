@@ -335,48 +335,56 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
                                         <div key={time}>
                                             <h4 className="text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 pl-2 opacity-80">{time}</h4>
                                             <div className="space-y-2.5">
-                                                {personChores.filter(c => c.time_of_day === time).map(chore => (
-                                                    <div key={chore.id} className="relative group">
-                                                        <button
-                                                            onClick={(e) => toggleChore(name, chore.id, chore.completed, e)}
-                                                            className={cn(
-                                                                "w-full text-left p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between group/btn relative overflow-hidden kiosk-touch",
-                                                                chore.completed
-                                                                    ? "bg-black/5 dark:bg-white/5 border-transparent opacity-60"
-                                                                    : "bg-white/60 dark:bg-white/5 border-white/50 dark:border-white/5 hover:bg-white/80 dark:hover:bg-white/10 hover:shadow-md hover:scale-[1.02]"
+                                                {personChores
+                                                    .filter(c => c.time_of_day === time)
+                                                    .sort((a, b) => {
+                                                        // Sort by completion status (completed last)
+                                                        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+                                                        // Then by ID to keep stable
+                                                        return a.id - b.id;
+                                                    })
+                                                    .map(chore => (
+                                                        <div key={chore.id} className="relative group">
+                                                            <button
+                                                                onClick={(e) => toggleChore(name, chore.id, chore.completed, e)}
+                                                                className={cn(
+                                                                    "w-full text-left p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between group/btn relative overflow-hidden kiosk-touch",
+                                                                    chore.completed
+                                                                        ? "bg-black/5 dark:bg-white/5 border-transparent opacity-60"
+                                                                        : "bg-white/60 dark:bg-white/5 border-white/50 dark:border-white/5 hover:bg-white/80 dark:hover:bg-white/10 hover:shadow-md hover:scale-[1.02]"
+                                                                )}
+                                                            >
+                                                                <span className={cn(
+                                                                    "font-bold text-xl leading-snug line-clamp-2 transition-all relative z-10",
+                                                                    chore.completed ? "text-gray-500 line-through" : "text-gray-800 dark:text-gray-100"
+                                                                )}>
+                                                                    {chore.title}
+                                                                </span>
+
+                                                                <div className={cn(
+                                                                    "w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ml-4 shadow-inner relative z-10",
+                                                                    chore.completed
+                                                                        ? "bg-green-500 border-green-500 text-white scale-110"
+                                                                        : "bg-white/50 border-gray-300 dark:border-gray-500 group-hover/btn:border-primary group-hover/btn:scale-110"
+                                                                )}>
+                                                                    {chore.completed && <Check size={24} strokeWidth={4} />}
+                                                                </div>
+                                                            </button>
+
+                                                            {/* Delete Button (Visible in Edit Mode) */}
+                                                            {isEditMode && (
+                                                                <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20">
+                                                                    <button
+                                                                        onClick={(e) => handleDeleteChore(e, chore.id)}
+                                                                        className="bg-white/90 dark:bg-red-900/90 text-red-500 border border-red-100 dark:border-red-800 p-2 rounded-xl shadow-sm hover:bg-red-50 hover:scale-105 transition-all"
+                                                                        title="Delete Chore"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </div>
                                                             )}
-                                                        >
-                                                            <span className={cn(
-                                                                "font-bold text-xl leading-snug line-clamp-2 transition-all relative z-10",
-                                                                chore.completed ? "text-gray-500 line-through" : "text-gray-800 dark:text-gray-100"
-                                                            )}>
-                                                                {chore.title}
-                                                            </span>
-
-                                                            <div className={cn(
-                                                                "w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ml-4 shadow-inner relative z-10",
-                                                                chore.completed
-                                                                    ? "bg-green-500 border-green-500 text-white scale-110"
-                                                                    : "bg-white/50 border-gray-300 dark:border-gray-500 group-hover/btn:border-primary group-hover/btn:scale-110"
-                                                            )}>
-                                                                {chore.completed && <Check size={24} strokeWidth={4} />}
-                                                            </div>
-                                                        </button>
-
-                                                        {/* Delete Button (Visible in Edit Mode) */}
-                                                        {isEditMode && (
-                                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20">
-                                                                <button
-                                                                    onClick={(e) => handleDeleteChore(e, chore.id)}
-                                                                    className="bg-white/90 dark:bg-red-900/90 text-red-500 border border-red-100 dark:border-red-800 p-2 rounded-xl shadow-sm hover:bg-red-50 hover:scale-105 transition-all"
-                                                                    title="Delete Chore"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                        </div>
+                                                    ))}
                                                 {personChores.filter(c => c.time_of_day === time).length === 0 && (
                                                     <div className="text-center py-4 border-2 border-dashed border-black/5 dark:border-white/5 rounded-2xl">
                                                         <p className="text-base text-gray-400 italic">No chores</p>

@@ -1,7 +1,6 @@
-package main
+package store
 
 import (
-	"net/http"
 	"time"
 )
 
@@ -11,17 +10,7 @@ type HistoryRow struct {
 	Count      int    `json:"count"`
 }
 
-func (app *App) handleHistory(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", 405)
-		return
-	}
-
-	period := r.URL.Query().Get("period")
-	if period == "" {
-		period = "week"
-	}
-
+func (s *Store) GetHistory(period string) ([]HistoryRow, error) {
 	// Calculate start date
 	now := time.Now()
 	var startDate time.Time
@@ -38,7 +27,6 @@ func (app *App) handleHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// SQLite query
-	// Group by Date (YYYY-MM-DD) and Member
 	query := `
 		SELECT 
 			strftime('%Y-%m-%d', cc.completed_at) as date,
@@ -51,14 +39,13 @@ func (app *App) handleHistory(w http.ResponseWriter, r *http.Request) {
 		ORDER BY date ASC
 	`
 
-	rows, err := app.DB.Query(query, startDate)
+	rows, err := s.DB.Query(query, startDate)
 	if err != nil {
-		jsonError(w, err.Error(), 500)
-		return
+		return nil, err
 	}
 	defer rows.Close()
 
-	history := []HistoryRow{}
+	var history []HistoryRow
 	for rows.Next() {
 		var h HistoryRow
 		if err := rows.Scan(&h.Date, &h.MemberName, &h.Count); err != nil {
@@ -66,6 +53,5 @@ func (app *App) handleHistory(w http.ResponseWriter, r *http.Request) {
 		}
 		history = append(history, h)
 	}
-
-	jsonResponse(w, history)
+	return history, nil
 }

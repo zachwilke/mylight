@@ -1,15 +1,14 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
+	"mylight/store"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/robfig/cron/v3"
 	"github.com/rs/cors"
@@ -24,7 +23,7 @@ const (
 
 // AppState holds the application state
 type App struct {
-	DB     *sql.DB
+	Store  *store.Store
 	Cron   *cron.Cron
 	Broker *Broker
 	mu     sync.Mutex
@@ -106,18 +105,18 @@ func main() {
 		log.Fatal("Failed to create uploads dir:", err)
 	}
 
-	// 2. Initialize DB
-	db, err := initDB(DbPath)
+	// 2. Initialize Store
+	s, err := store.NewStore(DbPath)
 	if err != nil {
-		log.Fatal("Failed to init DB:", err)
+		log.Fatal("Failed to init Store:", err)
 	}
-	defer db.Close()
+	defer s.Close()
 
 	broker := NewBroker()
 	go broker.Start()
 
 	app := &App{
-		DB:     db,
+		Store:  s,
 		Cron:   cron.New(),
 		Broker: broker,
 	}
@@ -125,6 +124,14 @@ func main() {
 	// 3. Start Scheduler
 	app.Cron.Start()
 	defer app.Cron.Stop()
+
+	// Safety Net: Check every 15 minutes in case the machine was sleeping
+	_, err = app.Cron.AddFunc("@every 15m", func() {
+		app.checkAndResetChores(false)
+	})
+	if err != nil {
+		log.Printf("[Cron] Failed to schedule safety net: %v", err)
+	}
 
 	// 4. Initialize Config/Schedule
 	app.loadConfigAndSchedule()
@@ -161,6 +168,8 @@ func main() {
 	mux.HandleFunc("/api/search", app.handleSearch)
 	mux.HandleFunc("/api/login", app.handleLogin)
 	mux.HandleFunc("/api/updates", app.Broker.ServeHTTP)
+	mux.HandleFunc("/api/meals", app.handleMeals)
+	mux.HandleFunc("/api/photos", app.handlePhotos)
 
 	// CORS
 	c := cors.New(cors.Options{
@@ -178,102 +187,11 @@ func main() {
 	}
 }
 
-func initDB(path string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		return nil, err
-	}
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	// Initialize Schema
-	schema := `
-	CREATE TABLE IF NOT EXISTS family_members (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL,
-		color TEXT,
-		avatar TEXT,
-		stars INTEGER DEFAULT 0,
-		phone TEXT,
-		email TEXT UNIQUE,
-		password_hash TEXT,
-		role TEXT DEFAULT 'user'
-	);
-	CREATE TABLE IF NOT EXISTS chores (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		title TEXT NOT NULL,
-		member_id INTEGER,
-		time_of_day TEXT,
-		completed BOOLEAN DEFAULT 0,
-		FOREIGN KEY(member_id) REFERENCES family_members(id)
-	);
-	CREATE TABLE IF NOT EXISTS chore_completions (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		chore_id INTEGER,
-		member_id INTEGER,
-		completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY(chore_id) REFERENCES chores(id),
-		FOREIGN KEY(member_id) REFERENCES family_members(id)
-	);
-	CREATE TABLE IF NOT EXISTS settings (
-		key TEXT PRIMARY KEY,
-		value TEXT
-	);
-	CREATE TABLE IF NOT EXISTS meals (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		title TEXT,
-		date TEXT,
-		type TEXT,
-		color TEXT
-	);
-	CREATE TABLE IF NOT EXISTS events (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		title TEXT,
-		start_date TEXT,
-		member_id INTEGER,
-		recurrence TEXT
-	);
-	CREATE TABLE IF NOT EXISTS calendar_subscriptions (
-		url TEXT PRIMARY KEY,
-		color TEXT
-	);
-	CREATE TABLE IF NOT EXISTS photos (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		url TEXT,
-		uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);
-	`
-	_, err = db.Exec(schema)
-	if err != nil {
-		return nil, err
-	}
-
-	// Migrations for new Event fields (simplistic approach: try add, ignore error)
-	migrations := []string{
-		"ALTER TABLE events ADD COLUMN end_date TEXT;",
-		"ALTER TABLE events ADD COLUMN description TEXT;",
-		"ALTER TABLE events ADD COLUMN location TEXT;",
-		"ALTER TABLE events ADD COLUMN is_all_day BOOLEAN DEFAULT 0;",
-		// Auth migrations
-		"ALTER TABLE family_members ADD COLUMN email TEXT;",
-		"ALTER TABLE family_members ADD COLUMN password_hash TEXT;",
-		"ALTER TABLE family_members ADD COLUMN role TEXT DEFAULT 'user';",
-		"ALTER TABLE family_members ADD COLUMN visible BOOLEAN DEFAULT 1;",
-	}
-	for _, m := range migrations {
-		db.Exec(m) // Ignore errors (like duplicate column)
-	}
-
-	return db, nil
-}
-
 func (app *App) loadConfigAndSchedule() {
 	// Load reset time from settings
-	var resetTime string
-	err := app.DB.QueryRow("SELECT value FROM settings WHERE key = 'chore_reset_time'").Scan(&resetTime)
-	if err != nil && err != sql.ErrNoRows {
-		log.Printf("Failed to load reset time: %v", err)
+	resetTime, err := app.Store.GetSetting("chore_reset_time")
+	if err != nil {
+		log.Printf("Using default reset time: %v", err)
 	}
 	if resetTime == "" {
 		resetTime = "00:00"
@@ -289,30 +207,9 @@ func (app *App) checkAndResetChores(force bool) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
 
-	today := time.Now().Format("2006-01-02")
-	log.Printf("[Chore Reset] Checking reset for %s (force: %v)", today, force)
-
-	var lastReset string
-	err := app.DB.QueryRow("SELECT value FROM settings WHERE key = 'last_chore_reset'").Scan(&lastReset)
-	if err != nil && err != sql.ErrNoRows {
-		log.Printf("Error checking last reset: %v", err)
-		return
-	}
-
-	if force || lastReset != today {
-		log.Println("[Chore Reset] Performing reset...")
-		_, err := app.DB.Exec("UPDATE chores SET completed = 0")
-		if err != nil {
-			log.Printf("Error resetting chores: %v", err)
-			return
-		}
-		_, err = app.DB.Exec("INSERT OR REPLACE INTO settings (key, value) VALUES ('last_chore_reset', ?)", today)
-		if err != nil {
-			log.Printf("Error updating last reset date: %v", err)
-		}
-		log.Println("[Chore Reset] Reset complete.")
-	} else {
-		log.Println("[Chore Reset] Already reset for today.")
+	// Using store logic
+	if err := app.Store.ResetChores(force); err != nil {
+		log.Printf("Error checking/resetting chores: %v", err)
 	}
 }
 

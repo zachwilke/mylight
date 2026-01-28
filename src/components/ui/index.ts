@@ -15,3 +15,6 @@ export type { TabsProps, TabListProps, TabTriggerProps, TabContentProps } from '
 
 export { Modal, ModalHeader, ModalTitle, ModalBody, ModalFooter } from './Modal';
 export type { ModalProps, ModalHeaderProps, ModalTitleProps, ModalBodyProps, ModalFooterProps } from './Modal';
+
+export { Tooltip } from './Tooltip';
+

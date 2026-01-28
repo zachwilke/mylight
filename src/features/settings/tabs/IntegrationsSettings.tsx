@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Save, Trash2, Calendar } from 'lucide-react';
-import { Button, Card, CardContent, Input } from '../../../components/ui';
+import { Button, Card, CardContent, Input, Tooltip } from '../../../components/ui';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { CalendarSubscription } from '../../../types';
 
@@ -107,8 +107,9 @@ export function IntegrationsSettings({ settings, saving, onSave }: IntegrationsS
       {/* Google Chat Webhook */}
       <Card>
         <CardContent>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             Google Chat Webhook
+            <Tooltip content="URL to send notifications when chores are completed." />
           </h3>
           <div className="flex gap-2">
             <Input
@@ -143,9 +144,8 @@ export function IntegrationsSettings({ settings, saving, onSave }: IntegrationsS
             >
               <div className="flex items-center gap-4 overflow-hidden">
                 <div
-                  className={`w-10 h-10 rounded-full ${
-                    cal.color || 'bg-gray-100 dark:bg-gray-700'
-                  } flex items-center justify-center shrink-0`}
+                  className={`w-10 h-10 rounded-full ${cal.color || 'bg-gray-100 dark:bg-gray-700'
+                    } flex items-center justify-center shrink-0`}
                 >
                   <Calendar size={18} className="opacity-70 dark:text-white" />
                 </div>
@@ -194,9 +194,8 @@ export function IntegrationsSettings({ settings, saving, onSave }: IntegrationsS
                   key={c.value}
                   type="button"
                   onClick={() => setNewColor(c.value)}
-                  className={`w-6 h-6 rounded-full ${c.value.split(' ')[0]} border-2 transition-all ${
-                    newColor === c.value ? 'border-gray-600 dark:border-white' : 'border-transparent'
-                  }`}
+                  className={`w-6 h-6 rounded-full ${c.value.split(' ')[0]} border-2 transition-all ${newColor === c.value ? 'border-gray-600 dark:border-white' : 'border-transparent'
+                    }`}
                   title={c.label}
                 />
               ))}

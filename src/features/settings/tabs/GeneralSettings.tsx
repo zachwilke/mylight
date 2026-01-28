@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Save, MapPin, Clock, Lock, Trash2 } from 'lucide-react';
-import { Button, Card, CardContent, Input } from '../../../components/ui';
+import { Save, Clock, Lock, Trash2 } from 'lucide-react';
+import { Button, Card, CardContent, Input, Tooltip } from '../../../components/ui';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { LocationSearch } from '../../../components/LocationSearch';
+import { getReverseGeocoding } from '../../../utils/weather';
 
 interface GeneralSettingsProps {
   settings: Record<string, string | undefined>;
@@ -11,8 +13,7 @@ interface GeneralSettingsProps {
 
 export function GeneralSettings({ settings, saving, onSave }: GeneralSettingsProps) {
   const [familyName, setFamilyName] = useState('');
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
+  const [locationName, setLocationName] = useState('');
   const [choreResetTime, setChoreResetTime] = useState('00:00');
   const [editCode, setEditCode] = useState('');
 
@@ -21,11 +22,26 @@ export function GeneralSettings({ settings, saving, onSave }: GeneralSettingsPro
 
   useEffect(() => {
     if (settings.family_name) setFamilyName(settings.family_name);
+
+    // Initialize location name (try to reverse geocode if only coords exist, or use stored name if we had it - but backend only stores "lat,lng")
+    // Ideally we would store the name too, but sticking to "lat,lng" format requirement:
     if (settings.weather_location?.includes(',')) {
       const parts = settings.weather_location.split(',');
-      setLatitude(parts[0].trim());
-      setLongitude(parts[1].trim());
+      const lat = parseFloat(parts[0].trim());
+      const lng = parseFloat(parts[1].trim());
+
+      if (!isNaN(lat) && !isNaN(lng)) {
+        // Attempt to fetch name for display if not already set by local interaction
+        getReverseGeocoding(lat, lng).then(name => {
+          if (name) setLocationName(name);
+          else setLocationName(`${lat}, ${lng}`);
+        });
+      }
+    } else if (settings.weather_location) {
+      // Fallback for zip codes or other formats if any legacy exist
+      setLocationName(settings.weather_location);
     }
+
     if (settings.chore_reset_time) setChoreResetTime(settings.chore_reset_time);
     if (settings.edit_code) setEditCode(settings.edit_code);
   }, [settings]);
@@ -40,11 +56,11 @@ export function GeneralSettings({ settings, saving, onSave }: GeneralSettingsPro
     if (success) showSuccess('Family name saved');
   };
 
-  const saveLocation = async () => {
-    if (!latitude || !longitude) return;
-    const locationString = `${latitude.trim()},${longitude.trim()}`;
+  const handleLocationSelect = async (loc: { name: string, lat: number, lng: number }) => {
+    setLocationName(loc.name);
+    const locationString = `${loc.lat},${loc.lng}`;
     const success = await onSave('weather_location', locationString);
-    if (success) showSuccess('Location saved');
+    if (success) showSuccess(`Location saved: ${loc.name}`);
   };
 
   const saveChoreResetTime = async () => {
@@ -88,8 +104,9 @@ export function GeneralSettings({ settings, saving, onSave }: GeneralSettingsPro
         <CardContent className="space-y-6">
           {/* Family Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 flex items-center gap-2">
               Family Name
+              <Tooltip content="Displayed on the home screen and screensaver." />
             </label>
             <div className="flex gap-2">
               <Input
@@ -108,40 +125,29 @@ export function GeneralSettings({ settings, saving, onSave }: GeneralSettingsPro
 
           {/* Weather Location */}
           <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
-              Weather Location (Coordinates)
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 flex items-center gap-2">
+              Weather Location
+              <Tooltip content="Used for weather forecasts and local time." />
             </label>
             <div className="flex gap-2">
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={latitude}
-                onChange={(e) => setLatitude(e.target.value)}
-                placeholder="Latitude"
-                icon={<MapPin size={14} />}
-                className="flex-1"
-              />
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={longitude}
-                onChange={(e) => setLongitude(e.target.value)}
-                placeholder="Longitude"
-                icon={<MapPin size={14} />}
-                className="flex-1"
-              />
-              <Button onClick={saveLocation} loading={saving}>
-                <Save size={16} />
-                Save
-              </Button>
+              <div className="flex-1">
+                <LocationSearch
+                  initialValue={locationName}
+                  onLocationSelect={handleLocationSelect}
+                />
+              </div>
             </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Search for your City or Zip Code to set the weather location.
+            </p>
           </div>
 
           {/* Chore Reset Time & Edit Code */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-100 dark:border-gray-800 pt-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 flex items-center gap-2">
                 Chore Reset Time
+                <Tooltip content="The time when daily chore status resets (24-hour format)." />
               </label>
               <div className="flex gap-2">
                 <Input
@@ -161,8 +167,9 @@ export function GeneralSettings({ settings, saving, onSave }: GeneralSettingsPro
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 flex items-center gap-2">
                 Edit Passcode
+                <Tooltip content="Required to enter Edit Mode for changing chores or settings." />
               </label>
               <div className="flex gap-2">
                 <Input

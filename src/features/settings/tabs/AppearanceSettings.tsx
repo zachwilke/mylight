@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Sun, Moon, Monitor, Sparkles, Zap, Save } from 'lucide-react';
-import { Button, Card, CardContent, Toggle, Input } from '../../../components/ui';
+import { Button, Card, CardContent, Toggle, Input, Tooltip } from '../../../components/ui';
 import { useTheme } from '../../../hooks/useTheme';
 
 interface AppearanceSettingsProps {
@@ -80,11 +80,10 @@ export function AppearanceSettings({
               <button
                 key={option.id}
                 onClick={() => setTheme(option.id)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  theme === option.id
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${theme === option.id
                     ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                }`}
+                  }`}
               >
                 <option.icon size={18} />
                 {option.label}
@@ -158,8 +157,9 @@ export function AppearanceSettings({
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Screensaver</h3>
           <div className="flex gap-2 items-end">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 flex items-center gap-2">
                 Idle Timeout (Minutes)
+                <Tooltip content="Minutes of inactivity before the screensaver starts." />
               </label>
               <Input
                 type="number"

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Cloud, Droplets, Wind, Eye, Sun, Gauge, Umbrella, ArrowUp, ArrowDown, CloudSun, CloudRain, CloudSnow, CloudLightning } from 'lucide-react';
+import { Cloud, Sun, CloudSun, CloudRain, CloudSnow, CloudLightning, ArrowUp, ArrowDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { WeatherMap } from './WeatherMap';
 import { getCachedWeather, getReverseGeocoding } from '../../utils/weather';
-import { Card, CardContent } from '../../components/ui';
+import { cn } from '../../lib/utils';
 
 interface WeatherData {
   temperatureAvg: number;
@@ -146,15 +146,15 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
   }, []);
 
   const getWeatherIcon = (code: number, size = 24) => {
-    if (code === 0) return <Sun className="text-amber-400" size={size} />;
-    if (code >= 1 && code <= 3) return <CloudSun className="text-amber-400" size={size} />;
-    if (code >= 45 && code <= 48) return <Cloud className="text-gray-400" size={size} />;
-    if (code >= 51 && code <= 67) return <CloudRain className="text-blue-400" size={size} />;
-    if (code >= 71 && code <= 77) return <CloudSnow className="text-sky-200" size={size} />;
-    if (code >= 80 && code <= 82) return <CloudRain className="text-blue-500" size={size} />;
-    if (code >= 85 && code <= 86) return <CloudSnow className="text-sky-200" size={size} />;
-    if (code >= 95 && code <= 99) return <CloudLightning className="text-purple-500" size={size} />;
-    return <CloudSun className="text-amber-400" size={size} />;
+    if (code === 0) return <Sun className="text-amber-500 drop-shadow-sm" size={size} />;
+    if (code >= 1 && code <= 3) return <CloudSun className="text-amber-400 drop-shadow-sm" size={size} />;
+    if (code >= 45 && code <= 48) return <Cloud className="text-slate-400 drop-shadow-sm" size={size} />;
+    if (code >= 51 && code <= 67) return <CloudRain className="text-indigo-400 drop-shadow-sm" size={size} />;
+    if (code >= 71 && code <= 77) return <CloudSnow className="text-indigo-200 drop-shadow-sm" size={size} />;
+    if (code >= 80 && code <= 82) return <CloudRain className="text-indigo-500 drop-shadow-sm" size={size} />;
+    if (code >= 85 && code <= 86) return <CloudSnow className="text-indigo-200 drop-shadow-sm" size={size} />;
+    if (code >= 95 && code <= 99) return <CloudLightning className="text-purple-600 drop-shadow-sm" size={size} />;
+    return <CloudSun className="text-amber-400 drop-shadow-sm" size={size} />;
   };
 
   const getWeatherLabel = (code: number) => {
@@ -175,29 +175,34 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
 
   if (loading)
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-gray-400">Loading Weather...</div>
+      <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+          <div className="text-gray-400 font-medium">Loading Weather...</div>
+        </div>
       </div>
     );
 
   if (!location) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-white dark:bg-gray-800">
-        <Cloud size={64} className="text-gray-300 dark:text-gray-600 mb-4" />
-        <h2 className="text-xl font-bold text-gray-700 dark:text-gray-200 mb-2">Location Not Set</h2>
-        {!kiosk && (
-          <p className="text-gray-500 dark:text-gray-400 max-w-md">
-            Please go to Settings and enter your Zip Code or City.
-          </p>
-        )}
+      <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-gray-50 dark:bg-gray-950">
+        <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl shadow-xl shadow-indigo-500/5 ring-1 ring-black/5">
+          <Cloud size={64} className="text-indigo-300 dark:text-indigo-700 mx-auto mb-6" />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Location Not Set</h2>
+          {!kiosk && (
+            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+              Please go to <span className="font-semibold text-indigo-500">Settings</span> and enter your Zip Code or City to see the weather.
+            </p>
+          )}
+        </div>
       </div>
     );
   }
 
+  // Kiosk Mode (Using the new design system lightly)
   if (kiosk) {
     return (
-      <div className="h-full flex flex-col overflow-hidden">
-        {/* Header */}
+      <div className="h-full flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-950">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -205,10 +210,10 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
         >
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight tracking-tight">
                 {location?.name}
               </h2>
-              <p className="text-gray-400 dark:text-gray-500 text-xs font-medium uppercase tracking-wider">
+              <p className="text-indigo-500 dark:text-indigo-400 text-sm font-semibold uppercase tracking-wider mt-1">
                 {new Date().toLocaleDateString('en-US', {
                   weekday: 'long',
                   month: 'long',
@@ -217,9 +222,9 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
               </p>
             </div>
             {weather && (
-              <div className="text-right flex items-center gap-3">
+              <div className="text-right flex items-center gap-4 bg-white dark:bg-gray-900 px-4 py-2 rounded-2xl shadow-sm ring-1 ring-black/5">
                 {getWeatherIcon(weather.weatherCode, 32)}
-                <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">
+                <span className="text-4xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
                   {Math.round(weather.temperatureAvg)}°
                 </span>
               </div>
@@ -227,8 +232,7 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
           </div>
         </motion.div>
 
-        <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-4 px-6 pb-6">
-          {/* Left Panel: Weather Details and Forecast */}
+        <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-6 px-6 pb-6">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -236,19 +240,19 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
             className="flex-1 flex flex-col min-h-0 overflow-hidden"
           >
             {weather && (
-              <div className="py-2 grid grid-cols-2 gap-2 text-xs shrink-0">
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 glass-panel rounded-xl px-3 py-2">
-                  <Droplets size={14} className="text-blue-500" />
-                  <span>{weather.humidityAvg}% humidity</span>
+              <div className="py-2 grid grid-cols-2 gap-3 text-sm shrink-0 mb-2">
+                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 rounded-xl px-4 py-3 shadow-sm ring-1 ring-black/5">
+                  <span>💧</span>
+                  <span className="font-medium">{weather.humidityAvg}% humidity</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 glass-panel rounded-xl px-3 py-2">
-                  <Wind size={14} className="text-gray-400" />
-                  <span>{Math.round(weather.windSpeedAvg)} mph wind</span>
+                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 rounded-xl px-4 py-3 shadow-sm ring-1 ring-black/5">
+                  <span>💨</span>
+                  <span className="font-medium">{Math.round(weather.windSpeedAvg)} mph wind</span>
                 </div>
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-2 mt-2">
+            <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
               {forecast.map((day, index) => {
                 const date = new Date(day.time);
                 return (
@@ -257,15 +261,15 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 + index * 0.05 }}
-                    className="flex items-center justify-between p-3 rounded-xl glass-panel hover:bg-white/60 dark:hover:bg-white/10 transition-colors kiosk-touch"
+                    className="flex items-center justify-between p-4 rounded-xl bg-white dark:bg-gray-900 shadow-sm ring-1 ring-black/5"
                   >
-                    <div className="text-xs font-bold text-gray-400 dark:text-gray-500 w-10">
+                    <div className="text-xs font-bold text-gray-400 dark:text-gray-500 w-12 uppercase tracking-wide">
                       {date.toLocaleDateString('en-US', { weekday: 'short' })}
                     </div>
                     <div className="flex items-center gap-2">{getWeatherIcon(day.values.weatherCode)}</div>
-                    <div className="text-sm font-bold text-gray-800 dark:text-gray-200 w-20 text-right">
-                      {Math.round(day.values.temperatureMax)}°{' '}
-                      <span className="text-gray-400 font-normal">
+                    <div className="text-sm font-bold text-gray-800 dark:text-gray-200 w-24 text-right tabular-nums">
+                      <span className="text-gray-900 dark:text-white">{Math.round(day.values.temperatureMax)}°</span>{' '}
+                      <span className="text-gray-400 dark:text-gray-600 font-medium">
                         / {Math.round(day.values.temperatureMin)}°
                       </span>
                     </div>
@@ -275,12 +279,11 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
             </div>
           </motion.div>
 
-          {/* Right Panel: Radar */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="w-full md:w-1/2 h-full rounded-2xl overflow-hidden border border-white/30 dark:border-white/10 relative z-0"
+            className="w-full md:w-1/2 h-full rounded-3xl overflow-hidden shadow-lg ring-4 ring-white dark:ring-gray-800 relative z-0"
           >
             {location ? (
               <WeatherMap lat={location.lat} lng={location.lng} />
@@ -293,112 +296,111 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
     );
   }
 
+  // Desktop Main View
   return (
-    <div className="h-full flex flex-col md:flex-row overflow-y-auto md:overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <div className="h-full flex flex-col md:flex-row overflow-y-auto md:overflow-hidden bg-gray-50/50 dark:bg-gray-950">
       {/* Left Panel: Current & Forecast */}
-      <div className="w-full md:w-1/3 flex flex-col shrink-0 border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-y-auto">
-        <div className="p-8 pb-4">
-          <h2 className="text-2xl font-bold text-charcoal dark:text-gray-100">
+      <div className="w-full md:w-[400px] lg:w-[450px] flex flex-col shrink-0 border-b md:border-b-0 md:border-r border-gray-200/50 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl overflow-y-auto z-10">
+        <div className="p-8 pb-6">
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-1">
             {location?.name || 'Unknown Location'}
           </h2>
-          <p className="text-gray-400 dark:text-gray-500 text-sm font-medium">Daily Forecast</p>
+          <p className="text-indigo-500 dark:text-indigo-400 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" /> Live Weather
+          </p>
         </div>
 
         {weather && (
-          <div className="px-8 py-6 space-y-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  {getWeatherIcon(weather.weatherCode)}
-                  <span className="text-lg font-medium text-gray-600 dark:text-gray-300">
-                    {getWeatherLabel(weather.weatherCode)}
-                  </span>
+          <div className="px-8 pb-8 space-y-8">
+            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-lg shadow-indigo-500/20 relative overflow-hidden">
+              {/* Decorative Circles */}
+              <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
+              <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-32 h-32 rounded-full bg-black/10 blur-2xl" />
+
+              <div className="flex items-start justify-between relative z-10">
+                <div>
+                  <div className="flex items-center gap-2 mb-1 opacity-90">
+                    {getWeatherIcon(weather.weatherCode, 20)}
+                    <span className="text-lg font-medium">
+                      {getWeatherLabel(weather.weatherCode)}
+                    </span>
+                  </div>
+                  <div className="text-7xl font-bold tracking-tighter mb-2">
+                    {Math.round(weather.temperatureAvg)}°
+                  </div>
                 </div>
-                <span className="text-7xl font-bold text-charcoal dark:text-gray-100 tracking-tighter">
-                  {Math.round(weather.temperatureAvg)}°
-                </span>
-                <div className="text-gray-500 dark:text-gray-400 font-medium mt-1">
-                  Feels like {Math.round(weather.temperatureApparentAvg)}°
+                <div className="text-right space-y-1 py-1">
+                  <div className="flex items-center justify-end gap-1 font-medium bg-white/20 backdrop-blur-sm px-3 py-1 rounded-lg text-sm">
+                    <ArrowUp size={14} /> {Math.round(weather.temperatureMax)}°
+                  </div>
+                  <div className="flex items-center justify-end gap-1 font-medium bg-black/10 backdrop-blur-sm px-3 py-1 rounded-lg text-sm">
+                    <ArrowDown size={14} /> {Math.round(weather.temperatureMin)}°
+                  </div>
                 </div>
               </div>
-              <div className="text-right space-y-1">
-                <div className="flex items-center justify-end gap-2 text-orange-500 font-bold">
-                  <ArrowUp size={16} /> {Math.round(weather.temperatureMax)}°
-                </div>
-                <div className="flex items-center justify-end gap-2 text-blue-500 font-bold">
-                  <ArrowDown size={16} /> {Math.round(weather.temperatureMin)}°
-                </div>
+              <div className="relative z-10 text-white/80 font-medium text-sm mt-2">
+                Feels like {Math.round(weather.temperatureApparentAvg)}°
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {[
-                { icon: Droplets, label: 'Humidity', value: `${weather.humidityAvg}%`, color: 'blue' },
-                { icon: Wind, label: 'Wind', value: `${Math.round(weather.windSpeedAvg)} mph`, color: 'gray' },
-                { icon: Sun, label: 'UV Index', value: `${weather.uvIndexMax || 0}`, color: 'yellow' },
-                {
-                  icon: Eye,
-                  label: 'Visibility',
-                  value: weather.visibilityAvg ? `${Math.round(weather.visibilityAvg)} mi` : '--',
-                  color: 'purple',
-                },
-                { icon: Gauge, label: 'Pressure', value: `${Math.round(weather.pressureSurfaceLevelAvg)} hPa`, color: 'teal' },
-                { icon: Umbrella, label: 'Precip %', value: `${weather.precipitationProbabilityAvg}%`, color: 'indigo' },
+                { label: 'Humidity', value: `${weather.humidityAvg}%`, emoji: '💧' },
+                { label: 'Wind', value: `${Math.round(weather.windSpeedAvg)} mph`, emoji: '💨' },
+                { label: 'UV Index', value: `${weather.uvIndexMax || 0}`, emoji: '☀️' },
+                { label: 'Visibility', value: weather.visibilityAvg ? `${Math.round(weather.visibilityAvg)} mi` : '--', emoji: '👁️' },
+                { label: 'Pressure', value: `${Math.round(weather.pressureSurfaceLevelAvg)} hPa`, emoji: '🌡️' },
+                { label: 'Precip', value: `${weather.precipitationProbabilityAvg}%`, emoji: '☔' },
               ].map(item => (
-                <Card key={item.label} className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 bg-${item.color}-100 dark:bg-${item.color}-900/30 text-${item.color}-600 dark:text-${item.color}-400 rounded-lg`}>
-                      <item.icon size={20} />
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
-                        {item.label}
-                      </div>
-                      <div className="font-bold text-gray-700 dark:text-gray-200">{item.value}</div>
-                    </div>
+                <div key={item.label} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-colors">
+                  <div className="text-lg mb-1">{item.emoji}</div>
+                  <div className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+                    {item.label}
                   </div>
-                </Card>
+                  <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">{item.value}</div>
+                </div>
               ))}
             </div>
           </div>
         )}
 
-        <div className="flex-1 px-4 pb-4 space-y-2">
+        <div className="flex-1 px-4 pb-4 space-y-1">
+          <h3 className="px-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">7-Day Forecast</h3>
           {forecast.map(day => {
             const date = new Date(day.time);
             return (
               <div
                 key={day.time}
-                className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group"
+                className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800/80 transition-all group"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 text-center">
-                    <div className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">
+                  <div className="w-14">
+                    <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">
                       {date.toLocaleDateString('en-US', { weekday: 'short' })}
                     </div>
-                    <div className="text-lg font-bold text-gray-700 dark:text-gray-200">
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-200">
                       {date.getDate()}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     {getWeatherIcon(day.values.weatherCode)}
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                       {getWeatherLabel(day.values.weatherCode)}
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden relative">
-                    <div
-                      className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-400 to-orange-400 opacity-50"
-                      style={{ left: '0%', right: '0%' }}
-                    />
-                  </div>
-                  <div className="text-right w-20">
-                    <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-right">
+                    <span className="text-sm font-bold text-gray-900 dark:text-white w-8">
                       {Math.round(day.values.temperatureMax)}°
                     </span>
-                    <span className="text-sm text-gray-400 dark:text-gray-500 ml-2">
+                    <div className="w-16 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                      <div
+                        className="absolute inset-y-0 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 rounded-full opacity-80"
+                        style={{ left: '0%', right: '0%' }}
+                      />
+                    </div>
+                    <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 w-6 text-right">
                       {Math.round(day.values.temperatureMin)}°
                     </span>
                   </div>
@@ -410,12 +412,14 @@ export function WeatherPage({ kiosk = false }: { kiosk?: boolean }) {
       </div>
 
       {/* Right Panel: Map */}
-      <div className="w-full flex-1 h-[400px] md:h-full bg-gray-100 dark:bg-gray-950 p-2 md:p-4 relative">
-        {location ? (
-          <WeatherMap lat={location.lat} lng={location.lng} />
-        ) : (
-          <div className="h-full w-full rounded-3xl bg-gray-200 dark:bg-gray-800 animate-pulse" />
-        )}
+      <div className="flex-1 h-[400px] md:h-full bg-gray-100 dark:bg-gray-950/50 p-3 md:p-6 relative">
+        <div className="h-full w-full rounded-[2rem] overflow-hidden shadow-2xl shadow-indigo-500/5 ring-1 ring-black/5 dark:ring-white/5 relative z-0">
+          {location ? (
+            <WeatherMap lat={location.lat} lng={location.lng} />
+          ) : (
+            <div className="h-full w-full bg-gray-200 dark:bg-gray-800 animate-pulse" />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -77,8 +77,8 @@ export function KioskSidebar({ isCollapsed, onToggleCollapse }: KioskSidebarProp
             to={item.path}
             className={({ isActive }) =>
               cn(
-                'w-full flex items-center p-5 rounded-3xl transition-all duration-200 group relative overflow-hidden kiosk-touch',
-                isCollapsed ? 'justify-center' : 'gap-5',
+                'w-full flex items-center p-4 rounded-3xl transition-all duration-200 group relative overflow-hidden kiosk-touch',
+                isCollapsed ? 'justify-center px-4' : 'gap-5 px-5',
                 isActive
                   ? 'bg-white/60 dark:bg-white/10 shadow-glass'
                   : 'hover:bg-white/40 dark:hover:bg-white/5'
@@ -90,7 +90,7 @@ export function KioskSidebar({ isCollapsed, onToggleCollapse }: KioskSidebarProp
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-center gap-5 w-full"
+                className={cn("flex items-center gap-5 w-full", isCollapsed && "justify-center")}
               >
                 {/* Icon with gradient background */}
                 <motion.div

@@ -1,29 +1,32 @@
-package main
+package store
 
 import (
 	"database/sql"
 )
 
 type FamilyMember struct {
-	ID     int            `json:"id"`
-	Name   string         `json:"name"`
-	Color  sql.NullString `json:"color"`
-	Avatar sql.NullString `json:"avatar"`
-	Stars  int            `json:"stars"`
-	Phone  sql.NullString `json:"phone"`
+	ID      int            `json:"id"`
+	Name    string         `json:"name"`
+	Color   sql.NullString `json:"color"`
+	Avatar  sql.NullString `json:"avatar"`
+	Stars   int            `json:"stars"`
+	Phone   sql.NullString `json:"phone"`
+	Email   sql.NullString `json:"email"`
+	Role    sql.NullString `json:"role"`
+	Visible sql.NullBool   `json:"visible"`
 }
 
-// Custom JSON marshaling to handle NullString nicely if desired,
-// or just use pointers *string in struct and handle nulls in scanning.
-// For simplicity in this rapid refactor: pointers is easier for JSON.
-
+// JSON Friendly version (optional, if we want to map sql.Null* to pointers)
 type FamilyMemberJSON struct {
-	ID     int     `json:"id"`
-	Name   string  `json:"name"`
-	Color  *string `json:"color"`
-	Avatar *string `json:"avatar"`
-	Stars  int     `json:"stars"`
-	Phone  *string `json:"phone"`
+	ID      int     `json:"id"`
+	Name    string  `json:"name"`
+	Color   *string `json:"color"`
+	Avatar  *string `json:"avatar"`
+	Stars   int     `json:"stars"`
+	Phone   *string `json:"phone"`
+	Email   *string `json:"email"`
+	Role    *string `json:"role"`
+	Visible bool    `json:"visible"`
 }
 
 type Setting struct {
@@ -57,17 +60,17 @@ type Meal struct {
 }
 
 type Event struct {
-	ID          interface{} `json:"id"` // Can be int or string (external)
-	Title       string      `json:"title"`
-	StartDate   string      `json:"start_date"`
-	EndDate     *string     `json:"end_date"`
-	MemberID    *int        `json:"member_id"`
-	Recurrence  *string     `json:"recurrence"`
-	Color       string      `json:"color,omitempty"`
-	IsExternal  bool        `json:"is_external,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Location    string      `json:"location,omitempty"`
-	IsAllDay    bool        `json:"is_all_day"`
+	ID          int     `json:"id"`
+	Title       string  `json:"title"`
+	StartDate   string  `json:"start_date"`
+	EndDate     *string `json:"end_date"`
+	MemberID    *int    `json:"member_id"`
+	Recurrence  *string `json:"recurrence"`
+	Color       string  `json:"color,omitempty"`
+	IsExternal  bool    `json:"is_external,omitempty"`
+	Description string  `json:"description,omitempty"`
+	Location    string  `json:"location,omitempty"`
+	IsAllDay    bool    `json:"is_all_day"`
 }
 
 type List struct {
