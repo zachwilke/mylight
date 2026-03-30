@@ -125,7 +125,7 @@ func (app *App) handleAvatarUpload(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	filename := fmt.Sprintf("avatar_%d_%d%s", id, time.Now().Unix(), filepath.Ext(handler.Filename))
-	dstPath := filepath.Join("../uploads", filename)
+	dstPath := filepath.Join(app.Config.UploadsDir, filename)
 
 	dst, err := os.Create(dstPath)
 	if err != nil {

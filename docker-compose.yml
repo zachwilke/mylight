@@ -1,0 +1,32 @@
+services:
+  mylight:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mylight:latest
+    container_name: mylight
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    volumes:
+      - mylight-data:/data
+    environment:
+      PORT: "3000"
+      DATA_DIR: /data
+      TZ: "${TZ:-America/New_York}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-*}"
+      # Optional: Claude API key for AI features (future)
+      # ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      # Optional: Google OAuth for two-way calendar sync (future)
+      # GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
+      # GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/settings"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  mylight-data:
+    driver: local
