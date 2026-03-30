@@ -6,6 +6,7 @@ import (
 	"mylight/store"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,17 +16,51 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const (
-	Port       = ":3000"
-	UploadsDir = "../uploads"
-	DbPath     = "../mylight.db" // Using root DB
-)
+// Config holds runtime configuration sourced from environment variables.
+type Config struct {
+	Port           string
+	UploadsDir     string
+	DbPath         string
+	AllowedOrigins []string
+}
 
-// AppState holds the application state
+func loadConfig() Config {
+	dataDir := getEnv("DATA_DIR", "..")
+	port := ":" + getEnv("PORT", "3000")
+
+	rawOrigins := getEnv("ALLOWED_ORIGINS", "*")
+	var origins []string
+	for _, o := range strings.Split(rawOrigins, ",") {
+		o = strings.TrimSpace(o)
+		if o != "" {
+			origins = append(origins, o)
+		}
+	}
+	if len(origins) == 0 {
+		origins = []string{"*"}
+	}
+
+	return Config{
+		Port:           port,
+		UploadsDir:     filepath.Join(dataDir, "uploads"),
+		DbPath:         filepath.Join(dataDir, "mylight.db"),
+		AllowedOrigins: origins,
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+// App holds the application state
 type App struct {
 	Store  *store.Store
 	Cron   *cron.Cron
 	Broker *Broker
+	Config Config
 	mu     sync.Mutex
 }
 
@@ -100,13 +135,15 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	cfg := loadConfig()
+
 	// 1. Setup Directories
-	if err := os.MkdirAll(UploadsDir, 0755); err != nil {
+	if err := os.MkdirAll(cfg.UploadsDir, 0755); err != nil {
 		log.Fatal("Failed to create uploads dir:", err)
 	}
 
 	// 2. Initialize Store
-	s, err := store.NewStore(DbPath)
+	s, err := store.NewStore(cfg.DbPath)
 	if err != nil {
 		log.Fatal("Failed to init Store:", err)
 	}
@@ -119,6 +156,7 @@ func main() {
 		Store:  s,
 		Cron:   cron.New(),
 		Broker: broker,
+		Config: cfg,
 	}
 
 	// 3. Start Scheduler
@@ -140,19 +178,18 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Static Files (Uploads)
-	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(UploadsDir))))
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadsDir))))
 
 	// Serve React Frontend (SPA)
-	frontendFS := http.FileServer(http.Dir("../dist"))
+	distDir := getEnv("DIST_DIR", "./dist")
+	frontendFS := http.FileServer(http.Dir(distDir))
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check if file exists in dist
-		path := "../dist" + r.URL.Path
+		path := filepath.Join(distDir, r.URL.Path)
 		if info, err := os.Stat(path); err == nil && !info.IsDir() {
 			frontendFS.ServeHTTP(w, r)
 			return
 		}
-		// Otherwise serve index.html for client-side routing
-		http.ServeFile(w, r, "../dist/index.html")
+		http.ServeFile(w, r, filepath.Join(distDir, "index.html"))
 	}))
 
 	// API Routes
@@ -172,17 +209,22 @@ func main() {
 	mux.HandleFunc("/api/photos", app.handlePhotos)
 
 	// CORS
+	corsOrigins := cfg.AllowedOrigins
+	if len(corsOrigins) == 1 && corsOrigins[0] == "*" {
+		corsOrigins = []string{"*"}
+	}
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:3000"}, // Vite & Self
+		AllowedOrigins:   corsOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
-		AllowCredentials: true,
+		AllowCredentials: len(corsOrigins) > 1 || corsOrigins[0] != "*",
 	})
 
 	handler := c.Handler(mux)
 
-	log.Printf("Server running on http://localhost%s", Port)
-	if err := http.ListenAndServe(Port, handler); err != nil {
+	log.Printf("Server running on http://localhost%s", cfg.Port)
+	log.Printf("Data dir: %s", getEnv("DATA_DIR", ".."))
+	if err := http.ListenAndServe(cfg.Port, handler); err != nil {
 		log.Fatal(err)
 	}
 }

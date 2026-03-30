@@ -80,7 +80,7 @@ func (app *App) handlePhotos(w http.ResponseWriter, r *http.Request) {
 
 			// Generate unique name
 			filename := fmt.Sprintf("photo-%d-%s", time.Now().UnixNano(), filepath.Base(fileHeader.Filename))
-			dstPath := filepath.Join(UploadsDir, filename)
+			dstPath := filepath.Join(app.Config.UploadsDir, filename)
 
 			dst, err := os.Create(dstPath)
 			if err != nil {
