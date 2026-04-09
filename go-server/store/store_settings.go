@@ -1,7 +1,9 @@
 package store
 
+import "fmt"
+
 func (s *Store) GetSettings() (map[string]string, error) {
-	rows, err := s.DB.Query("SELECT key, value FROM settings")
+	rows, err := s.DB.Query("SELECT key, value FROM settings LIMIT 1000")
 	if err != nil {
 		return nil, err
 	}
@@ -10,10 +12,12 @@ func (s *Store) GetSettings() (map[string]string, error) {
 	settings := make(map[string]string)
 	for rows.Next() {
 		var k, v string
-		rows.Scan(&k, &v)
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, fmt.Errorf("scan setting row: %w", err)
+		}
 		settings[k] = v
 	}
-	return settings, nil
+	return settings, rows.Err()
 }
 
 func (s *Store) UpsertSetting(key, value string) error {

@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
 )
@@ -19,7 +20,7 @@ func (s *Store) GetChores() (map[string][]Chore, error) {
 	}
 
 	// 2. Get Chores
-	rows, err := s.DB.Query("SELECT id, title, member_id, time_of_day, completed FROM chores")
+	rows, err := s.DB.Query("SELECT id, title, member_id, time_of_day, completed FROM chores LIMIT 1000")
 	if err != nil {
 		return nil, err
 	}
@@ -33,14 +34,14 @@ func (s *Store) GetChores() (map[string][]Chore, error) {
 	for rows.Next() {
 		var c Chore
 		if err := rows.Scan(&c.ID, &c.Title, &c.MemberID, &c.TimeOfDay, &c.Completed); err != nil {
-			continue
+			return nil, fmt.Errorf("scan chore row: %w", err)
 		}
 		if name, ok := members[c.MemberID]; ok {
 			c.MemberName = name
 			choresByMember[name] = append(choresByMember[name], c)
 		}
 	}
-	return choresByMember, nil
+	return choresByMember, rows.Err()
 }
 
 func (s *Store) CreateChore(c Chore) (int, error) {
@@ -135,14 +136,15 @@ func (s *Store) SearchChores(query string) ([]interface{}, error) {
 		var title string
 		var memberID int
 		var completed bool
-		if err := rows.Scan(&id, &title, &memberID, &completed); err == nil {
-			results = append(results, map[string]interface{}{
-				"id":        id,
-				"title":     title,
-				"member_id": memberID,
-				"completed": completed,
-			})
+		if err := rows.Scan(&id, &title, &memberID, &completed); err != nil {
+			return nil, fmt.Errorf("scan search chore row: %w", err)
 		}
+		results = append(results, map[string]interface{}{
+			"id":        id,
+			"title":     title,
+			"member_id": memberID,
+			"completed": completed,
+		})
 	}
-	return results, nil
+	return results, rows.Err()
 }

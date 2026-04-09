@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"mime/multipart"
 	"mylight/store"
 	"net/http"
 	"os"
@@ -26,25 +28,30 @@ func (app *App) handleMeals(w http.ResponseWriter, r *http.Request) {
 			meals = []store.Meal{}
 		}
 		jsonResponse(w, meals)
-
-	} else if r.Method == "POST" {
-		var m store.Meal
-		if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
-			jsonError(w, err.Error(), 400)
-			return
-		}
-		if m.Date == "" || m.Type == "" {
-			jsonError(w, "Date and Type required", 400)
-			return
-		}
-
-		updatedMeal, err := app.Store.UpsertMeal(m)
-		if err != nil {
-			jsonError(w, err.Error(), 500)
-			return
-		}
-		jsonResponse(w, map[string]interface{}{"success": true, "meal": updatedMeal})
+		return
 	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+
+	var m store.Meal
+	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		jsonError(w, err.Error(), 400)
+		return
+	}
+	if m.Date == "" || m.Type == "" {
+		jsonError(w, "Date and Type required", 400)
+		return
+	}
+
+	updatedMeal, err := app.Store.UpsertMeal(m)
+	if err != nil {
+		jsonError(w, err.Error(), 500)
+		return
+	}
+	jsonResponse(w, map[string]interface{}{"success": true, "meal": updatedMeal})
 }
 
 // -- Photos --
@@ -59,41 +66,69 @@ func (app *App) handlePhotos(w http.ResponseWriter, r *http.Request) {
 			photos = []store.Photo{}
 		}
 		jsonResponse(w, photos)
-
-	} else if r.Method == "POST" {
-		// Multipart upload
-		err := r.ParseMultipartForm(10 << 20) // 10MB
-		if err != nil {
-			jsonError(w, err.Error(), 400)
-			return
-		}
-
-		files := r.MultipartForm.File["photos"]
-		var urls []string
-
-		for _, fileHeader := range files {
-			file, err := fileHeader.Open()
-			if err != nil {
-				continue
-			}
-			defer file.Close()
-
-			// Generate unique name
-			filename := fmt.Sprintf("photo-%d-%s", time.Now().UnixNano(), filepath.Base(fileHeader.Filename))
-			dstPath := filepath.Join(app.Config.UploadsDir, filename)
-
-			dst, err := os.Create(dstPath)
-			if err != nil {
-				continue
-			}
-			defer dst.Close()
-
-			io.Copy(dst, file)
-
-			url := "/uploads/" + filename
-			app.Store.AddPhoto(url)
-			urls = append(urls, url)
-		}
-		jsonResponse(w, map[string]interface{}{"success": true, "urls": urls})
+		return
 	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10MB
+		jsonError(w, fmt.Sprintf("Failed to parse multipart form: %v", err), 400)
+		return
+	}
+
+	files := r.MultipartForm.File["photos"]
+	if len(files) == 0 {
+		jsonError(w, "No photos provided", 400)
+		return
+	}
+
+	var urls []string
+	var errors []string
+
+	for _, fileHeader := range files {
+		url, err := app.savePhoto(fileHeader)
+		if err != nil {
+			log.Printf("Failed to save photo %s: %v", fileHeader.Filename, err)
+			errors = append(errors, fmt.Sprintf("%s: %v", fileHeader.Filename, err))
+			continue
+		}
+		urls = append(urls, url)
+	}
+
+	if len(urls) == 0 {
+		jsonError(w, fmt.Sprintf("All uploads failed: %v", errors), 500)
+		return
+	}
+
+	jsonResponse(w, map[string]interface{}{"success": true, "urls": urls})
+}
+
+func (app *App) savePhoto(fh *multipart.FileHeader) (string, error) {
+	file, err := fh.Open()
+	if err != nil {
+		return "", fmt.Errorf("open file: %w", err)
+	}
+	defer file.Close()
+
+	filename := fmt.Sprintf("photo-%d-%s", time.Now().UnixNano(), filepath.Base(fh.Filename))
+	dstPath := filepath.Join(app.Config.UploadsDir, filename)
+
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		return "", fmt.Errorf("create destination: %w", err)
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		return "", fmt.Errorf("copy file: %w", err)
+	}
+
+	url := "/uploads/" + filename
+	if err := app.Store.AddPhoto(url); err != nil {
+		return "", fmt.Errorf("save to database: %w", err)
+	}
+	return url, nil
 }

@@ -18,24 +18,38 @@ func (app *App) handleChores(w http.ResponseWriter, r *http.Request) {
 		}
 		jsonResponse(w, chores)
 		return
-	} else if r.Method == "POST" {
-		var c store.Chore
-		if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
-			jsonError(w, err.Error(), 400)
-			return
-		}
-
-		id, err := app.Store.CreateChore(c)
-		if err != nil {
-			jsonError(w, err.Error(), 500)
-			return
-		}
-
-		c.ID = id
-		c.Completed = false
-		app.Broker.Notify("update")
-		jsonResponse(w, c)
 	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+
+	var c store.Chore
+	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+		jsonError(w, err.Error(), 400)
+		return
+	}
+
+	if c.Title == "" {
+		jsonError(w, "Title is required", 400)
+		return
+	}
+	if c.MemberID <= 0 {
+		jsonError(w, "Valid member_id is required", 400)
+		return
+	}
+
+	id, err := app.Store.CreateChore(c)
+	if err != nil {
+		jsonError(w, err.Error(), 500)
+		return
+	}
+
+	c.ID = id
+	c.Completed = false
+	app.Broker.Notify("update")
+	jsonResponse(w, c)
 }
 
 // POST /api/chores/:id/toggle
@@ -46,7 +60,11 @@ func (app *App) handleChoreToggle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idStr := parts[3]
-	id, _ := strconv.Atoi(idStr)
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		jsonError(w, "Invalid chore ID", 400)
+		return
+	}
 
 	var body struct {
 		Completed bool `json:"completed"`
@@ -71,7 +89,7 @@ func (app *App) handleChoreReset(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", 405)
 		return
 	}
-	app.checkAndResetChores(true) // Logic still in main/app for now as it uses Lock, essentially just calls store.ResetChores
+	app.checkAndResetChores(true)
 	app.Broker.Notify("update")
-	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	jsonResponse(w, map[string]bool{"success": true})
 }

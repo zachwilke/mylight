@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -26,9 +27,8 @@ func (s *Store) GetHistory(period string) ([]HistoryRow, error) {
 		startDate = now.AddDate(0, 0, -7)
 	}
 
-	// SQLite query
 	query := `
-		SELECT 
+		SELECT
 			strftime('%Y-%m-%d', cc.completed_at) as date,
 			m.name,
 			COUNT(cc.id) as count
@@ -37,6 +37,7 @@ func (s *Store) GetHistory(period string) ([]HistoryRow, error) {
 		WHERE cc.completed_at >= ?
 		GROUP BY date, m.name
 		ORDER BY date ASC
+		LIMIT 5000
 	`
 
 	rows, err := s.DB.Query(query, startDate)
@@ -49,9 +50,9 @@ func (s *Store) GetHistory(period string) ([]HistoryRow, error) {
 	for rows.Next() {
 		var h HistoryRow
 		if err := rows.Scan(&h.Date, &h.MemberName, &h.Count); err != nil {
-			continue
+			return nil, fmt.Errorf("scan history row: %w", err)
 		}
 		history = append(history, h)
 	}
-	return history, nil
+	return history, rows.Err()
 }

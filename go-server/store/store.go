@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 )
 
 type Store struct {
@@ -15,6 +16,15 @@ func NewStore(dbPath string) (*Store, error) {
 	}
 	if err := db.Ping(); err != nil {
 		return nil, err
+	}
+
+	// Set busy timeout to 5 seconds to avoid "database is locked" errors
+	if _, err := db.Exec("PRAGMA busy_timeout = 5000"); err != nil {
+		return nil, fmt.Errorf("set busy_timeout: %w", err)
+	}
+	// Enable WAL mode for better concurrent read/write performance
+	if _, err := db.Exec("PRAGMA journal_mode = WAL"); err != nil {
+		return nil, fmt.Errorf("set journal_mode: %w", err)
 	}
 
 	if err := initSchema(db); err != nil {
