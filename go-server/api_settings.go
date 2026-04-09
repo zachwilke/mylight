@@ -21,6 +21,10 @@ func (app *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, err.Error(), 400)
 			return
 		}
+		if s.Key == "" {
+			jsonError(w, "Setting key is required", 400)
+			return
+		}
 
 		if err := app.Store.UpsertSetting(s.Key, s.Value); err != nil {
 			jsonError(w, err.Error(), 500)

@@ -2,10 +2,11 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 )
 
 func (s *Store) GetEvents() ([]interface{}, error) {
-	rows, err := s.DB.Query("SELECT id, title, start_date, end_date, member_id, recurrence, description, location, is_all_day FROM events")
+	rows, err := s.DB.Query("SELECT id, title, start_date, end_date, member_id, recurrence, description, location, is_all_day FROM events LIMIT 10000")
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +21,7 @@ func (s *Store) GetEvents() ([]interface{}, error) {
 		var isAllDay sql.NullBool
 
 		if err := rows.Scan(&id, &title, &startDate, &endDate, &memberID, &recurrence, &description, &location, &isAllDay); err != nil {
-			continue
+			return nil, fmt.Errorf("scan event row: %w", err)
 		}
 
 		events = append(events, map[string]interface{}{
@@ -35,7 +36,7 @@ func (s *Store) GetEvents() ([]interface{}, error) {
 			"is_all_day":  isAllDay.Bool,
 		})
 	}
-	return events, nil
+	return events, rows.Err()
 }
 
 func (s *Store) CreateEvent(e Event) (int, error) {
@@ -82,15 +83,16 @@ func (s *Store) SearchEvents(query string) ([]interface{}, error) {
 		var title, start string
 		var location sql.NullString
 		var memberID sql.NullInt64
-		if err := rows.Scan(&id, &title, &start, &location, &memberID); err == nil {
-			results = append(results, map[string]interface{}{
-				"id":         id,
-				"title":      title,
-				"start_date": start,
-				"location":   location.String,
-				"member_id":  memberID.Int64,
-			})
+		if err := rows.Scan(&id, &title, &start, &location, &memberID); err != nil {
+			return nil, fmt.Errorf("scan search event row: %w", err)
 		}
+		results = append(results, map[string]interface{}{
+			"id":         id,
+			"title":      title,
+			"start_date": start,
+			"location":   location.String,
+			"member_id":  memberID.Int64,
+		})
 	}
-	return results, nil
+	return results, rows.Err()
 }

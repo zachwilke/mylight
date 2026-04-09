@@ -272,17 +272,28 @@ func (app *App) rescheduleReset(timeStr string) {
 		log.Printf("Invalid time format: %s", timeStr)
 		return
 	}
-	hour, _ := strconv.Atoi(parts[0])
-	minute, _ := strconv.Atoi(parts[1])
+	hour, err := strconv.Atoi(parts[0])
+	if err != nil {
+		log.Printf("Invalid hour in time format %q: %v", timeStr, err)
+		return
+	}
+	minute, err := strconv.Atoi(parts[1])
+	if err != nil {
+		log.Printf("Invalid minute in time format %q: %v", timeStr, err)
+		return
+	}
+	if hour < 0 || hour > 23 || minute < 0 || minute > 59 {
+		log.Printf("Time out of range: %s", timeStr)
+		return
+	}
 
 	// Cron: minute hour * * *
 	spec := fmt.Sprintf("%d %d * * *", minute, hour)
 	log.Printf("[Cron] Scheduling reset for %s (%s)", timeStr, spec)
 
-	_, err := app.Cron.AddFunc(spec, func() {
+	if _, err = app.Cron.AddFunc(spec, func() {
 		app.checkAndResetChores(false)
-	})
-	if err != nil {
+	}); err != nil {
 		log.Printf("[Cron] Failed to schedule: %v", err)
 	}
 }

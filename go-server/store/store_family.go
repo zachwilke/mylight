@@ -2,12 +2,13 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 func (s *Store) GetFamilyMembers() ([]FamilyMemberJSON, error) {
-	rows, err := s.DB.Query("SELECT id, name, color, avatar, stars, phone, email, role, visible FROM family_members")
+	rows, err := s.DB.Query("SELECT id, name, color, avatar, stars, phone, email, role, visible FROM family_members LIMIT 100")
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +25,7 @@ func (s *Store) GetFamilyMembers() ([]FamilyMemberJSON, error) {
 		var visible sql.NullBool
 
 		if err := rows.Scan(&id, &name, &color, &avatar, &stars, &phone, &email, &role, &visible); err != nil {
-			continue
+			return nil, fmt.Errorf("scan family member row: %w", err)
 		}
 
 		c := color.String
@@ -49,11 +50,11 @@ func (s *Store) GetFamilyMembers() ([]FamilyMemberJSON, error) {
 			Visible: v,
 		})
 	}
-	return members, nil
+	return members, rows.Err()
 }
 
 func (s *Store) GetFamilyMembersMap() (map[int]string, error) {
-	rows, err := s.DB.Query("SELECT id, name FROM family_members")
+	rows, err := s.DB.Query("SELECT id, name FROM family_members LIMIT 100")
 	if err != nil {
 		return nil, err
 	}
@@ -63,10 +64,12 @@ func (s *Store) GetFamilyMembersMap() (map[int]string, error) {
 	for rows.Next() {
 		var id int
 		var name string
-		rows.Scan(&id, &name)
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, fmt.Errorf("scan family member map row: %w", err)
+		}
 		members[id] = name
 	}
-	return members, nil
+	return members, rows.Err()
 }
 
 func (s *Store) CreateFamilyMember(m FamilyMemberJSON, password string) (int, error) {
@@ -145,13 +148,14 @@ func (s *Store) SearchMembers(query string) ([]interface{}, error) {
 		var id int
 		var name string
 		var avatar sql.NullString
-		if err := rows.Scan(&id, &name, &avatar); err == nil {
-			results = append(results, map[string]interface{}{
-				"id":     id,
-				"name":   name,
-				"avatar": avatar.String,
-			})
+		if err := rows.Scan(&id, &name, &avatar); err != nil {
+			return nil, fmt.Errorf("scan search member row: %w", err)
 		}
+		results = append(results, map[string]interface{}{
+			"id":     id,
+			"name":   name,
+			"avatar": avatar.String,
+		})
 	}
-	return results, nil
+	return results, rows.Err()
 }
