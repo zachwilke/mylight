@@ -1,9 +1,16 @@
-import { useState, useEffect } from 'react';
-import { Save, Clock, Lock, Trash2 } from 'lucide-react';
-import { Button, Card, CardContent, Input, Tooltip } from '../../../components/ui';
-import { ConfirmDialog } from '../../../components/ConfirmDialog';
-import { LocationSearch } from '../../../components/LocationSearch';
-import { getReverseGeocoding } from '../../../utils/weather';
+import { Clock, Lock, Save, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ConfirmDialog } from "../../../components/ConfirmDialog";
+import { LocationSearch } from "../../../components/LocationSearch";
+import {
+  Button,
+  Card,
+  CardContent,
+  Input,
+  Tooltip,
+} from "../../../components/ui";
+import { apiFetch } from "../../../lib/api";
+import { getReverseGeocoding } from "../../../utils/weather";
 
 interface GeneralSettingsProps {
   settings: Record<string, string | undefined>;
@@ -11,11 +18,15 @@ interface GeneralSettingsProps {
   onSave: (key: string, value: string) => Promise<boolean>;
 }
 
-export function GeneralSettings({ settings, saving, onSave }: GeneralSettingsProps) {
-  const [familyName, setFamilyName] = useState('');
-  const [locationName, setLocationName] = useState('');
-  const [choreResetTime, setChoreResetTime] = useState('00:00');
-  const [editCode, setEditCode] = useState('');
+export function GeneralSettings({
+  settings,
+  saving,
+  onSave,
+}: GeneralSettingsProps) {
+  const [familyName, setFamilyName] = useState("");
+  const [locationName, setLocationName] = useState("");
+  const [choreResetTime, setChoreResetTime] = useState("00:00");
+  const [editCode, setEditCode] = useState("");
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -25,14 +36,14 @@ export function GeneralSettings({ settings, saving, onSave }: GeneralSettingsPro
 
     // Initialize location name (try to reverse geocode if only coords exist, or use stored name if we had it - but backend only stores "lat,lng")
     // Ideally we would store the name too, but sticking to "lat,lng" format requirement:
-    if (settings.weather_location?.includes(',')) {
-      const parts = settings.weather_location.split(',');
+    if (settings.weather_location?.includes(",")) {
+      const parts = settings.weather_location.split(",");
       const lat = parseFloat(parts[0].trim());
       const lng = parseFloat(parts[1].trim());
 
       if (!isNaN(lat) && !isNaN(lng)) {
         // Attempt to fetch name for display if not already set by local interaction
-        getReverseGeocoding(lat, lng).then(name => {
+        getReverseGeocoding(lat, lng).then((name) => {
           if (name) setLocationName(name);
           else setLocationName(`${lat}, ${lng}`);
         });
@@ -52,31 +63,35 @@ export function GeneralSettings({ settings, saving, onSave }: GeneralSettingsPro
   };
 
   const saveFamilyName = async () => {
-    const success = await onSave('family_name', familyName);
-    if (success) showSuccess('Family name saved');
+    const success = await onSave("family_name", familyName);
+    if (success) showSuccess("Family name saved");
   };
 
-  const handleLocationSelect = async (loc: { name: string, lat: number, lng: number }) => {
+  const handleLocationSelect = async (loc: {
+    name: string;
+    lat: number;
+    lng: number;
+  }) => {
     setLocationName(loc.name);
     const locationString = `${loc.lat},${loc.lng}`;
-    const success = await onSave('weather_location', locationString);
+    const success = await onSave("weather_location", locationString);
     if (success) showSuccess(`Location saved: ${loc.name}`);
   };
 
   const saveChoreResetTime = async () => {
-    const success = await onSave('chore_reset_time', choreResetTime);
-    if (success) showSuccess('Reset time saved');
+    const success = await onSave("chore_reset_time", choreResetTime);
+    if (success) showSuccess("Reset time saved");
   };
 
   const saveEditCode = async () => {
-    const success = await onSave('edit_code', editCode);
-    if (success) showSuccess('Passcode saved');
+    const success = await onSave("edit_code", editCode);
+    if (success) showSuccess("Passcode saved");
   };
 
   const manualResetChores = async () => {
     try {
-      await fetch('/api/chores/reset', { method: 'POST' });
-      showSuccess('Chores have been reset');
+      await apiFetch("/api/chores/reset", { method: "POST" });
+      showSuccess("Chores have been reset");
       setShowResetConfirm(false);
     } catch (err) {
       console.error(err);
@@ -157,10 +172,18 @@ export function GeneralSettings({ settings, saving, onSave }: GeneralSettingsPro
                   icon={<Clock size={14} />}
                   className="flex-1"
                 />
-                <Button variant="secondary" onClick={saveChoreResetTime} loading={saving}>
+                <Button
+                  variant="secondary"
+                  onClick={saveChoreResetTime}
+                  loading={saving}
+                >
                   <Save size={16} />
                 </Button>
-                <Button variant="danger" onClick={() => setShowResetConfirm(true)} title="Reset All Chores Now">
+                <Button
+                  variant="danger"
+                  onClick={() => setShowResetConfirm(true)}
+                  title="Reset All Chores Now"
+                >
                   <Trash2 size={16} />
                 </Button>
               </div>

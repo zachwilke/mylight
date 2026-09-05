@@ -7,8 +7,16 @@
     @apply bg-[#F2F3F5] text-gray-900 font-sans antialiased overflow-hidden selection:bg-blue-500/30;
     background-image:
       radial-gradient(at 0% 0%, rgba(200, 220, 255, 0.4) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(255, 220, 220, 0.4) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(220, 255, 240, 0.4) 0px, transparent 50%),
+      radial-gradient(
+        at 100% 0%,
+        rgba(255, 220, 220, 0.4) 0px,
+        transparent 50%
+      ),
+      radial-gradient(
+        at 100% 100%,
+        rgba(220, 255, 240, 0.4) 0px,
+        transparent 50%
+      ),
       radial-gradient(at 0% 100%, rgba(240, 230, 255, 0.4) 0px, transparent 50%);
     background-attachment: fixed;
   }
@@ -20,27 +28,47 @@
       radial-gradient(at 100% 0%, rgba(50, 20, 20, 0.3) 0px, transparent 50%);
   }
 
-  /* iPad/Tablet Scale Increase */
-  @media (min-width: 768px) {
-    html {
-      font-size: 18px;
-      /* Base scale up */
+  @keyframes celebration-flash {
+    0% {
+      background-color: rgba(255, 0, 0, 0.3);
+    }
+    20% {
+      background-color: rgba(255, 255, 0, 0.3);
+    }
+    40% {
+      background-color: rgba(0, 255, 0, 0.3);
+    }
+    60% {
+      background-color: rgba(0, 255, 255, 0.3);
+    }
+    80% {
+      background-color: rgba(0, 0, 255, 0.3);
+    }
+    100% {
+      background-color: rgba(255, 0, 255, 0.3);
     }
   }
 
-  @keyframes celebration-flash {
-    0% { background-color: rgba(255, 0, 0, 0.3); }
-    20% { background-color: rgba(255, 255, 0, 0.3); }
-    40% { background-color: rgba(0, 255, 0, 0.3); }
-    60% { background-color: rgba(0, 255, 255, 0.3); }
-    80% { background-color: rgba(0, 0, 255, 0.3); }
-    100% { background-color: rgba(255, 0, 255, 0.3); }
-  }
-
   .celebration-overlay {
-    animation: celebration-flash 0.5s infinite;
+    background: rgba(142, 165, 128, 0.08);
     @apply fixed inset-0 pointer-events-none z-[100];
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid #355b48;
+  outline-offset: 3px;
 }
 
 @layer components {
@@ -52,11 +80,19 @@
   /* Glassmorphic card with pastel gradient */
   .glass-card-pastel {
     @apply backdrop-blur-xl rounded-3xl border border-white/40 dark:border-white/10 shadow-glass;
-    background: linear-gradient(135deg, rgba(214, 228, 229, 0.6) 0%, rgba(245, 225, 218, 0.6) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(214, 228, 229, 0.6) 0%,
+      rgba(245, 225, 218, 0.6) 100%
+    );
   }
 
   .dark .glass-card-pastel {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 37, 37, 0.6) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(30, 41, 59, 0.8) 0%,
+      rgba(51, 37, 37, 0.6) 100%
+    );
   }
 
   /* Sidebar-specific glass styling */

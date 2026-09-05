@@ -2,16 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"io"
 	"log"
 	"mylight/store"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // GET/POST/PUT /api/family
@@ -20,21 +15,40 @@ func (app *App) handleFamily(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		app.handleFamilyGet(w)
+		app.handleFamilyGet(w, r)
 	case "POST":
 		app.handleFamilyPost(w, r)
 	case "PUT":
 		app.handleFamilyPut(w, r)
+	case "DELETE":
+		id, err := pathID(r.URL.Path)
+		if err != nil {
+			jsonError(w, "Invalid member ID", 400)
+			return
+		}
+		if err = app.Store.DeleteFamilyMember(id); err != nil {
+			jsonError(w, err.Error(), 400)
+			return
+		}
+		app.Broker.Notify("update")
+		jsonResponse(w, map[string]bool{"success": true})
 	default:
 		http.Error(w, "Method not allowed", 405)
 	}
 }
 
-func (app *App) handleFamilyGet(w http.ResponseWriter) {
+func (app *App) handleFamilyGet(w http.ResponseWriter, r *http.Request) {
 	members, err := app.Store.GetFamilyMembers()
 	if err != nil {
 		jsonError(w, err.Error(), 500)
 		return
+	}
+	if user, _ := r.Context().Value(userKey{}).(*store.FamilyMemberJSON); user != nil && user.Role != nil && *user.Role == "display" {
+		for i := range members {
+			members[i].Email = nil
+			members[i].Phone = nil
+			members[i].Role = nil
+		}
 	}
 	jsonResponse(w, members)
 }
@@ -57,6 +71,14 @@ func (app *App) handleFamilyPost(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "Name is required", 400)
 		return
 	}
+	if req.Email != nil {
+		normalized := strings.ToLower(strings.TrimSpace(*req.Email))
+		req.Email = &normalized
+	}
+	if req.Password != "" && (len(req.Password) < 10 || len(req.Password) > 72 || req.Email == nil || !strings.Contains(*req.Email, "@")) {
+		jsonError(w, "Adult sign-in requires an email and password between 10 and 72 characters", 400)
+		return
+	}
 
 	id, err := app.Store.CreateFamilyMember(req.FamilyMemberJSON, req.Password)
 	if err != nil {
@@ -65,7 +87,12 @@ func (app *App) handleFamilyPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	app.Broker.Notify("update")
-	jsonResponse(w, map[string]interface{}{"success": true, "id": id})
+	member, err := app.Store.GetFamilyMember(id)
+	if err != nil {
+		jsonError(w, "Could not read member", 500)
+		return
+	}
+	jsonResponse(w, member)
 }
 
 func (app *App) handleFamilyPut(w http.ResponseWriter, r *http.Request) {
@@ -116,9 +143,15 @@ func (app *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := app.Store.AuthenticateUser(body.Email, body.Password)
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	user, err := app.Store.AuthenticateUser(strings.ToLower(strings.TrimSpace(body.Email)), body.Password)
 	if err != nil {
 		jsonError(w, "Invalid credentials", 401)
+		return
+	}
+	if err := app.newSession(w, r, user.ID); err != nil {
+		jsonError(w, "Could not start session", 500)
 		return
 	}
 
@@ -141,11 +174,17 @@ func (app *App) handleAvatarUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		jsonError(w, "Failed to parse multipart form", 400)
 		return
 	}
-	file, handler, err := r.FormFile("avatar")
+	defer r.MultipartForm.RemoveAll()
+	if _, err := app.Store.GetFamilyMember(id); err != nil {
+		jsonError(w, "Member not found", 404)
+		return
+	}
+	file, _, err := r.FormFile("avatar")
 	if err != nil {
 		log.Printf("Error retrieving file: %v", err)
 		jsonError(w, "Error retrieving file", 400)
@@ -153,24 +192,11 @@ func (app *App) handleAvatarUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	filename := fmt.Sprintf("avatar_%d_%d%s", id, time.Now().Unix(), filepath.Ext(handler.Filename))
-	dstPath := filepath.Join(app.Config.UploadsDir, filename)
-
-	dst, err := os.Create(dstPath)
+	avatarURL, err := app.saveImage(file)
 	if err != nil {
-		log.Printf("Error creating file: %v", err)
-		jsonError(w, "Error saving file", 500)
+		jsonError(w, err.Error(), 400)
 		return
 	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		log.Printf("Error copying file: %v", err)
-		jsonError(w, "Error copying file", 500)
-		return
-	}
-
-	avatarURL := fmt.Sprintf("/uploads/%s", filename)
 	if err := app.Store.UpdateAvatar(id, avatarURL); err != nil {
 		log.Printf("Error updating db: %v", err)
 		jsonError(w, "Error updating db", 500)

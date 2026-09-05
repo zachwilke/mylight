@@ -1,13 +1,18 @@
-import { Tabs, TabList, TabTrigger, TabContent } from '../../components/ui';
-import { useSettings } from '../../hooks/useSettings';
-import { GeneralSettings } from './tabs/GeneralSettings';
-import { FamilySettings } from './tabs/FamilySettings';
-import { IntegrationsSettings } from './tabs/IntegrationsSettings';
-import { AppearanceSettings } from './tabs/AppearanceSettings';
-import { PhotosSettings } from './tabs/PhotosSettings';
+import { TabContent, TabList, Tabs, TabTrigger } from "../../components/ui";
+import { useSettings } from "../../hooks/useSettings";
+import { BackupSettings } from "./tabs/BackupSettings";
+import { AppearanceSettings } from "./tabs/AppearanceSettings";
+import { FamilySettings } from "./tabs/FamilySettings";
+import { GeneralSettings } from "./tabs/GeneralSettings";
+import { IntegrationsSettings } from "./tabs/IntegrationsSettings";
+import { PhotosSettings } from "./tabs/PhotosSettings";
+import { RemoteAccessSettings } from "./tabs/RemoteAccessSettings";
+import { DevicesSettings } from "./tabs/DevicesSettings";
+import { AccountSettings } from "./tabs/AccountSettings";
 
 export function Settings() {
-  const { settings, loading, saving, updateSetting, updateSettings } = useSettings();
+  const { settings, loading, saving, updateSetting, updateSettings } =
+    useSettings();
 
   if (loading) {
     return (
@@ -34,8 +39,12 @@ export function Settings() {
             <TabTrigger value="general">General</TabTrigger>
             <TabTrigger value="family">Family</TabTrigger>
             <TabTrigger value="integrations">Integrations</TabTrigger>
+            <TabTrigger value="remote">Remote access</TabTrigger>
+            <TabTrigger value="devices">Displays</TabTrigger>
+            <TabTrigger value="account">Account</TabTrigger>
             <TabTrigger value="appearance">Appearance</TabTrigger>
             <TabTrigger value="photos">Photos</TabTrigger>
+            <TabTrigger value="backup">Backups</TabTrigger>
           </TabList>
 
           <TabContent value="general">
@@ -51,11 +60,16 @@ export function Settings() {
           </TabContent>
 
           <TabContent value="integrations">
-            <IntegrationsSettings
-              settings={settings}
-              saving={saving}
-              onSave={updateSetting}
-            />
+            <IntegrationsSettings />
+          </TabContent>
+          <TabContent value="remote">
+            <RemoteAccessSettings />
+          </TabContent>
+          <TabContent value="devices">
+            <DevicesSettings />
+          </TabContent>
+          <TabContent value="account">
+            <AccountSettings />
           </TabContent>
 
           <TabContent value="appearance">
@@ -69,6 +83,9 @@ export function Settings() {
 
           <TabContent value="photos">
             <PhotosSettings />
+          </TabContent>
+          <TabContent value="backup">
+            <BackupSettings />
           </TabContent>
         </Tabs>
       </div>

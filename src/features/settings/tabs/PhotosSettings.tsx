@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
-import { Upload, Trash2 } from 'lucide-react';
-import { Card, CardContent } from '../../../components/ui';
-import { ConfirmDialog } from '../../../components/ConfirmDialog';
-import { Photo } from '../../../types';
+import { Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ConfirmDialog } from "../../../components/ConfirmDialog";
+import { Card, CardContent } from "../../../components/ui";
+import { apiFetch } from "../../../lib/api";
+import { Photo } from "../../../types";
 
 export function PhotosSettings() {
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -15,9 +16,9 @@ export function PhotosSettings() {
   }, []);
 
   const fetchPhotos = () => {
-    fetch('/api/photos')
-      .then(res => res.json())
-      .then(data => setPhotos(data || []))
+    apiFetch("/api/photos")
+      .then((res) => res.json())
+      .then((data) => setPhotos(data || []))
       .catch(console.error);
   };
 
@@ -26,17 +27,17 @@ export function PhotosSettings() {
     if (!files || files.length === 0) return;
 
     const formData = new FormData();
-    Array.from(files).forEach(file => {
-      formData.append('photos', file);
+    Array.from(files).forEach((file) => {
+      formData.append("photos", file);
     });
 
     try {
-      await fetch('/api/photos', {
-        method: 'POST',
+      await apiFetch("/api/photos", {
+        method: "POST",
         body: formData,
       });
       fetchPhotos();
-      e.target.value = '';
+      e.target.value = "";
     } catch (err) {
       console.error(err);
     }
@@ -45,8 +46,8 @@ export function PhotosSettings() {
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
     try {
-      await fetch(`/api/photos/${pendingDeleteId}`, { method: 'DELETE' });
-      setPhotos(photos.filter(p => p.id !== pendingDeleteId));
+      await apiFetch(`/api/photos/${pendingDeleteId}`, { method: "DELETE" });
+      setPhotos(photos.filter((p) => p.id !== pendingDeleteId));
       setPendingDeleteId(null);
       setShowDeleteConfirm(false);
     } catch (err) {
@@ -98,7 +99,7 @@ export function PhotosSettings() {
             </div>
 
             {/* Photo Grid */}
-            {photos.map(photo => (
+            {photos.map((photo) => (
               <div
                 key={photo.id}
                 className="relative group aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"

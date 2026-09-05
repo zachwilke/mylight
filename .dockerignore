@@ -1,0 +1,17 @@
+.git
+node_modules
+dist
+data
+uploads
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
+go-server/server
+go-server/server_bin
+go-server/mylight
+go-server/web/dist
+mylight
+release
+**/*-tailscale

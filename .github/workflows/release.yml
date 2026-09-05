@@ -1,0 +1,54 @@
+name: Release candidates
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  binaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-server/go.mod
+          cache-dependency-path: go-server/go.sum
+      - run: npm ci && npm run build && npm run lint
+      - run: npm run test:ui
+      - run: go test -C go-server -race ./...
+      - name: Build self-contained binaries
+        shell: bash
+        run: |
+          mkdir -p go-server/web/dist release
+          cp -R dist/. go-server/web/dist/
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            platform="${target%/*}"
+            architecture="${target#*/}"
+            artifact="mylight-${platform}-${architecture}"
+            if [ "$platform" = windows ]; then artifact="${artifact}.exe"; fi
+            CGO_ENABLED=0 GOOS="$platform" GOARCH="$architecture" go build -C go-server -trimpath -ldflags='-s -w' -o "../release/$artifact" .
+          done
+          cd release
+          sha256sum mylight-* > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mylight-binaries
+          path: release/
+          retention-days: 30
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: mylight:candidate

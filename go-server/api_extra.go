@@ -3,14 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"mime/multipart"
 	"mylight/store"
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 // -- Meals --
@@ -52,6 +50,7 @@ func (app *App) handleMeals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonResponse(w, map[string]interface{}{"success": true, "meal": updatedMeal})
+	app.Broker.Notify("update")
 }
 
 // -- Photos --
@@ -78,10 +77,11 @@ func (app *App) handlePhotos(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, fmt.Sprintf("Failed to parse multipart form: %v", err), 400)
 		return
 	}
+	defer r.MultipartForm.RemoveAll()
 
 	files := r.MultipartForm.File["photos"]
-	if len(files) == 0 {
-		jsonError(w, "No photos provided", 400)
+	if len(files) == 0 || len(files) > 20 {
+		jsonError(w, "Provide between 1 and 20 photos per upload", 400)
 		return
 	}
 
@@ -104,6 +104,7 @@ func (app *App) handlePhotos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, map[string]interface{}{"success": true, "urls": urls})
+	app.Broker.Notify("update")
 }
 
 func (app *App) savePhoto(fh *multipart.FileHeader) (string, error) {
@@ -113,21 +114,12 @@ func (app *App) savePhoto(fh *multipart.FileHeader) (string, error) {
 	}
 	defer file.Close()
 
-	filename := fmt.Sprintf("photo-%d-%s", time.Now().UnixNano(), filepath.Base(fh.Filename))
-	dstPath := filepath.Join(app.Config.UploadsDir, filename)
-
-	dst, err := os.Create(dstPath)
+	url, err := app.saveImage(file)
 	if err != nil {
-		return "", fmt.Errorf("create destination: %w", err)
+		return "", err
 	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		return "", fmt.Errorf("copy file: %w", err)
-	}
-
-	url := "/uploads/" + filename
 	if err := app.Store.AddPhoto(url); err != nil {
+		os.Remove(filepath.Join(app.Config.UploadsDir, filepath.Base(url)))
 		return "", fmt.Errorf("save to database: %w", err)
 	}
 	return url, nil

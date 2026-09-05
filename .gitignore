@@ -25,6 +25,17 @@ dist-ssr
 
 # Database and Uploads
 mylight.db
+mylight.db-wal
+mylight.db-shm
+.env
+.env.*
+!.env.example
+data/
+release/
 uploads/
 go-server/mylight
 go-server/server_bin
+go-server/web/dist/
+/mylight
+*-tailscale/
+**/.mylight.lock

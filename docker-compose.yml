@@ -10,23 +10,30 @@ services:
       - "${HOST_PORT:-3000}:3000"
     volumes:
       - mylight-data:/data
+      - mylight-tailscale:/var/lib/mylight-tailscale
     environment:
       PORT: "3000"
       DATA_DIR: /data
       TZ: "${TZ:-America/New_York}"
-      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-*}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+      MYLIGHT_TAILSCALE: "${MYLIGHT_TAILSCALE:-false}"
+      MYLIGHT_TAILSCALE_ONLY: "${MYLIGHT_TAILSCALE_ONLY:-false}"
+      MYLIGHT_TAILSCALE_HOSTNAME: "${MYLIGHT_TAILSCALE_HOSTNAME:-mylight}"
+      MYLIGHT_TAILSCALE_STATE_DIR: /var/lib/mylight-tailscale
+      TS_AUTHKEY: "${TS_AUTHKEY:-}"
       # Optional: Claude API key for AI features (future)
       # ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
       # Optional: Google OAuth for two-way calendar sync (future)
       # GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
       # GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/settings"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/readyz"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
 
 volumes:
+  mylight-tailscale:
   mylight-data:
     driver: local
