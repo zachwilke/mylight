@@ -4,6 +4,34 @@ These are incremental implementations from the approved roadmap, **not full Skyl
 parity**. Work is on `codex/mylight-foundation`. This document records
 implementation evidence, not release approval or deployment to a household server.
 
+## Task identity and calendar review follow-ups — September 5
+
+- The task board explicitly requests `GET /api/chores?group_by=member_id` and
+  uses member IDs for columns, optimistic updates, celebrations and star totals.
+  Duplicate names are visibly disambiguated in headers and assignment choices.
+  Existing unparameterized clients retain the old name-grouped response; the
+  updated board rejects incompatible responses with a visible retry notice.
+- Tests cover two identically named members, isolated tasks/star updates, stable
+  IDs after renaming, invalid grouping parameters and legacy response compatibility.
+  This is the identity foundation for gate C, not task occurrences or a reward ledger.
+- Calendar review follow-ups validate typed timezone names before save, normalize
+  stored timestamp reads, explicitly test both folded instants, and clear stale
+  events after a failed recurrence refresh. New late-night events now default to
+  an end date on the following day rather than an invalid earlier end.
+- The timezone review returned three minor suggestions (addressed) and one major
+  suggestion to replace a failed series with its single DTSTART. That fallback
+  was rejected because it silently loses occurrences; explicit failure/no-partial-
+  calendar behavior is intentional and regression-tested. Calendar range loading
+  was additionally hardened to clear stale data on failure and recover on retry.
+
+Checks: 83 frontend tests and 54 Go tests pass. Production build and lint pass
+(18 pre-existing lint warnings); the focused follow-up review covered all 12
+changed source/test files and returned zero findings.
+Hosted checks passed for timezone commit `81f2bdf` on draft PR #17.
+The Go race suite and vet also pass. A browser check with synthetic Alex #1 and
+Alex #3 confirmed separate columns and tasks: completing Alex #1's task raised
+only that member's stars from 0 to 1; Alex #3 remained at 7 with an incomplete task.
+
 ## Zoned timed recurrence — September 5
 
 - Transactional schema 7 adds an explicit event timezone. Existing records stay
@@ -37,8 +65,8 @@ errors. Production dependency audit reports zero vulnerabilities. Browser tests
 saved a synthetic 9 AM Asia/Tokyo series, verified its previous-day 7 PM Chicago
 display, and reopened it as 9 AM Tokyo. The phone-width editor was visually checked.
 The preview's schema-6 database was backed up before migration. No real household,
-provider or tailnet data was used. CodeRabbit review is temporarily rate-limited;
-this is not a clean-review claim. Full gate B still needs server/provider occurrence
+provider or tailnet data was used. CodeRabbit initially hit a temporary rate limit;
+its subsequent findings and follow-ups are recorded above. Full gate B still needs server/provider occurrence
 semantics, historical export, occurrence exceptions/future splits and real sync.
 
 Implementation references: [Temporal timezone disambiguation](https://github.com/tc39/proposal-temporal/blob/main/docs/timezone.md)

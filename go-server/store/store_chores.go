@@ -5,31 +5,42 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 )
 
 func (s *Store) GetChores() (map[string][]Chore, error) {
+	return s.getChores(false)
+}
+
+func (s *Store) GetChoresByMemberID() (map[string][]Chore, error) {
+	return s.getChores(true)
+}
+
+func (s *Store) getChores(byID bool) (map[string][]Chore, error) {
 	// 1. Get Members for mapping
 	members, err := s.GetFamilyMembersMap()
 	if err != nil {
 		return nil, err
 	}
 
-	memberNames := []string{}
-	for _, name := range members {
-		memberNames = append(memberNames, name)
+	key := func(id int, name string) string {
+		if byID {
+			return strconv.Itoa(id)
+		}
+		return name
 	}
 
 	// 2. Get Chores
-	rows, err := s.DB.Query("SELECT id, title, member_id, time_of_day, completed FROM chores LIMIT 1000")
+	rows, err := s.DB.Query("SELECT id, title, member_id, time_of_day, completed FROM chores ORDER BY member_id, id LIMIT 1000")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
 	choresByMember := make(map[string][]Chore)
-	for _, name := range members {
-		choresByMember[name] = []Chore{}
+	for id, name := range members {
+		choresByMember[key(id, name)] = []Chore{}
 	}
 
 	for rows.Next() {
@@ -39,7 +50,8 @@ func (s *Store) GetChores() (map[string][]Chore, error) {
 		}
 		if name, ok := members[c.MemberID]; ok {
 			c.MemberName = name
-			choresByMember[name] = append(choresByMember[name], c)
+			bucket := key(c.MemberID, name)
+			choresByMember[bucket] = append(choresByMember[bucket], c)
 		}
 	}
 	return choresByMember, rows.Err()

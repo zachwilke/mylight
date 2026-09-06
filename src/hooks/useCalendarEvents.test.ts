@@ -29,6 +29,37 @@ const event = {
 };
 const json = (body: unknown) => new Response(JSON.stringify(body));
 
+it("clears stale events and reports failed recurrence expansion on refresh", async () => {
+  let broken = false;
+  vi.mocked(apiFetch).mockImplementation(async (url) =>
+    json(
+      url === "/api/family"
+        ? [member]
+        : [
+            {
+              ...event,
+              ...(broken
+                ? { timezone: "Mars/Olympus", recurrence: "FREQ=DAILY" }
+                : {}),
+            },
+          ],
+    ),
+  );
+  const { result, rerender } = renderHook(
+    ({ refresh }) => useCalendarEvents(start, end, refresh),
+    { initialProps: { refresh: 0 } },
+  );
+  await waitFor(() => expect(result.current.events).toHaveLength(1));
+  broken = true;
+  rerender({ refresh: 1 });
+  await waitFor(() => expect(result.current.error).not.toBe(""));
+  expect(result.current.events).toEqual([]);
+  broken = false;
+  await act(async () => result.current.retry());
+  await waitFor(() => expect(result.current.events).toHaveLength(1));
+  expect(result.current.error).toBe("");
+});
+
 it("returns family options and resolves unassigned, subscribed and deleted-member events as shared", async () => {
   vi.mocked(apiFetch).mockImplementation(async (url) =>
     json(

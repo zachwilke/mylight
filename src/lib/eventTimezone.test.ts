@@ -4,6 +4,29 @@ import { occurrences } from "./calendar";
 import { readRepeat, writeRepeat } from "./recurrenceEditor";
 
 describe("timezone-aware calendar", () => {
+  it("produces identical occurrence instants for viewers in different timezones", () => {
+    const previous = process.env.TZ;
+    try {
+      for (const viewer of ["UTC", "America/Los_Angeles", "Asia/Tokyo"]) {
+        process.env.TZ = viewer;
+        const dates = zonedRepeatDates(
+          "FREQ=DAILY;COUNT=3",
+          new Date("2026-03-07T15:00:00Z"),
+          "America/Chicago",
+          new Date("2026-03-07"),
+          new Date("2026-03-12"),
+        );
+        expect(dates.map((d) => d.toISOString())).toEqual([
+          "2026-03-07T15:00:00.000Z",
+          "2026-03-08T14:00:00.000Z",
+          "2026-03-09T14:00:00.000Z",
+        ]);
+      }
+    } finally {
+      if (previous === undefined) delete process.env.TZ;
+      else process.env.TZ = previous;
+    }
+  });
   it("keeps 9am through spring and fall, independent of the viewer timezone", () => {
     for (const [start, hours] of [
       ["2026-03-07T15:00:00Z", [15, 14, 14]],

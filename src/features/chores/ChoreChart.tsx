@@ -17,6 +17,14 @@ import { cn } from "../../lib/utils";
 
 import { Chore, FamilyMember } from "@/types";
 
+function taskMemberLabel(member: FamilyMember, members: FamilyMember[]) {
+  return members.some(
+    (other) => other.id !== member.id && other.name === member.name,
+  )
+    ? `${member.name} · #${member.id}`
+    : member.name;
+}
+
 interface Celebration {
   x: number;
   y: number;
@@ -28,6 +36,7 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [stars, setStars] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [animations, setAnimations] = useState({
     confetti: true,
     major: false,
@@ -55,7 +64,7 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
     const version = ++state.version;
     try {
       const [choresRes, familyRes, settingsRes] = await Promise.all([
-        apiFetch("/api/chores"),
+        apiFetch("/api/chores?group_by=member_id"),
         apiFetch("/api/family"),
         apiFetch("/api/settings"),
       ]);
@@ -64,6 +73,22 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
       const settingsData: Record<string, string> = await settingsRes.json();
       if (!state.active || state.version !== version || state.mutations.size)
         return;
+
+      if (
+        !choresData ||
+        Array.isArray(choresData) ||
+        typeof choresData !== "object" ||
+        Object.entries(choresData).some(
+          ([id, tasks]) =>
+            !/^[1-9]\d*$/.test(id) ||
+            !Array.isArray(tasks) ||
+            tasks.some((task) => !task || task.member_id !== Number(id)),
+        )
+      ) {
+        throw new Error(
+          "The server did not return ID-based task groups. Reload after updating MyLight",
+        );
+      }
 
       setEditCode(settingsData.edit_code || null);
       setAnimations({
@@ -77,11 +102,16 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
       // Use stars from member data
       const initialStars: Record<string, number> = {};
       familyData.forEach((m) => {
-        initialStars[m.name] = m.stars || 0;
+        initialStars[m.id] = m.stars || 0;
       });
       setStars(initialStars);
+      setLoadError("");
     } catch (err) {
       console.error("Failed to fetch data", err);
+      if (state.active && state.version === version && !state.mutations.size)
+        setLoadError(
+          err instanceof Error ? err.message : "Could not load tasks",
+        );
     } finally {
       if (state.active && state.version === version && !state.mutations.size)
         setLoading(false);
@@ -101,9 +131,8 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
     };
   }, [fetchData]);
 
-  // Helper to get member by name
-  const getMemberByName = (name: string) =>
-    members.find((m) => m.name === name);
+  const memberLabel = (member: FamilyMember) =>
+    taskMemberLabel(member, members);
 
   const triggerCelebration = (x: number, y: number) => {
     if (
@@ -295,6 +324,21 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-transparent">
+      {loadError && (
+        <div
+          role="alert"
+          className="mx-6 mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"
+        >
+          <p>{loadError}</p>
+          <button
+            type="button"
+            className="min-h-11 underline"
+            onClick={() => void fetchData()}
+          >
+            Retry task loading
+          </button>
+        </div>
+      )}
       {showMajorCelebration && <div className="celebration-overlay" />}
       {celebration && (
         <div
@@ -398,12 +442,14 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
           kiosk && "pt-6",
         )}
       >
-        {Object.entries(chores).map(([name, personChores]) => {
-          const member = getMemberByName(name);
+        {Object.entries(chores).map(([memberId, personChores]) => {
+          const member = members.find((m) => String(m.id) === memberId);
           if (!member || member.visible === false) return null;
           return (
             <div
-              key={name}
+              key={memberId}
+              role="region"
+              aria-label={`Tasks for ${memberLabel(member)}`}
               className="w-full md:w-[320px] md:min-w-[320px] lg:flex-1 p-0 flex flex-col shrink-0 snap-center"
             >
               {/* Glass Card for Member */}
@@ -414,7 +460,7 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
                     <UserAvatar member={member} size="xl" />
                   </div>
                   <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                    {name}
+                    {memberLabel(member)}
                   </h3>
                   <div className="inline-flex items-center gap-2 bg-white/80 dark:bg-black/40 px-4 py-1.5 rounded-full border border-yellow-200/50 dark:border-yellow-500/20 shadow-sm">
                     <Star
@@ -422,7 +468,7 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
                       className="fill-yellow-400 text-yellow-400 drop-shadow-sm"
                     />
                     <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400 tabular-nums">
-                      {stars[name] || 0}
+                      {stars[memberId] || 0}
                     </span>
                   </div>
                 </div>
@@ -449,7 +495,7 @@ export function ChoreChart({ kiosk = false }: { kiosk?: boolean }) {
                               <button
                                 onClick={(e) =>
                                   toggleChore(
-                                    name,
+                                    memberId,
                                     chore.id,
                                     chore.completed,
                                     e,
@@ -630,7 +676,7 @@ function ChoreModal({ isOpen, onClose, members, onSave }: ChoreModalProps) {
                       value={m.id}
                       className="dark:bg-gray-800"
                     >
-                      {m.name}
+                      {taskMemberLabel(m, members)}
                     </option>
                   ))}
                 </select>

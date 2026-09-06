@@ -11,7 +11,18 @@ import (
 // GET /api/chores
 func (app *App) handleChores(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		chores, err := app.Store.GetChores()
+		grouping := r.URL.Query()["group_by"]
+		if len(grouping) > 1 || (len(grouping) == 1 && grouping[0] != "member_id") {
+			jsonError(w, "group_by must be member_id when supplied", 400)
+			return
+		}
+		var chores map[string][]store.Chore
+		var err error
+		if len(grouping) == 1 {
+			chores, err = app.Store.GetChoresByMemberID()
+		} else {
+			chores, err = app.Store.GetChores()
+		}
 		if err != nil {
 			jsonError(w, err.Error(), 500)
 			return

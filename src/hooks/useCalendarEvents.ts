@@ -31,41 +31,45 @@ export function useCalendarEvents(start: Date, end: Date, refresh: number) {
     ])
       .then(([members, data]: [FamilyMember[], Event[]]) => {
         if (!current) return;
+        const expanded = segments(
+          data,
+          new Date(startTime),
+          new Date(endTime),
+        ).map((event) => {
+          const participants = eventMembers(event, members);
+          const primary = participants[0];
+          return {
+            ...event,
+            participants,
+            member: primary
+              ? {
+                  ...primary,
+                  name: eventMemberLabel(event, members),
+                  avatar: participants.length > 1 ? null : primary.avatar,
+                }
+              : {
+                  id: 0,
+                  name: event.source_name || "Family",
+                  color: event.color || "bg-stone-100 text-stone-700",
+                  avatar: null,
+                  stars: 0,
+                  phone: null,
+                  visible: true,
+                },
+          };
+        });
         setMembers(members);
         setLoadedRange(`${startTime}:${endTime}`);
-        setEvents(
-          segments(data, new Date(startTime), new Date(endTime)).map(
-            (event) => {
-              const participants = eventMembers(event, members);
-              const primary = participants[0];
-              return {
-                ...event,
-                participants,
-                member: primary
-                  ? {
-                      ...primary,
-                      name: eventMemberLabel(event, members),
-                      avatar: participants.length > 1 ? null : primary.avatar,
-                    }
-                  : {
-                      id: 0,
-                      name: event.source_name || "Family",
-                      color: event.color || "bg-stone-100 text-stone-700",
-                      avatar: null,
-                      stars: 0,
-                      phone: null,
-                      visible: true,
-                    },
-              };
-            },
-          ),
-        );
+        setEvents(expanded);
       })
       .catch((cause) => {
-        if (current)
+        if (current) {
+          setEvents([]);
+          setLoadedRange("");
           setError(
             cause instanceof Error ? cause.message : "Could not load calendar",
           );
+        }
       })
       .finally(() => {
         if (current) setLoading(false);

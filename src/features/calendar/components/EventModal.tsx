@@ -8,7 +8,11 @@ import { Event, FamilyMember } from "../../../types";
 import { Modal } from "../../../components/ui/Modal";
 import { readRepeat, writeRepeat } from "../../../lib/recurrenceEditor";
 import { RepeatEditor } from "./RepeatEditor";
-import { eventClock, eventInstant } from "../../../lib/eventTimezone";
+import {
+  eventClock,
+  eventInstant,
+  validateEventTimezone,
+} from "../../../lib/eventTimezone";
 
 interface EventModalProps {
   isOpen: boolean;
@@ -174,7 +178,7 @@ export function EventModal({
 
         setStartDate(format(now, "yyyy-MM-dd"));
         setStartTime(format(now, "HH:mm"));
-        setEndDate(format(now, "yyyy-MM-dd"));
+        setEndDate(format(nextHour, "yyyy-MM-dd"));
         setEndTime(format(nextHour, "HH:mm"));
 
         setRepeat(readRepeat("", false));
@@ -200,6 +204,7 @@ export function EventModal({
     setSaving(true);
     setSaveError("");
     try {
+      if (!isAllDay) validateEventTimezone(timezone);
       let startIso: string;
       let endIso: string | undefined;
 
@@ -210,13 +215,14 @@ export function EventModal({
       } else {
         const resolve = (day: string, clock: string, original?: string) => {
           if (original && timezone === (currentEvent?.timezone || "")) {
-            const old = timezone ? eventClock(original, timezone) : null;
+            const parsed = parseISO(original);
+            const old = timezone ? eventClock(parsed, timezone) : null;
             const oldDate = old
               ? old.toPlainDate().toString()
-              : format(parseISO(original), "yyyy-MM-dd");
+              : format(parsed, "yyyy-MM-dd");
             const oldTime = old
               ? old.toPlainTime().toString({ smallestUnit: "minute" })
-              : format(parseISO(original), "HH:mm");
+              : format(parsed, "HH:mm");
             if (day === oldDate && clock === oldTime) return original;
           }
           return timezone

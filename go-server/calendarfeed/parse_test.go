@@ -19,6 +19,34 @@ func mustTime(s string) time.Time {
 	return t
 }
 
+func TestZonedExportDurationAndSecondFoldOverride(t *testing.T) {
+	loc, _ := time.LoadLocation("America/Chicago")
+	data := feed(`BEGIN:VEVENT
+UID:fold-export
+DTSTART;TZID=America/Chicago:20261101T013000
+DURATION:PT3600S
+RRULE:FREQ=DAILY;COUNT=3
+EXDATE:20261101T063000Z
+RDATE:20261101T073000Z
+SUMMARY:Late fold
+END:VEVENT`)
+	events, err := Parse(data, loc, mustTime("2026-11-01T00:00:00Z"), mustTime("2026-11-05T00:00:00Z"))
+	if err != nil || len(events) != 3 {
+		t.Fatal(events, err)
+	}
+	for i, event := range events {
+		expected := []string{"2026-11-01T07:30:00Z", "2026-11-02T07:30:00Z", "2026-11-03T07:30:00Z"}[i]
+		if !mustTime(event.Start).Equal(mustTime(expected)) || mustTime(event.End).Sub(mustTime(event.Start)) != time.Hour {
+			t.Fatal(event)
+		}
+	}
+	withoutOverride := strings.ReplaceAll(string(data), "EXDATE:20261101T063000Z\r\nRDATE:20261101T073000Z\r\n", "")
+	baseline, err := Parse([]byte(withoutOverride), loc, mustTime("2026-11-01T00:00:00Z"), mustTime("2026-11-05T00:00:00Z"))
+	if err != nil || len(baseline) != 3 || !mustTime(baseline[0].Start).Equal(mustTime("2026-11-01T06:30:00Z")) {
+		t.Fatal("unmodified folded DTSTART must use the first instant", baseline, err)
+	}
+}
+
 func TestDSTExclusionsAndMovedOccurrence(t *testing.T) {
 	loc, _ := time.LoadLocation("America/Chicago")
 	data := feed(`BEGIN:VEVENT

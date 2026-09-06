@@ -128,6 +128,7 @@ the directory. A guided Docker-volume restore workflow remains on the roadmap.
   their wall-clock time across DST. Legacy events stay fixed-UTC until a timezone
   is explicitly chosen; the editor warns about that distinction.
 - Household-timezone daily chore resets and reconnecting live updates.
+- ID-based task columns and star totals keep people with identical names separate.
 - Raster image validation, backup export/offline restore, health checks, and CI.
 
 ## Current limitations

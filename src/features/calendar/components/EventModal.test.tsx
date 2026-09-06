@@ -14,6 +14,63 @@ vi.mock("../../../lib/api", () => ({ apiFetch: vi.fn() }));
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  vi.useRealTimers();
+});
+
+it("explains invalid or abbreviated timezones before submitting", async () => {
+  vi.mocked(apiFetch).mockResolvedValue(new Response("[]"));
+  const onSave = vi.fn().mockResolvedValue(undefined);
+  await act(async () =>
+    render(
+      <EventModal
+        isOpen
+        onClose={() => {}}
+        onDelete={() => {}}
+        onSave={onSave}
+        currentEvent={{
+          id: 1,
+          title: "Practice",
+          start_date: "2026-09-05T15:00:00Z",
+          timezone: "America/Chicago",
+        }}
+      />,
+    ),
+  );
+  for (const zone of ["CST", "America/", "Mars/Olympus"]) {
+    fireEvent.change(screen.getByLabelText("Event timezone"), {
+      target: { value: zone },
+    });
+    await act(async () =>
+      fireEvent.submit(screen.getByLabelText("Start date").closest("form")!),
+    );
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Choose a valid IANA event timezone",
+    );
+  }
+  expect(onSave).not.toHaveBeenCalled();
+});
+
+it("defaults a late-night new event to an end on the next day", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(2026, 8, 5, 23, 30));
+  vi.mocked(apiFetch).mockResolvedValue(new Response("[]"));
+  await act(async () =>
+    render(
+      <EventModal
+        isOpen
+        onClose={() => {}}
+        onDelete={() => {}}
+        onSave={async () => {}}
+        currentEvent={null}
+      />,
+    ),
+  );
+  expect((screen.getByLabelText("Start date") as HTMLInputElement).value).toBe(
+    "2026-09-05",
+  );
+  expect((screen.getByLabelText("End date") as HTMLInputElement).value).toBe(
+    "2026-09-06",
+  );
 });
 
 it("edits in the event timezone and preserves a second folded instant on unrelated changes", async () => {

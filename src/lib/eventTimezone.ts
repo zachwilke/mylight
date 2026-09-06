@@ -1,6 +1,25 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { RRule } from "rrule";
 
+export function validateEventTimezone(zone: string) {
+  if (!zone) return; // Explicit legacy fixed-UTC mode.
+  try {
+    if (
+      zone.length > 100 ||
+      (zone !== "UTC" &&
+        !/^(Africa|America|Antarctica|Arctic|Asia|Atlantic|Australia|Europe|Indian|Pacific|Etc)\/[A-Za-z0-9_+/-]+$/.test(
+          zone,
+        ))
+    )
+      throw new Error();
+    eventClock("2000-01-01T00:00:00Z", zone);
+  } catch {
+    throw new Error(
+      "Choose a valid IANA event timezone, such as America/Chicago, or UTC",
+    );
+  }
+}
+
 export function eventClock(instant: string | Date, zone: string) {
   return Temporal.Instant.from(
     typeof instant === "string" ? instant : instant.toISOString(),
