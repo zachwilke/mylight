@@ -120,6 +120,8 @@ the directory. A guided Docker-volume restore workflow remains on the roadmap.
 - Version-checked calendar saves/deletes prevent stale editors from overwriting
   newer changes. Failed saves retain the draft, and series-wide changes require
   explicit acknowledgement. Single-occurrence editing is not implemented yet.
+- Local recurrence writes are validated before saving; unsupported/sub-daily rules
+  are rejected instead of adding schedules the current calendar cannot display.
 - Household-timezone daily chore resets and reconnecting live updates.
 - Raster image validation, backup export/offline restore, health checks, and CI.
 

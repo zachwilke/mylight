@@ -4,6 +4,32 @@ These are incremental implementations from the approved roadmap, **not full Skyl
 parity**. Work is on `codex/mylight-foundation`. This document records
 implementation evidence, not release approval or deployment to a household server.
 
+## Publication checkpoint and recurrence validation — September 5
+
+- The implementation checkpoint was committed as `a994a7b`, pushed to
+  `codex/mylight-foundation`, and opened as draft PR #17. The draft is a review
+  checkpoint, not a completed roadmap or a production release.
+- Continued with server-side validation of local recurrence writes: one
+  daily/weekly/monthly/yearly rule, supported fields without duplicates, interval
+  1–1000, count 1–10000, mutually exclusive count/end date, matching date-only or
+  UTC end representation, and valid selector ranges/combinations. Embedded DTSTART,
+  exception lines, sub-daily selectors and unsupported extensions are rejected.
+- Rules are parsed with the existing pinned Go recurrence library without expanding
+  the series during validation. Optional RRULE prefixes are canonicalized. Invalid
+  create/edit requests fail before any event or version mutation. Subscribed ICS
+  calendars retain their independent validation pipeline.
+- Existing records are not rewritten. Unsupported legacy rules may need an explicit
+  recurrence change before they can be saved; timezone-correct expansion, repair
+  workflows and single-occurrence editing remain unfinished.
+
+Checks: 50 frontend tests and 50 Go tests pass. The focused recurrence review
+returned zero findings. Initial hosted CI passed frontend checks but exposed a
+SQLite contention retry window that was too short under Linux's race detector.
+The follow-up extends bounded lock backoff to 1.175 seconds across at most seven
+attempts, retaining the one-winner/one-conflict assertion. The separate-connection
+race test passed 30 repeated runs; the full race suite and vet pass too. The retry
+review and updated hosted CI remain pending final confirmation.
+
 ## Calendar conflict protection and explicit series scope — September 5
 
 - Transactional schema 6 adds event versions, starting existing records at 1.

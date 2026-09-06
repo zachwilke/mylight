@@ -25,10 +25,15 @@ func retryEventWrite(write func() error) error {
 	for attempt := 0; ; attempt++ {
 		err := write()
 		var code interface{ Code() int }
-		if attempt >= 3 || !errors.As(err, &code) || (code.Code()&255 != 5 && code.Code()&255 != 6) {
+		if attempt >= 6 || !errors.As(err, &code) || (code.Code()&255 != 5 && code.Code()&255 != 6) {
 			return err
 		}
-		time.Sleep(time.Duration(5<<attempt) * time.Millisecond)
+		// Slow disks and race-instrumented Linux runners can keep the winning
+		// writer active beyond a few milliseconds. Back off for at most 1.175s
+		// in total, while retaining a fixed attempt budget and never replaying
+		// conflicts or uncertain non-lock failures.
+		delay := min(25<<attempt, 400)
+		time.Sleep(time.Duration(delay) * time.Millisecond)
 	}
 }
 

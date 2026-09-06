@@ -14,7 +14,7 @@ func (eventLockFixture) Code() int     { return 517 }
 func TestEventWriteRetriesAreBoundedAndDoNotReplayConflicts(t *testing.T) {
 	calls := 0
 	err := retryEventWrite(func() error { calls++; return eventLockFixture{} })
-	if err == nil || calls != 4 {
+	if err == nil || calls != 7 {
 		t.Fatal(calls, err)
 	}
 	calls = 0

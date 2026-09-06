@@ -52,7 +52,7 @@ func validateEvent(body *eventBody) error {
 	if body.MemberId < 0 {
 		return fmt.Errorf("invalid family member")
 	}
-	return nil
+	return validateLocalRecurrence(body, start)
 }
 
 func eventFromBody(body eventBody) store.Event {
