@@ -41,7 +41,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['DM Sans Variable', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         'xl': '1rem',

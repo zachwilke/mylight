@@ -1,8 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning, Sun } from 'lucide-react';
-import { getCachedWeather } from '../../utils/weather';
-import { Photo, CurrentWeather } from '../../types';
+import { AnimatePresence, motion, type Variants } from "framer-motion";
+import {
+  Cloud,
+  CloudLightning,
+  CloudRain,
+  CloudSnow,
+  CloudSun,
+  Sun,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "../../lib/api";
+import { CurrentWeather, Photo } from "../../types";
+import { getCachedWeather } from "../../utils/weather";
 
 interface ScreensaverProps {
   onInteraction: () => void;
@@ -17,9 +25,9 @@ export default function Screensaver({ onInteraction }: ScreensaverProps) {
 
   useEffect(() => {
     // Fetch photos
-    fetch('/api/photos')
-      .then(res => res.json())
-      .then(data => {
+    apiFetch("/api/photos")
+      .then((res) => res.json())
+      .then((data) => {
         if (data && data.length > 0) {
           setPhotos(data);
         }
@@ -32,7 +40,7 @@ export default function Screensaver({ onInteraction }: ScreensaverProps) {
     // Fetch weather
     const fetchWeather = async () => {
       try {
-        const res = await fetch('/api/settings');
+        const res = await apiFetch("/api/settings");
         const data = await res.json();
         if (data.weather_location) {
           let latitude: number | undefined, longitude: number | undefined;
@@ -40,7 +48,9 @@ export default function Screensaver({ onInteraction }: ScreensaverProps) {
           const isZip = /^\d{5}$/.test(data.weather_location.trim());
           if (isZip) {
             try {
-              const zipRes = await fetch(`https://api.zippopotam.us/us/${data.weather_location.trim()}`);
+              const zipRes = await apiFetch(
+                `https://api.zippopotam.us/us/${data.weather_location.trim()}`,
+              );
               if (zipRes.ok) {
                 const zipData = await zipRes.json();
                 if (zipData.places && zipData.places.length > 0) {
@@ -49,13 +59,13 @@ export default function Screensaver({ onInteraction }: ScreensaverProps) {
                 }
               }
             } catch (e) {
-              console.error('Zip fetch failed', e);
+              console.error("Zip fetch failed", e);
             }
           }
 
           if (!latitude) {
-            const geoRes = await fetch(
-              `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(data.weather_location)}&count=1&language=en&format=json`
+            const geoRes = await apiFetch(
+              `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(data.weather_location)}&count=1&language=en&format=json`,
             );
             const geoData = await geoRes.json();
             if (geoData.results && geoData.results.length > 0) {
@@ -89,14 +99,14 @@ export default function Screensaver({ onInteraction }: ScreensaverProps) {
   useEffect(() => {
     if (photos.length === 0) return;
     const interval = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % photos.length);
-      setKenBurnsDirection(prev => (prev + 1) % 4);
+      setCurrentIndex((prev) => (prev + 1) % photos.length);
+      setKenBurnsDirection((prev) => (prev + 1) % 4);
     }, 10000);
     return () => clearInterval(interval);
   }, [photos]);
 
   const getWeatherIcon = useCallback((code: number) => {
-    const iconProps = { className: 'text-white drop-shadow-lg', size: 48 };
+    const iconProps = { className: "text-white drop-shadow-lg", size: 48 };
     if (code === 0) return <Sun {...iconProps} />;
     if (code >= 1 && code <= 3) return <CloudSun {...iconProps} />;
     if (code >= 45 && code <= 48) return <Cloud {...iconProps} />;
@@ -108,29 +118,29 @@ export default function Screensaver({ onInteraction }: ScreensaverProps) {
   }, []);
 
   // Ken Burns animation variants
-  const getKenBurnsVariants = (direction: number) => {
+  const getKenBurnsVariants = (direction: number): Variants => {
     const transforms = [
-      { scale: 1.1, x: '-2%', y: '-2%' },
-      { scale: 1.15, x: '2%', y: '-2%' },
-      { scale: 1.1, x: '2%', y: '2%' },
-      { scale: 1.15, x: '-2%', y: '2%' },
+      { scale: 1.1, x: "-2%", y: "-2%" },
+      { scale: 1.15, x: "2%", y: "-2%" },
+      { scale: 1.1, x: "2%", y: "2%" },
+      { scale: 1.15, x: "-2%", y: "2%" },
     ];
 
     return {
-      initial: { opacity: 0, scale: 1, x: '0%', y: '0%' },
+      initial: { opacity: 0, scale: 1, x: "0%", y: "0%" },
       animate: {
         opacity: 1,
         ...transforms[direction],
         transition: {
-          opacity: { duration: 1.5, ease: 'easeOut' },
-          scale: { duration: 10, ease: 'linear' },
-          x: { duration: 10, ease: 'linear' },
-          y: { duration: 10, ease: 'linear' },
+          opacity: { duration: 1.5, ease: "easeOut" },
+          scale: { duration: 10, ease: "linear" },
+          x: { duration: 10, ease: "linear" },
+          y: { duration: 10, ease: "linear" },
         },
       },
       exit: {
         opacity: 0,
-        transition: { duration: 1.5, ease: 'easeIn' },
+        transition: { duration: 1.5, ease: "easeIn" },
       },
     };
   };
@@ -173,10 +183,17 @@ export default function Screensaver({ onInteraction }: ScreensaverProps) {
         className="absolute bottom-12 left-12 flex flex-col"
       >
         <h1 className="text-8xl font-thin text-white tracking-tighter drop-shadow-2xl">
-          {time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+          {time.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+          })}
         </h1>
         <p className="text-2xl text-white/80 font-medium ml-2 drop-shadow-lg">
-          {time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          {time.toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          })}
         </p>
       </motion.div>
 

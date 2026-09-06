@@ -14,7 +14,7 @@ func (s *Store) GetFamilyMembers() ([]FamilyMemberJSON, error) {
 	}
 	defer rows.Close()
 
-	var members []FamilyMemberJSON
+	members := []FamilyMemberJSON{}
 	for rows.Next() {
 		var id int
 		var name string
@@ -73,13 +73,24 @@ func (s *Store) GetFamilyMembersMap() (map[int]string, error) {
 }
 
 func (s *Store) CreateFamilyMember(m FamilyMemberJSON, password string) (int, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return 0, err
+	var hash []byte
+	var err error
+	if password != "" {
+		hash, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if m.Email != nil && *m.Email == "" {
+		m.Email = nil
+	}
+	role := "user"
+	if password == "" {
+		role = "child"
 	}
 
-	res, err := s.DB.Exec("INSERT INTO family_members (name, email, password_hash, role, color, stars, visible) VALUES (?, ?, ?, ?, ?, 0, ?)",
-		m.Name, m.Email, string(hash), m.Role, m.Color, true)
+	res, err := s.DB.Exec("INSERT INTO family_members (name, email, password_hash, role, color, phone, stars, visible) VALUES (?, ?, ?, ?, ?, ?, 0, ?)",
+		m.Name, m.Email, string(hash), role, m.Color, m.Phone, true)
 	if err != nil {
 		return 0, err
 	}
@@ -88,17 +99,75 @@ func (s *Store) CreateFamilyMember(m FamilyMemberJSON, password string) (int, er
 }
 
 func (s *Store) UpdateFamilyMember(id int, m map[string]interface{}) error {
-	// Simple dynamic update (only supporting what was in handler previously)
-	if val, ok := m["visible"]; ok {
-		visibleInt := 0
-		if val.(bool) {
-			visibleInt = 1
-		}
-		_, err := s.DB.Exec("UPDATE family_members SET visible = ? WHERE id = ?", visibleInt, id)
+	if _, err := s.GetFamilyMember(id); err != nil {
 		return err
 	}
-	// Expand here if more updates needed
-	return nil
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for key, value := range m {
+		switch key {
+		case "name", "phone", "color":
+			v, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("%s must be text", key)
+			}
+			if key == "name" && v == "" {
+				return fmt.Errorf("name is required")
+			}
+		case "visible":
+			if _, ok := value.(bool); !ok {
+				return fmt.Errorf("visible must be boolean")
+			}
+		default:
+			return fmt.Errorf("unsupported field: %s", key)
+		}
+		if _, err = tx.Exec("UPDATE family_members SET "+key+"=? WHERE id=?", value, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (s *Store) GetFamilyMember(id int) (*FamilyMemberJSON, error) {
+	var name string
+	var color, avatar, phone, email, role sql.NullString
+	var stars int
+	var visible sql.NullBool
+	err := s.DB.QueryRow("SELECT name,color,avatar,stars,phone,email,role,visible FROM family_members WHERE id=?", id).
+		Scan(&name, &color, &avatar, &stars, &phone, &email, &role, &visible)
+	if err != nil {
+		return nil, err
+	}
+	v := !visible.Valid || visible.Bool
+	return &FamilyMemberJSON{ID: id, Name: name, Color: &color.String, Avatar: &avatar.String, Stars: stars,
+		Phone: &phone.String, Email: &email.String, Role: &role.String, Visible: v}, nil
+}
+
+func (s *Store) DeleteFamilyMember(id int) error {
+	m, err := s.GetFamilyMember(id)
+	if err != nil {
+		return err
+	}
+	if m.Role != nil && *m.Role == "admin" {
+		return fmt.Errorf("the household owner cannot be deleted")
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec("UPDATE events SET version=version+1 WHERE member_id=? OR id IN (SELECT event_id FROM event_members WHERE member_id=?)", id, id); err != nil {
+		return err
+	}
+	for _, q := range []string{"DELETE FROM chore_completions WHERE member_id=?", "DELETE FROM chores WHERE member_id=?", "DELETE FROM event_members WHERE member_id=?", "UPDATE events SET member_id=(SELECT MIN(member_id) FROM event_members WHERE event_id=events.id) WHERE member_id=?", "DELETE FROM family_members WHERE id=?"} {
+		if _, err = tx.Exec(q, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (s *Store) UpdateAvatar(id int, url string) error {

@@ -11,7 +11,18 @@ import (
 // GET /api/chores
 func (app *App) handleChores(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		chores, err := app.Store.GetChores()
+		grouping := r.URL.Query()["group_by"]
+		if len(grouping) > 1 || (len(grouping) == 1 && grouping[0] != "member_id") {
+			jsonError(w, "group_by must be member_id when supplied", 400)
+			return
+		}
+		var chores map[string][]store.Chore
+		var err error
+		if len(grouping) == 1 {
+			chores, err = app.Store.GetChoresByMemberID()
+		} else {
+			chores, err = app.Store.GetChores()
+		}
 		if err != nil {
 			jsonError(w, err.Error(), 500)
 			return
@@ -54,6 +65,44 @@ func (app *App) handleChores(w http.ResponseWriter, r *http.Request) {
 
 // POST /api/chores/:id/toggle
 func (app *App) handleChoreToggle(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "DELETE" {
+		id, err := pathID(r.URL.Path)
+		if err != nil {
+			jsonError(w, "Invalid chore ID", 400)
+			return
+		}
+		tx, err := app.Store.DB.Begin()
+		if err != nil {
+			jsonError(w, "Could not delete chore", 500)
+			return
+		}
+		defer tx.Rollback()
+		if _, err = tx.Exec("DELETE FROM chore_completions WHERE chore_id=?", id); err != nil {
+			jsonError(w, "Could not delete history", 500)
+			return
+		}
+		result, err := tx.Exec("DELETE FROM chores WHERE id=?", id)
+		if err != nil {
+			jsonError(w, "Could not delete chore", 500)
+			return
+		}
+		count, _ := result.RowsAffected()
+		if count == 0 {
+			jsonError(w, "Chore not found", 404)
+			return
+		}
+		if err = tx.Commit(); err != nil {
+			jsonError(w, "Could not delete chore", 500)
+			return
+		}
+		app.Broker.Notify("update")
+		jsonResponse(w, map[string]bool{"success": true})
+		return
+	}
+	if r.Method != "POST" || !strings.HasSuffix(r.URL.Path, "/toggle") {
+		jsonError(w, "Method not allowed", 405)
+		return
+	}
 	parts := strings.Split(r.URL.Path, "/")
 	if len(parts) < 4 {
 		jsonError(w, "Invalid path", 400)
@@ -89,7 +138,13 @@ func (app *App) handleChoreReset(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", 405)
 		return
 	}
-	app.checkAndResetChores(true)
+	app.mu.Lock()
+	err := app.Store.ResetChores(true)
+	app.mu.Unlock()
+	if err != nil {
+		jsonError(w, "Could not reset chores", 500)
+		return
+	}
 	app.Broker.Notify("update")
 	jsonResponse(w, map[string]bool{"success": true})
 }

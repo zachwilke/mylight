@@ -1,189 +1,348 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, CheckSquare, CloudSun, TrendingUp, ArrowRight, User, Plus } from 'lucide-react';
-import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
-import { Chore, Event, FamilyMember } from '../../types';
-import { UserAvatar } from '../../components/UserAvatar';
-import { useAuth } from '../../context/AuthContext';
+import { addDays, format, isSameDay, startOfDay } from "date-fns";
+import {
+  ArrowRight,
+  CalendarDays,
+  Check,
+  CheckCheck,
+  CookingPot,
+  Plus,
+  Sprout,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { apiFetch } from "../../lib/api";
+import { calendarSegments } from "../../lib/calendar";
+import { eventMemberLabel } from "../../lib/eventMembers";
+import { calendarEventsURL } from "../../lib/calendarRange";
+import type {
+  Event as CalendarEvent,
+  Chore,
+  FamilyMember,
+  Meal,
+} from "../../types";
 
-export function DashboardHome() {
-    const { user } = useAuth();
-    const navigate = useNavigate();
-    const [events, setEvents] = useState<Event[]>([]);
-    const [chores, setChores] = useState<Chore[]>([]);
-    const [members, setMembers] = useState<FamilyMember[]>([]);
-
-    useEffect(() => {
-        // Fetch snapshot data
-        Promise.all([
-            fetch('/api/events').then(r => r.json()),
-            fetch('/api/chores').then(r => r.json()),
-            fetch('/api/family').then(r => r.json())
-        ]).then(([eventsData, choresData, familyData]) => {
-            // ... (keep existing data processing)
-            const today = new Date();
-            const todaysEvents = (eventsData as Event[]).filter(e => {
-                const date = new Date(e.start_date);
-                return date.toDateString() === today.toDateString();
-            }).slice(0, 3);
-            setEvents(todaysEvents);
-
-            // Chores comes as map likely? Or need similar parsing as in Chores view
-            // Actually handleChores GET returns map[string][]Chore. 
-            // Let's just grab a flattened list of pending chores for now if possible or just slice
-            // Simpler: Just count pending?
-            // The API logic for chores returns `map[memberName]Chore[]`.
-            const allChores: Chore[] = [];
-            Object.values(choresData).forEach((list: any) => {
-                allChores.push(...list);
-            });
-            setChores(allChores.filter(c => !c.completed).slice(0, 4));
-
-            setMembers(familyData as FamilyMember[]);
-        }).catch(err => console.error("Dashboard fetch error", err));
-    }, []);
-
-    const QuickStat = ({ icon: Icon, label, value, color, onClick }: any) => (
-        <button
-            onClick={onClick}
-            className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all flex items-center justify-between group"
-        >
-            <div className="flex items-center gap-4">
-                <div className={`p - 3 rounded - xl ${color} bg - opacity - 10`}>
-                    <Icon size={24} className={color.replace('bg-', 'text-')} />
-                </div>
-                <div className="text-left">
-                    <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{value}</div>
-                    <div className="text-sm text-slate-500 font-medium">{label}</div>
-                </div>
-            </div>
-            <ArrowRight size={18} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
-        </button>
-    );
-
-    return (
-        <div className="space-y-8">
-            <header className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">
-                    Good Morning, Family! ☀️
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400">
-                    Here's what's happening today, {format(new Date(), 'EEEE, MMMM do')}.
-                </p>
-            </header>
-
-            {/* Quick Stats / Navigation */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <QuickStat
-                    icon={Calendar}
-                    label="Events Today"
-                    value={events.length}
-                    color="bg-purple-500"
-                    onClick={() => navigate('/calendar')}
-                />
-                <QuickStat
-                    icon={CheckSquare}
-                    label="Pending Chores"
-                    value={chores.length}
-                    color="bg-green-500"
-                    onClick={() => navigate('/chores')}
-                />
-                <QuickStat
-                    icon={CloudSun}
-                    label="Weather"
-                    value="72°"
-                    color="bg-blue-500"
-                    onClick={() => navigate('/weather')}
-                />
-                <QuickStat
-                    icon={TrendingUp}
-                    label="Weekly Progress"
-                    value="85%"
-                    color="bg-orange-500"
-                    onClick={() => navigate('/history')}
-                />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Upcoming Events */}
-                <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-bold text-slate-800 dark:text-white">Upcoming Events</h2>
-                        <button onClick={() => navigate('/calendar')} className="text-sm font-semibold text-blue-600 hover:text-blue-700">View All</button>
-                    </div>
-                    <div className="space-y-3">
-                        {events.length === 0 ? (
-                            <div className="text-center py-8 text-slate-400">No events today</div>
-                        ) : (
-                            events.map(event => (
-                                <div key={event.id} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 transition-colors">
-                                    <div className="w-16 text-center">
-                                        <div className="text-xs font-bold text-slate-400 uppercase">{format(new Date(event.start_date), 'MMM')}</div>
-                                        <div className="text-xl font-bold text-slate-800 dark:text-slate-200">{format(new Date(event.start_date), 'd')}</div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-slate-800 dark:text-slate-100">{event.title}</h3>
-                                        <div className="text-sm text-slate-500">{event.location || 'No location'} • {format(new Date(event.start_date), 'h:mm a')}</div>
-                                    </div>
-                                    {event.member_id && <UserAvatar member={members.find(m => m.id === event.member_id)} size="sm" />}
-                                </div>
-                            ))
-                        )}
-                        <button onClick={() => navigate('/calendar')} className="w-full py-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400 hover:text-blue-600 hover:border-blue-200 flex items-center justify-center gap-2 font-medium transition-all">
-                            <Plus size={18} />
-                            Add Event
-                        </button>
-                    </div>
-                </div>
-
-
-                {/* Chores Overview */}
-                <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-bold text-slate-800 dark:text-white">Chores Status</h2>
-                        <button onClick={() => navigate('/chores')} className="text-sm font-semibold text-blue-600 hover:text-blue-700">Manage</button>
-                    </div>
-                    <div className="space-y-4">
-                        {members.slice(0, 4).map(member => (
-                            <div key={member.id} className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <UserAvatar member={member} size="sm" />
-                                    <span className="font-medium text-slate-700 dark:text-slate-300">{member.name}</span>
-                                </div>
-                                <div className="flex space-x-1">
-                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                    <div className="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700"></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+interface Snapshot {
+  events: CalendarEvent[];
+  chores: Chore[];
+  members: FamilyMember[];
+  meals: Meal[];
 }
-
-function StatCard({ label, value, icon: Icon, trend, color }: any) {
-    const colors: any = {
-        blue: "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400",
-        green: "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400",
-        purple: "text-purple-600 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400",
-        orange: "text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400",
+export function DashboardHome() {
+  const [data, setData] = useState<Snapshot>({
+    events: [],
+    chores: [],
+    members: [],
+    meals: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const loadVersion = useRef(0);
+  const location = useLocation();
+  const prefix = location.pathname.startsWith("/kiosk") ? "/kiosk" : "";
+  const load = useCallback(async () => {
+    const version = ++loadVersion.current;
+    try {
+      const start = startOfDay(new Date());
+      const [events, chores, members, meals] = await Promise.all(
+        [
+          calendarEventsURL(start, addDays(start, 7)),
+          "/api/chores",
+          "/api/family",
+          "/api/meals",
+        ].map(async (p) => (await apiFetch(p)).json()),
+      );
+      if (version !== loadVersion.current) return;
+      setData({
+        events,
+        chores: Object.values(chores).flat() as Chore[],
+        members,
+        meals,
+      });
+      setError("");
+    } catch (e) {
+      if (version !== loadVersion.current) return;
+      setError(e instanceof Error ? e.message : "Could not load your day");
+    } finally {
+      if (version === loadVersion.current) setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+    const handle = () => void load();
+    window.addEventListener("system-update", handle);
+    const timer = setInterval(handle, 60000);
+    return () => {
+      loadVersion.current++;
+      window.removeEventListener("system-update", handle);
+      clearInterval(timer);
     };
-
-    return (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-200 group">
-            <div className="flex items-center justify-between mb-4">
-                <div className={`p-2 rounded-lg ${colors[color]}`}>
-                    <Icon size={20} />
-                </div>
-                <span className="text-xs font-medium text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-full">{trend}</span>
-            </div>
-            <div>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
-                <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-1 group-hover:scale-[1.02] transition-transform origin-left">{value}</h4>
-            </div>
+  }, [load]);
+  const today = startOfDay(new Date());
+  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
+  const { events: expanded, error: calendarError } = calendarSegments(
+    data.events,
+    today,
+    addDays(today, 7),
+  );
+  const pending = data.chores.filter((c) => !c.completed);
+  const todayEvents = expanded.filter((e) => isSameDay(e.date, today));
+  const dinner = data.meals.filter(
+    (m) => m.date === format(today, "yyyy-MM-dd") && m.type === "Dinner",
+  );
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12
+      ? "Good morning."
+      : hour < 18
+        ? "A lovely afternoon."
+        : "Welcome to the evening.";
+  const done = data.chores.length - pending.length;
+  async function complete(chore: Chore) {
+    try {
+      await apiFetch("/api/chores/" + chore.id + "/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: true }),
+      });
+      await load();
+    } catch {
+      setError(
+        "Couldn't save this task. It remains pending; please try again.",
+      );
+    }
+  }
+  return (
+    <div className="p-5 md:p-8 xl:p-10 max-w-[1800px] mx-auto space-y-7">
+      <section className="relative overflow-hidden rounded-[28px] bg-[#355B48] text-[#F7F5F0] p-7 md:p-10 flex items-center justify-between gap-6">
+        <div className="relative z-10">
+          <p className="text-[11px] font-medium tracking-[.2em] uppercase text-emerald-100/70 mb-4">
+            Your day, a little lighter
+          </p>
+          <h1 className="text-3xl md:text-5xl tracking-tight font-medium">
+            {greeting}
+          </h1>
+          <p className="mt-4 text-sm md:text-base text-emerald-50/80">
+            {loading
+              ? "Gathering your day…"
+              : todayEvents.length
+                ? todayEvents.length +
+                  (todayEvents.length === 1
+                    ? " plan on the calendar today."
+                    : " plans on the calendar today.")
+                : "A little breathing room on the calendar today."}
+          </p>
         </div>
-    );
+        <Sprout
+          size={144}
+          strokeWidth={0.7}
+          className="hidden sm:block text-[#BDD0AE] shrink-0 opacity-80"
+        />
+        <div className="absolute -right-10 -bottom-32 w-80 h-80 rounded-full border border-white/10" />
+      </section>
+      {(error || calendarError) && (
+        <div
+          role="alert"
+          className="rounded-xl bg-red-50 text-red-800 p-4 flex justify-between"
+        >
+          <p>{error || calendarError}</p>
+          <button onClick={() => void load()} className="underline">
+            Retry
+          </button>
+        </div>
+      )}
+      {data.members.length === 1 && !loading && (
+        <Link
+          to={`${prefix}/settings`}
+          className="flex items-center gap-3 text-sm text-[#355B48] dark:text-emerald-200 bg-[#E7ECDD] dark:bg-emerald-950 p-4 rounded-2xl"
+        >
+          <Plus size={18} />
+          Make room for everyone. Add your family profiles.
+          <ArrowRight size={18} className="ml-auto" />
+        </Link>
+      )}
+      <div className="grid xl:grid-cols-[minmax(0,1fr)_320px] gap-7">
+        <section className="min-w-0">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <p className="text-[10px] uppercase tracking-[.2em] text-stone-500 mb-1">
+                Room for what matters
+              </p>
+              <h2 className="text-2xl tracking-tight font-semibold">
+                The week ahead
+              </h2>
+            </div>
+            <Link
+              to={prefix + "/calendar"}
+              className="text-sm text-stone-500 flex gap-2 items-center"
+            >
+              Calendar
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {days.map((day, index) => {
+              const events = expanded.filter((e) => isSameDay(e.date, day));
+              return (
+                <Link
+                  to={prefix + "/calendar"}
+                  key={day.toISOString()}
+                  className={
+                    "min-h-40 p-4 rounded-2xl border transition-colors hover:border-[#355B48] " +
+                    (index === 0
+                      ? "bg-white dark:bg-stone-900 border-[#A9BA9B] sm:col-span-2 lg:col-span-1"
+                      : "bg-white/60 dark:bg-stone-900/50 border-stone-200/80 dark:border-stone-800")
+                  }
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs uppercase tracking-wider text-stone-500">
+                      {index === 0 ? "Today" : format(day, "EEE")}
+                    </span>
+                    <span
+                      className={
+                        "text-lg tabular-nums " +
+                        (index === 0
+                          ? "bg-[#355B48] text-white w-9 h-9 rounded-full flex items-center justify-center"
+                          : "")
+                      }
+                    >
+                      {format(day, "d")}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {events.slice(0, 3).map((event) => {
+                      const member = data.members.find(
+                        (m) => m.id === event.member_id,
+                      );
+                      return (
+                        <div
+                          key={event.occurrenceId}
+                          className={
+                            "rounded-lg px-3 py-2 " +
+                            (member?.color || "bg-stone-100 text-stone-700")
+                          }
+                        >
+                          <p className="text-[10px] font-semibold opacity-70">
+                            {event.is_all_day
+                              ? "All day"
+                              : format(event.date, "h:mm a")}
+                            {" · " + eventMemberLabel(event, data.members)}
+                          </p>
+                          <p className="text-sm font-medium truncate mt-0.5">
+                            {event.title}
+                          </p>
+                        </div>
+                      );
+                    })}
+                    {!events.length && (
+                      <p className="text-xs text-stone-400 pt-4">
+                        A little space to breathe.
+                      </p>
+                    )}
+                    {events.length > 3 && (
+                      <p className="text-xs text-stone-500">
+                        +{events.length - 3} more plans
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+          <Link
+            to={prefix + "/calendar"}
+            className="mt-4 flex items-center justify-center gap-2 rounded-2xl border border-dashed border-stone-300 dark:border-stone-700 p-4 text-sm text-stone-500 hover:bg-white/60"
+          >
+            <CalendarDays size={18} />
+            Plan something together
+          </Link>
+        </section>
+        <aside className="space-y-5">
+          <section className="bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-3xl p-6">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="font-semibold text-lg">Little wins</h2>
+              <CheckCheck
+                size={20}
+                className="text-[#355B48] dark:text-emerald-200"
+              />
+            </div>
+            <div className="h-1.5 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden mb-2">
+              <div
+                className="h-full bg-[#8EA580] rounded-full"
+                style={{
+                  width: data.chores.length
+                    ? (done / data.chores.length) * 100 + "%"
+                    : "0%",
+                }}
+              />
+            </div>
+            <p className="text-xs text-stone-500 mb-5">
+              {done} of {data.chores.length} tasks complete
+            </p>
+            <div className="space-y-4">
+              {pending.slice(0, 4).map((chore) => (
+                <div key={chore.id} className="flex items-center gap-3">
+                  <button
+                    onClick={() => void complete(chore)}
+                    aria-label={"Complete " + chore.title}
+                    className="w-12 h-12 shrink-0 rounded-full border border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-300 hover:bg-[#E7ECDD] hover:text-[#355B48]"
+                  >
+                    <Check size={20} />
+                  </button>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {chore.title}
+                    </p>
+                    <p className="text-xs text-stone-500">
+                      {data.members.find((m) => m.id === chore.member_id)?.name}{" "}
+                      · {chore.time_of_day}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!pending.length && (
+              <p className="text-sm text-stone-500">
+                {data.chores.length
+                  ? "All done. Enjoy your time together."
+                  : "Add a small routine to get started."}
+              </p>
+            )}
+            <Link
+              to={prefix + "/chores"}
+              className="mt-5 pt-4 border-t border-stone-100 dark:border-stone-800 flex justify-between text-xs text-stone-500"
+            >
+              All family tasks
+              <ArrowRight size={15} />
+            </Link>
+          </section>
+          <Link
+            to={prefix + "/meals"}
+            className="block rounded-3xl bg-[#EAE4D7] dark:bg-stone-800 p-6"
+          >
+            <CookingPot
+              size={24}
+              className="text-[#786646] dark:text-amber-100 mb-5"
+            />
+            <p className="text-[10px] uppercase tracking-[.2em] text-stone-500 mb-2">
+              Around the table
+            </p>
+            <h2 className="text-xl font-semibold">
+              {dinner.length
+                ? dinner.map((m) => m.title).join(" & ")
+                : "What’s for dinner?"}
+            </h2>
+            <p className="text-sm text-stone-500 mt-2">
+              {dinner.length
+                ? "Tonight’s plan, all taken care of."
+                : "Give tonight a little thought."}
+            </p>
+            <span className="mt-5 flex items-center gap-2 text-xs font-medium">
+              Open meal plan
+              <ArrowRight size={15} />
+            </span>
+          </Link>
+        </aside>
+      </div>
+    </div>
+  );
 }

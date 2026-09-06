@@ -1,211 +1,296 @@
-import { useState, useEffect } from 'react';
-import { Save, Trash2, Calendar } from 'lucide-react';
-import { Button, Card, CardContent, Input, Tooltip } from '../../../components/ui';
-import { ConfirmDialog } from '../../../components/ConfirmDialog';
-import { CalendarSubscription } from '../../../types';
+import {
+  CalendarDays,
+  CheckCircle2,
+  RefreshCw,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "../../../context/AuthContext";
+import { ConfirmDialog } from "../../../components/ConfirmDialog";
+import { apiFetch } from "../../../lib/api";
 
-const PRESET_COLORS = [
-  { label: 'Gray', value: 'bg-gray-200 text-gray-800' },
-  { label: 'Red', value: 'bg-red-100 text-red-800' },
-  { label: 'Green', value: 'bg-emerald-100 text-emerald-800' },
-  { label: 'Blue', value: 'bg-blue-100 text-blue-800' },
-  { label: 'Purple', value: 'bg-purple-100 text-purple-800' },
-];
-
-interface IntegrationsSettingsProps {
-  settings: Record<string, string | undefined>;
-  saving: boolean;
-  onSave: (key: string, value: string) => Promise<boolean>;
+interface Source {
+  id: number;
+  name: string;
+  color: string;
+  last_sync: string;
+  last_attempt: string;
+  last_error: string;
+  range_start: string;
+  range_end: string;
+  event_count: number;
 }
-
-export function IntegrationsSettings({ settings, saving, onSave }: IntegrationsSettingsProps) {
-  const [webhookUrl, setWebhookUrl] = useState('');
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  // Calendar subscriptions
-  const [calendars, setCalendars] = useState<CalendarSubscription[]>([]);
-  const [newUrl, setNewUrl] = useState('');
-  const [newName, setNewName] = useState('');
-  const [newColor, setNewColor] = useState(PRESET_COLORS[0].value);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (settings.google_chat_webhook) {
-      setWebhookUrl(settings.google_chat_webhook);
-    }
-  }, [settings]);
-
-  useEffect(() => {
-    fetch('/api/calendars')
-      .then(res => res.json())
-      .then(data => setCalendars(data || []))
-      .catch(console.error);
-  }, []);
-
-  const showSuccess = (message: string) => {
-    setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(null), 3000);
-  };
-
-  const saveWebhookUrl = async () => {
-    if (!webhookUrl) return;
-    const success = await onSave('google_chat_webhook', webhookUrl);
-    if (success) showSuccess('Webhook saved');
-  };
-
-  const addCalendar = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newUrl) return;
-
+const colors = [
+  ["Blue", "bg-blue-100 text-blue-800"],
+  ["Green", "bg-emerald-100 text-emerald-800"],
+  ["Purple", "bg-purple-100 text-purple-800"],
+  ["Orange", "bg-orange-100 text-orange-800"],
+  ["Rose", "bg-rose-100 text-rose-800"],
+];
+export function IntegrationsSettings() {
+  const { user } = useAuth();
+  const [sources, setSources] = useState<Source[]>([]);
+  const [name, setName] = useState("");
+  const [url, setURL] = useState("");
+  const [color, setColor] = useState(colors[0][1]);
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [removing, setRemoving] = useState<Source | null>(null);
+  const requestVersion = useRef(0);
+  const load = useCallback(async () => {
+    if (user?.role !== "admin") return;
+    const version = ++requestVersion.current;
     try {
-      const res = await fetch('/api/calendars', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: newUrl, name: newName || 'Calendar', color: newColor }),
+      const response = await apiFetch("/api/calendars");
+      const data = (await response.json()) ?? [];
+      if (
+        !Array.isArray(data) ||
+        data.some(
+          (source) =>
+            !source ||
+            typeof source.id !== "number" ||
+            typeof source.name !== "string",
+        )
+      )
+        throw new Error("The server returned an invalid calendar list");
+      if (version !== requestVersion.current) return;
+      setSources(data);
+      setError("");
+    } catch (e) {
+      if (version !== requestVersion.current) return;
+      setError(e instanceof Error ? e.message : "Could not read calendars");
+    } finally {
+      if (version === requestVersion.current) setLoading(false);
+    }
+  }, [user?.role]);
+  useEffect(() => {
+    void load();
+    const update = () => void load();
+    window.addEventListener("system-update", update);
+    return () => window.removeEventListener("system-update", update);
+  }, [load]);
+  async function add(event: React.FormEvent) {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    try {
+      await apiFetch("/api/calendars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, url, color }),
       });
-      const data = await res.json();
-      setCalendars([...calendars, data]);
-      setNewUrl('');
-      setNewName('');
-      showSuccess('Calendar added');
-    } catch (err) {
-      console.error(err);
+      setName("");
+      setURL("");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not add calendar");
+    } finally {
+      setBusy(false);
     }
-  };
-
-  const confirmDeleteCalendar = async () => {
-    if (!pendingDeleteId) return;
+  }
+  async function sync(source: Source) {
+    setBusy(true);
     try {
-      await fetch(`/api/calendars/${pendingDeleteId}`, { method: 'DELETE' });
-      setCalendars(calendars.filter(c => c.id !== pendingDeleteId));
-      setPendingDeleteId(null);
-      setShowDeleteConfirm(false);
-      showSuccess('Calendar removed');
-    } catch (err) {
-      console.error(err);
+      await apiFetch("/api/calendars/" + source.id + "/sync", {
+        method: "POST",
+      });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not refresh calendar");
+    } finally {
+      setBusy(false);
     }
-  };
-
+  }
+  async function remove() {
+    if (!removing || busy) return;
+    setBusy(true);
+    try {
+      await apiFetch("/api/calendars/" + removing.id, { method: "DELETE" });
+      setRemoving(null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not remove calendar");
+      throw e;
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (user?.role !== "admin")
+    return (
+      <p className="p-6">The household owner manages calendar connections.</p>
+    );
   return (
     <div className="space-y-6">
-      <ConfirmDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={confirmDeleteCalendar}
-        title="Unsubscribe Calendar"
-        message="Are you sure you want to unsubscribe from this calendar?"
-        confirmText="Unsubscribe"
-      />
-
-      {successMessage && (
-        <div className="bg-success-light text-success px-4 py-2 rounded-xl text-sm font-medium animate-fade-in">
-          {successMessage}
+      <section className="rounded-3xl bg-[#355B48] text-white p-7">
+        <CalendarDays size={30} className="mb-4 text-emerald-200" />
+        <h2 className="text-2xl font-semibold">Bring your calendars home.</h2>
+        <p className="mt-3 max-w-xl text-emerald-50/85">
+          Subscribe to an iCalendar feed from your calendar provider, school, or
+          club. Plans appear alongside your family calendar and stay available
+          when the internet is down.
+        </p>
+        <p className="mt-4 text-sm text-emerald-100">
+          Read-only · Refreshes every 15 minutes · Last 31 days and next year
+        </p>
+      </section>
+      {error && (
+        <div role="alert" className="rounded-xl bg-red-50 text-red-800 p-4">
+          {error}
         </div>
       )}
-
-      {/* Google Chat Webhook */}
-      <Card>
-        <CardContent>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            Google Chat Webhook
-            <Tooltip content="URL to send notifications when chores are completed." />
-          </h3>
-          <div className="flex gap-2">
-            <Input
-              type="url"
-              value={webhookUrl}
-              onChange={e => setWebhookUrl(e.target.value)}
-              placeholder="https://chat.googleapis.com/..."
-              className="flex-1"
-            />
-            <Button onClick={saveWebhookUrl} loading={saving}>
-              <Save size={16} />
-              Save
-            </Button>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Configure a webhook to receive notifications in Google Chat.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* External Calendars */}
-      <Card>
-        <CardContent className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            External Calendar Subscriptions
-          </h3>
-
-          {calendars.map(cal => (
-            <div
-              key={cal.id}
-              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl"
+      {loading && <p role="status">Loading your calendars…</p>}
+      {!loading && sources.length === 0 && (
+        <p className="text-stone-500">
+          No connected calendars yet. Add your first feed below.
+        </p>
+      )}
+      {sources.map((source) => (
+        <section
+          key={source.id}
+          className="rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-5"
+        >
+          <div className="flex items-start gap-3">
+            <span className={"rounded-xl p-3 " + source.color}>
+              <CalendarDays size={22} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold break-words">{source.name}</h3>
+              <p className="text-xs text-stone-500 mt-1">
+                {source.event_count} cached occurrences · Read-only
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              aria-label={"Refresh " + source.name}
+              onClick={() => void sync(source)}
+              className="p-3 rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 disabled:opacity-40"
             >
-              <div className="flex items-center gap-4 overflow-hidden">
-                <div
-                  className={`w-10 h-10 rounded-full ${cal.color || 'bg-gray-100 dark:bg-gray-700'
-                    } flex items-center justify-center shrink-0`}
-                >
-                  <Calendar size={18} className="opacity-70 dark:text-white" />
-                </div>
-                <div className="min-w-0">
-                  <h4 className="font-semibold text-gray-800 dark:text-gray-100 truncate">
-                    {cal.name}
-                  </h4>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-xs">
-                    {cal.url}
-                  </p>
-                </div>
-              </div>
+              <RefreshCw size={18} />
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              aria-label={"Remove " + source.name}
+              onClick={() => setRemoving(source)}
+              className="p-3 rounded-xl hover:bg-red-50 text-stone-500 disabled:opacity-40"
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
+          {source.last_error ? (
+            <div
+              role="status"
+              className="mt-4 rounded-xl bg-amber-50 text-amber-900 p-3 text-sm"
+            >
+              <p className="font-medium">Refresh needs attention</p>
+              <p>{source.last_error}</p>
+              {source.last_sync && (
+                <p className="mt-1">
+                  Keeping the last good copy from{" "}
+                  {new Date(source.last_sync).toLocaleString()}.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-stone-500 flex gap-2 items-center">
+              <CheckCircle2 size={16} />
+              {source.last_sync
+                ? "Updated " + new Date(source.last_sync).toLocaleString()
+                : "Waiting for first refresh"}
+            </p>
+          )}
+          {source.range_end && (
+            <p className="text-xs text-stone-500 mt-2">
+              Cached dates: {source.range_start} to {source.range_end} (end
+              exclusive).
+            </p>
+          )}
+        </section>
+      ))}
+      <form
+        onSubmit={add}
+        className="rounded-3xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-6 space-y-4"
+      >
+        <h3 className="text-lg font-semibold">Connect a calendar</h3>
+        <label className="block text-sm font-medium">
+          Calendar name
+          <input
+            required
+            maxLength={100}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="School & activities"
+            className="mt-2 w-full p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent"
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          iCalendar feed URL
+          <input
+            required
+            autoComplete="off"
+            spellCheck={false}
+            value={url}
+            onChange={(e) => setURL(e.target.value)}
+            placeholder="https://…/calendar.ics"
+            className="mt-2 w-full p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent"
+            aria-describedby="feed-privacy"
+          />
+        </label>
+        <p
+          id="feed-privacy"
+          className="text-xs text-stone-500 flex items-start gap-2"
+        >
+          <ShieldCheck className="shrink-0" size={16} />
+          Use a subscription/export link, not a calendar webpage. Secret links
+          stay on your server and are included in private backups. HTTPS or
+          webcal links only; local-network feeds are blocked.
+        </p>
+        <fieldset>
+          <legend className="text-sm mb-2">Calendar color</legend>
+          <div className="flex gap-2 flex-wrap">
+            {colors.map(([label, value]) => (
               <button
-                onClick={() => {
-                  setPendingDeleteId(cal.id);
-                  setShowDeleteConfirm(true);
-                }}
-                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                key={value}
+                type="button"
+                aria-label={label}
+                aria-pressed={color === value}
+                onClick={() => setColor(value)}
+                className={
+                  "min-h-11 px-3 rounded-xl border-2 " +
+                  value +
+                  (color === value
+                    ? " border-stone-700"
+                    : " border-transparent")
+                }
               >
-                <Trash2 size={18} />
+                {label}
               </button>
-            </div>
-          ))}
-
-          {/* Add Calendar Form */}
-          <form
-            onSubmit={addCalendar}
-            className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800 space-y-3"
-          >
-            <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Add Subscription</h4>
-            <Input
-              type="text"
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              placeholder="Calendar Name (e.g. Holidays)"
-            />
-            <Input
-              type="text"
-              value={newUrl}
-              onChange={e => setNewUrl(e.target.value)}
-              placeholder="iCal URL (https://...)"
-            />
-            <div className="flex items-center gap-2">
-              {PRESET_COLORS.map(c => (
-                <button
-                  key={c.value}
-                  type="button"
-                  onClick={() => setNewColor(c.value)}
-                  className={`w-6 h-6 rounded-full ${c.value.split(' ')[0]} border-2 transition-all ${newColor === c.value ? 'border-gray-600 dark:border-white' : 'border-transparent'
-                    }`}
-                  title={c.label}
-                />
-              ))}
-              <Button type="submit" className="ml-auto" size="sm">
-                Subscribe
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            ))}
+          </div>
+        </fieldset>
+        <button
+          disabled={busy}
+          className="px-5 py-3 rounded-xl bg-[#355B48] text-white font-medium disabled:opacity-50"
+        >
+          {busy ? "Working…" : "Connect calendar"}
+        </button>
+        <p className="text-xs text-stone-500">
+          Edit subscribed events in their original calendar. Two-way
+          Google/iCloud connections and Google Chat notifications are not yet
+          available.
+        </p>
+      </form>
+      <ConfirmDialog
+        isOpen={!!removing}
+        title="Remove connected calendar?"
+        message={`Remove ${removing?.name || "this calendar"} and its cached events from MyLight? The original calendar will not change. Reconnect the feed to restore it.`}
+        onClose={() => setRemoving(null)}
+        onConfirm={remove}
+        confirmText={busy ? "Removing…" : "Remove calendar"}
+      />
     </div>
   );
 }

@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("BEGIN:\nBEGIN:\n0;0=\nEND:\nEND:0")

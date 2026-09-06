@@ -2,33 +2,45 @@ package store
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 )
 
 func (s *Store) GetChores() (map[string][]Chore, error) {
+	return s.getChores(false)
+}
+
+func (s *Store) GetChoresByMemberID() (map[string][]Chore, error) {
+	return s.getChores(true)
+}
+
+func (s *Store) getChores(byID bool) (map[string][]Chore, error) {
 	// 1. Get Members for mapping
 	members, err := s.GetFamilyMembersMap()
 	if err != nil {
 		return nil, err
 	}
 
-	memberNames := []string{}
-	for _, name := range members {
-		memberNames = append(memberNames, name)
+	key := func(id int, name string) string {
+		if byID {
+			return strconv.Itoa(id)
+		}
+		return name
 	}
 
 	// 2. Get Chores
-	rows, err := s.DB.Query("SELECT id, title, member_id, time_of_day, completed FROM chores LIMIT 1000")
+	rows, err := s.DB.Query("SELECT id, title, member_id, time_of_day, completed FROM chores ORDER BY member_id, id LIMIT 1000")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
 	choresByMember := make(map[string][]Chore)
-	for _, name := range members {
-		choresByMember[name] = []Chore{}
+	for id, name := range members {
+		choresByMember[key(id, name)] = []Chore{}
 	}
 
 	for rows.Next() {
@@ -38,7 +50,8 @@ func (s *Store) GetChores() (map[string][]Chore, error) {
 		}
 		if name, ok := members[c.MemberID]; ok {
 			c.MemberName = name
-			choresByMember[name] = append(choresByMember[name], c)
+			bucket := key(c.MemberID, name)
+			choresByMember[bucket] = append(choresByMember[bucket], c)
 		}
 	}
 	return choresByMember, rows.Err()
@@ -62,9 +75,13 @@ func (s *Store) ToggleChore(id int, completed bool) error {
 
 	// Get member ID
 	var memberID int
-	err = tx.QueryRow("SELECT member_id FROM chores WHERE id = ?", id).Scan(&memberID)
+	var wasCompleted bool
+	err = tx.QueryRow("SELECT member_id, completed FROM chores WHERE id = ?", id).Scan(&memberID, &wasCompleted)
 	if err != nil {
 		return err
+	}
+	if wasCompleted == completed {
+		return tx.Commit()
 	}
 
 	// Update Chore
@@ -101,24 +118,52 @@ func (s *Store) ToggleChore(id int, completed bool) error {
 }
 
 func (s *Store) ResetChores(force bool) error {
-	today := time.Now().Format("2006-01-02")
+	location := time.Local
+	if zone, err := s.GetSetting("timezone"); err == nil && zone != "" {
+		if loc, err := time.LoadLocation(zone); err == nil {
+			location = loc
+		}
+	}
+	now := time.Now().In(location)
+	resetTime, err := s.GetSetting("chore_reset_time")
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	if resetTime == "" {
+		resetTime = "00:00"
+	}
+	clock, err := time.Parse("15:04", resetTime)
+	if err != nil {
+		return err
+	}
+	boundary := time.Date(now.Year(), now.Month(), now.Day(), clock.Hour(), clock.Minute(), 0, 0, location)
+	if now.Before(boundary) {
+		boundary = boundary.AddDate(0, 0, -1)
+	}
+	today := boundary.Format("2006-01-02")
 
 	var lastReset string
-	err := s.DB.QueryRow("SELECT value FROM settings WHERE key = 'last_chore_reset'").Scan(&lastReset)
-	if err != nil && err != sql.ErrNoRows {
+	err = s.DB.QueryRow("SELECT value FROM settings WHERE key = 'last_chore_reset'").Scan(&lastReset)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
 
 	if force || lastReset != today {
 		log.Println("[Store] Resetting chores...")
-		_, err := s.DB.Exec("UPDATE chores SET completed = 0")
+		tx, err := s.DB.Begin()
 		if err != nil {
 			return err
 		}
-		_, err = s.DB.Exec("INSERT OR REPLACE INTO settings (key, value) VALUES ('last_chore_reset', ?)", today)
+		defer tx.Rollback()
+		_, err = tx.Exec("UPDATE chores SET completed = 0")
 		if err != nil {
 			return err
 		}
+		_, err = tx.Exec("INSERT OR REPLACE INTO settings (key, value) VALUES ('last_chore_reset', ?)", today)
+		if err != nil {
+			return err
+		}
+		return tx.Commit()
 	}
 	return nil
 }

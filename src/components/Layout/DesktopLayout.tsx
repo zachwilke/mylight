@@ -1,234 +1,158 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { cn } from '../../lib/utils';
-import { useAuth } from '../../context/AuthContext';
-import { Calendar, CheckSquare, Settings, CloudSun, TrendingUp, LayoutDashboard, Search, LogOut, User as UserIcon } from 'lucide-react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format } from "date-fns";
+import {
+  CalendarDays,
+  CheckCheck,
+  CloudSun,
+  CookingPot,
+  House,
+  Leaf,
+  ListTodo,
+  LogOut,
+  Monitor,
+  Settings,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { NavLink, Outlet } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { useSettings } from "../../hooks/useSettings";
+import { cn } from "../../lib/utils";
 
-function SearchResults() {
-    const [query, setQuery] = useState('');
-    const [results, setResults] = useState<{ events: any[], chores: any[], members: any[] } | null>(null);
-    const [isOpen, setIsOpen] = useState(false);
-    const navigate = useNavigate();
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    useEffect(() => {
-        if (!query.trim()) {
-            setResults(null);
-            return;
-        }
-
-        const timer = setTimeout(() => {
-            fetch(`/api/search?q=${encodeURIComponent(query)}`)
-                .then(res => res.json())
-                .then(data => {
-                    setResults(data);
-                    setIsOpen(true);
-                })
-                .catch(err => console.error(err));
-        }, 300);
-
-        return () => clearTimeout(timer);
-    }, [query]);
-
-    const handleSelect = (type: string) => {
-        setIsOpen(false);
-        setQuery('');
-        if (type === 'event') navigate('/calendar');
-        if (type === 'chore') navigate('/chores');
-        if (type === 'member') navigate('/settings'); // Or profile if we had one
-    };
-
-    return (
-        <div ref={containerRef} className="relative w-96">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-                type="text"
-                value={query}
-                onChange={(e) => {
-                    setQuery(e.target.value);
-                    if (!e.target.value) setIsOpen(false);
-                }}
-                onFocus={() => {
-                    if (results) setIsOpen(true);
-                }}
-                placeholder="Search..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-slate-400"
-            />
-
-            {isOpen && results && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden z-50 max-h-96 overflow-y-auto">
-                    {/* Events */}
-                    {results.events?.length > 0 && (
-                        <div className="p-2">
-                            <div className="text-xs font-semibold text-slate-400 px-2 py-1 uppercase tracking-wider">Events</div>
-                            {results.events.map((e: any) => (
-                                <button
-                                    key={`e-${e.id}`}
-                                    onClick={() => handleSelect('event')}
-                                    className="w-full text-left px-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors"
-                                >
-                                    <div className="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-lg">
-                                        <Calendar size={14} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{e.title}</div>
-                                        <div className="text-xs text-slate-400">{format(new Date(e.start_date), 'MMM d, h:mm a')}</div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Chores */}
-                    {results.chores?.length > 0 && (
-                        <div className="p-2 border-t border-slate-100 dark:border-slate-800">
-                            <div className="text-xs font-semibold text-slate-400 px-2 py-1 uppercase tracking-wider">Chores</div>
-                            {results.chores.map((c: any) => (
-                                <button
-                                    key={`c-${c.id}`}
-                                    onClick={() => handleSelect('chore')}
-                                    className="w-full text-left px-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors"
-                                >
-                                    <div className={`p-2 rounded-lg ${c.completed ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
-                                        <CheckSquare size={14} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{c.title}</div>
-                                        <div className="text-xs text-slate-400">{c.completed ? 'Completed' : 'Pending'}</div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Members */}
-                    {results.members?.length > 0 && (
-                        <div className="p-2 border-t border-slate-100 dark:border-slate-800">
-                            <div className="text-xs font-semibold text-slate-400 px-2 py-1 uppercase tracking-wider">Family</div>
-                            {results.members.map((m: any) => (
-                                <button
-                                    key={`m-${m.id}`}
-                                    onClick={() => handleSelect('member')}
-                                    className="w-full text-left px-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg flex items-center gap-3 transition-colors"
-                                >
-                                    <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200">
-                                        {m.avatar ? <img src={m.avatar} alt={m.name} className="w-full h-full object-cover" /> : <UserIcon size={16} className="m-auto mt-2 text-slate-400" />}
-                                    </div>
-                                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{m.name}</div>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {(!results.events?.length && !results.chores?.length && !results.members?.length) && (
-                        <div className="p-4 text-center text-sm text-slate-400">
-                            No results found
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
-
-interface DesktopLayoutProps {
-    children?: React.ReactNode;
-}
-
-const NAV_ITEMS = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { id: 'calendar', label: 'Calendar', icon: Calendar, path: '/calendar' },
-    { id: 'chores', label: 'Chores', icon: CheckSquare, path: '/chores' },
-    { id: 'history', label: 'History', icon: TrendingUp, path: '/history' },
-    { id: 'weather', label: 'Weather', icon: CloudSun, path: '/weather' },
-    { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
+const links = [
+  { label: "Today", path: "", icon: House },
+  { label: "Calendar", path: "/calendar", icon: CalendarDays },
+  { label: "Tasks", path: "/chores", icon: CheckCheck },
+  { label: "Meals", path: "/meals", icon: CookingPot },
+  { label: "Lists", path: "/lists", icon: ListTodo },
 ];
-
-export function DesktopLayout({ children }: DesktopLayoutProps) {
-    const { user, logout } = useAuth();
-
-    return (
-        <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-sm antialiased text-slate-900 dark:text-slate-100 selection:bg-blue-100 selection:text-blue-900">
-
-
-            {/* Sidebar */}
-            <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col">
-                <div className="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-800/50">
-                    <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-                        🗓️ MyLight
-                    </span>
-                </div>
-
-                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                    {NAV_ITEMS.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                            <NavLink
-                                key={item.id}
-                                to={item.path}
-                                className={({ isActive }) => cn(
-                                    "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group text-sm font-medium",
-                                    isActive
-                                        ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-200"
-                                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
-                                )}
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        <Icon size={18} className={cn(isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500")} />
-                                        {item.label}
-                                    </>
-                                )}
-                            </NavLink>
-                        );
-                    })}
-                </nav>
-
-                <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${user?.color ? `bg-${user.color.replace('step-', '')}-500` : 'bg-blue-500'}`}>
-                            {user?.avatar ? <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" /> : user?.name?.[0]}
-                        </div>
-                        <div className="flex flex-col overflow-hidden">
-                            <span className="text-xs font-semibold truncate">{user?.name}</span>
-                            <span className="text-[10px] text-slate-500 truncate">{user?.email}</span>
-                        </div>
-                    </div>
-                    <button
-                        onClick={logout}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors text-xs font-medium"
-                    >
-                        <LogOut size={14} />
-                        Sign Out
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                {/* Header */}
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 z-10 relative">
-                    <SearchResults />
-                </header>
-
-                {/* Page Content */}
-                <main className="flex-1 overflow-auto p-6 md:p-8">
-                    <div className="mx-auto h-full max-w-7xl">
-                        <Outlet />
-                    </div>
-                </main>
-            </div>
+export function DesktopLayout({ kiosk = false }: { kiosk?: boolean }) {
+  const { user, logout } = useAuth();
+  const { settings } = useSettings();
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+  const prefix = kiosk ? "/kiosk" : "";
+  return (
+    <div className="h-dvh flex bg-[#F7F5F0] dark:bg-stone-950 text-[#252923] dark:text-stone-100 overflow-hidden">
+      <aside className="hidden md:flex w-24 shrink-0 flex-col items-center border-r border-stone-200/70 dark:border-stone-800 py-7">
+        <NavLink
+          to={prefix || "/"}
+          aria-label="MyLight home"
+          className="w-12 h-12 rounded-2xl bg-[#355B48] text-white flex items-center justify-center mb-10"
+        >
+          <Leaf size={25} />
+        </NavLink>
+        <nav className="flex flex-col gap-3 w-full px-3">
+          {links.map(({ label, path, icon: Icon }) => (
+            <NavLink
+              end
+              key={label}
+              to={prefix + path || "/"}
+              className={({ isActive }) =>
+                cn(
+                  "flex flex-col items-center gap-1.5 rounded-2xl py-3 text-[11px] font-medium transition-colors",
+                  isActive
+                    ? "bg-[#E7ECDD] text-[#355B48] dark:bg-emerald-950 dark:text-emerald-100"
+                    : "text-stone-500 hover:bg-stone-200/50 dark:hover:bg-stone-800",
+                )
+              }
+            >
+              <Icon size={22} strokeWidth={1.7} />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="mt-auto flex flex-col gap-3">
+          <NavLink
+            to={prefix + "/weather"}
+            aria-label="Weather"
+            className="p-3 text-stone-500 rounded-xl hover:bg-stone-200/50"
+          >
+            <CloudSun size={22} />
+          </NavLink>
+          {!kiosk && (
+            <NavLink
+              to="/kiosk"
+              aria-label="Open wall display"
+              className="p-3 text-stone-500 rounded-xl hover:bg-stone-200/50"
+            >
+              <Monitor size={22} />
+            </NavLink>
+          )}
+          <NavLink
+            to={`${prefix}/settings`}
+            aria-label="Settings"
+            className="p-3 text-stone-500 rounded-xl hover:bg-stone-200/50"
+          >
+            <Settings size={22} />
+          </NavLink>
+          {!kiosk && (
+            <button
+              onClick={() => logout()}
+              aria-label="Sign out"
+              className="p-3 text-stone-500 rounded-xl hover:bg-stone-200/50"
+            >
+              <LogOut size={20} />
+            </button>
+          )}
         </div>
-    );
+      </aside>
+      <div className="min-w-0 flex-1 flex flex-col">
+        <header className="shrink-0 h-20 md:h-24 px-5 md:px-9 flex justify-between items-center border-b border-stone-200/60 dark:border-stone-800">
+          <div>
+            <p className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+              <Leaf className="md:hidden text-[#355B48]" size={20} />
+              {settings.family_name || "MyLight"}
+            </p>
+            <p className="text-xs text-stone-500 mt-1">
+              {format(now, "EEEE, MMMM d")}
+              <span className="hidden sm:inline">
+                {" "}
+                · A little more together.
+              </span>
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="hidden sm:block text-sm tabular-nums text-stone-500">
+              {format(now, "h:mm a")}
+            </span>
+            <NavLink
+              to={`${prefix}/settings`}
+              aria-label="Household settings"
+              className="w-10 h-10 rounded-full bg-[#E7ECDD] dark:bg-emerald-950 flex items-center justify-center text-[#355B48] dark:text-emerald-100 font-semibold"
+            >
+              {user?.name?.slice(0, 1)}
+            </NavLink>
+          </div>
+        </header>
+        <main className="flex-1 min-h-0 overflow-y-auto pb-20 md:pb-0">
+          <Outlet />
+        </main>
+      </div>
+      <nav
+        aria-label="Main navigation"
+        className="md:hidden fixed bottom-0 inset-x-0 h-20 pb-[env(safe-area-inset-bottom)] bg-[#F7F5F0]/95 dark:bg-stone-950 border-t border-stone-200 dark:border-stone-800 flex justify-around z-40"
+      >
+        {links.map(({ label, path, icon: Icon }) => (
+          <NavLink
+            end
+            key={label}
+            to={prefix + path || "/"}
+            className={({ isActive }) =>
+              cn(
+                "min-w-14 flex flex-col items-center justify-center gap-1 text-[10px]",
+                isActive
+                  ? "text-[#355B48] dark:text-emerald-300 font-bold"
+                  : "text-stone-500",
+              )
+            }
+          >
+            <Icon size={21} />
+            {label}
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  );
 }

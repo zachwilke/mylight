@@ -1,0 +1,26 @@
+name: Checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-server/go.mod
+          cache-dependency-path: go-server/go.sum
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run test:ui
+      - run: go test -C go-server -race ./...
+      - run: go vet -C go-server ./...
+      - run: docker build -t mylight:test .

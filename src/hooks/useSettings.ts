@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "../lib/api";
 
 interface Settings {
   family_name?: string;
@@ -32,13 +33,13 @@ export function useSettings(): UseSettingsReturn {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/settings');
-      if (!res.ok) throw new Error('Failed to fetch settings');
+      const res = await apiFetch("/api/settings");
+      if (!res.ok) throw new Error("Failed to fetch settings");
       const data = await res.json();
       setSettings(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load settings');
-      console.error('Failed to fetch settings:', err);
+      setError(err instanceof Error ? err.message : "Failed to load settings");
+      console.error("Failed to fetch settings:", err);
     } finally {
       setLoading(false);
     }
@@ -48,58 +49,66 @@ export function useSettings(): UseSettingsReturn {
     fetchSettings();
   }, [fetchSettings]);
 
-  const updateSetting = useCallback(async (key: string, value: string): Promise<boolean> => {
-    try {
-      setSaving(true);
-      setError(null);
+  const updateSetting = useCallback(
+    async (key: string, value: string): Promise<boolean> => {
+      try {
+        setSaving(true);
+        setError(null);
 
-      const res = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, value }),
-      });
-
-      if (!res.ok) throw new Error('Failed to save setting');
-
-      setSettings(prev => ({ ...prev, [key]: value }));
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save setting');
-      console.error('Failed to update setting:', err);
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  }, []);
-
-  const updateSettings = useCallback(async (updates: Record<string, string>): Promise<boolean> => {
-    try {
-      setSaving(true);
-      setError(null);
-
-      const promises = Object.entries(updates).map(([key, value]) =>
-        fetch('/api/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await apiFetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key, value }),
-        })
-      );
+        });
 
-      const results = await Promise.all(promises);
-      const allOk = results.every(res => res.ok);
+        if (!res.ok) throw new Error("Failed to save setting");
 
-      if (!allOk) throw new Error('Failed to save some settings');
+        setSettings((prev) => ({ ...prev, [key]: value }));
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to save setting");
+        console.error("Failed to update setting:", err);
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [],
+  );
 
-      setSettings(prev => ({ ...prev, ...updates }));
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings');
-      console.error('Failed to update settings:', err);
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  }, []);
+  const updateSettings = useCallback(
+    async (updates: Record<string, string>): Promise<boolean> => {
+      try {
+        setSaving(true);
+        setError(null);
+
+        const promises = Object.entries(updates).map(([key, value]) =>
+          apiFetch("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key, value }),
+          }),
+        );
+
+        const results = await Promise.all(promises);
+        const allOk = results.every((res) => res.ok);
+
+        if (!allOk) throw new Error("Failed to save some settings");
+
+        setSettings((prev) => ({ ...prev, ...updates }));
+        return true;
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to save settings",
+        );
+        console.error("Failed to update settings:", err);
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [],
+  );
 
   return {
     settings,

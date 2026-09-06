@@ -1,6 +1,14 @@
-import { createContext, useContext, useState, ReactNode, HTMLAttributes, forwardRef, ButtonHTMLAttributes } from 'react';
-import { motion } from 'framer-motion';
-import { cn } from '../../lib/utils';
+import { motion } from "framer-motion";
+import {
+  ButtonHTMLAttributes,
+  HTMLAttributes,
+  ReactNode,
+  createContext,
+  forwardRef,
+  useContext,
+  useState,
+} from "react";
+import { cn } from "../../lib/utils";
 
 interface TabsContextType {
   activeTab: string;
@@ -12,7 +20,7 @@ const TabsContext = createContext<TabsContextType | null>(null);
 function useTabsContext() {
   const context = useContext(TabsContext);
   if (!context) {
-    throw new Error('Tabs components must be used within a Tabs provider');
+    throw new Error("Tabs components must be used within a Tabs provider");
   }
   return context;
 }
@@ -24,7 +32,14 @@ export interface TabsProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
 }
 
-export function Tabs({ defaultValue, value, onValueChange, children, className, ...props }: TabsProps) {
+export function Tabs({
+  defaultValue,
+  value,
+  onValueChange,
+  children,
+  className,
+  ...props
+}: TabsProps) {
   const [internalValue, setInternalValue] = useState(defaultValue);
 
   const activeTab = value ?? internalValue;
@@ -35,7 +50,7 @@ export function Tabs({ defaultValue, value, onValueChange, children, className, 
 
   return (
     <TabsContext.Provider value={{ activeTab, setActiveTab }}>
-      <div className={cn('flex flex-col', className)} {...props}>
+      <div className={cn("flex flex-col", className)} {...props}>
         {children}
       </div>
     </TabsContext.Provider>
@@ -50,17 +65,17 @@ export const TabList = forwardRef<HTMLDivElement, TabListProps>(
       ref={ref}
       role="tablist"
       className={cn(
-        'flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl',
-        className
+        "flex gap-1 p-1 overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-xl",
+        className,
       )}
       {...props}
     >
       {children}
     </div>
-  )
+  ),
 );
 
-TabList.displayName = 'TabList';
+TabList.displayName = "TabList";
 
 export interface TabTriggerProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   value: string;
@@ -78,11 +93,11 @@ export const TabTrigger = forwardRef<HTMLButtonElement, TabTriggerProps>(
         aria-selected={isActive}
         onClick={() => setActiveTab(value)}
         className={cn(
-          'relative flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200',
+          "relative shrink-0 flex-1 whitespace-nowrap px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200",
           isActive
-            ? 'text-gray-900 dark:text-white'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
-          className
+            ? "text-gray-900 dark:text-white"
+            : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300",
+          className,
         )}
         {...props}
       >
@@ -90,18 +105,21 @@ export const TabTrigger = forwardRef<HTMLButtonElement, TabTriggerProps>(
           <motion.div
             layoutId="activeTab"
             className="absolute inset-0 bg-white dark:bg-gray-700 rounded-lg shadow-sm"
-            transition={{ type: 'spring', duration: 0.3, bounce: 0.15 }}
+            transition={{ type: "spring", duration: 0.3, bounce: 0.15 }}
           />
         )}
         <span className="relative z-10">{children}</span>
       </button>
     );
-  }
+  },
 );
 
-TabTrigger.displayName = 'TabTrigger';
+TabTrigger.displayName = "TabTrigger";
 
-export interface TabContentProps extends HTMLAttributes<HTMLDivElement> {
+export interface TabContentProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "onDrag" | "onDragStart" | "onDragEnd" | "onAnimationStart"
+> {
   value: string;
 }
 
@@ -118,13 +136,13 @@ export const TabContent = forwardRef<HTMLDivElement, TabContentProps>(
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
-        className={cn('mt-4', className)}
+        className={cn("mt-4", className)}
         {...props}
       >
         {children}
       </motion.div>
     );
-  }
+  },
 );
 
-TabContent.displayName = 'TabContent';
+TabContent.displayName = "TabContent";

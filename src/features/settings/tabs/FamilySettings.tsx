@@ -1,18 +1,36 @@
-import { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Upload, Edit2, Eye, EyeOff, X, Save } from 'lucide-react';
-import { Button, Card, CardContent, Input } from '../../../components/ui';
-import { Modal, ModalHeader, ModalTitle, ModalBody, ModalFooter } from '../../../components/ui';
-import { UserAvatar } from '../../../components/UserAvatar';
-import { ConfirmDialog } from '../../../components/ConfirmDialog';
-import { FamilyMember } from '../../../types';
+import { Edit2, Eye, EyeOff, Plus, Save, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ConfirmDialog } from "../../../components/ConfirmDialog";
+import {
+  Button,
+  Card,
+  CardContent,
+  Input,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  ModalTitle,
+} from "../../../components/ui";
+import { UserAvatar } from "../../../components/UserAvatar";
+import { apiFetch } from "../../../lib/api";
+import { FamilyMember } from "../../../types";
 
 const COLORS = [
-  { label: 'Blue', value: 'bg-blue-100 text-blue-800', hex: 'bg-blue-100' },
-  { label: 'Pink', value: 'bg-pink-100 text-pink-800', hex: 'bg-pink-100' },
-  { label: 'Green', value: 'bg-green-100 text-green-800', hex: 'bg-green-100' },
-  { label: 'Purple', value: 'bg-purple-100 text-purple-800', hex: 'bg-purple-100' },
-  { label: 'Orange', value: 'bg-orange-100 text-orange-800', hex: 'bg-orange-100' },
-  { label: 'Teal', value: 'bg-teal-100 text-teal-800', hex: 'bg-teal-100' },
+  { label: "Blue", value: "bg-blue-100 text-blue-800", hex: "bg-blue-100" },
+  { label: "Pink", value: "bg-pink-100 text-pink-800", hex: "bg-pink-100" },
+  { label: "Green", value: "bg-green-100 text-green-800", hex: "bg-green-100" },
+  {
+    label: "Purple",
+    value: "bg-purple-100 text-purple-800",
+    hex: "bg-purple-100",
+  },
+  {
+    label: "Orange",
+    value: "bg-orange-100 text-orange-800",
+    hex: "bg-orange-100",
+  },
+  { label: "Teal", value: "bg-teal-100 text-teal-800", hex: "bg-teal-100" },
 ];
 
 export function FamilySettings() {
@@ -20,10 +38,10 @@ export function FamilySettings() {
   const [loading, setLoading] = useState(true);
 
   // Add member form
-  const [newMemberName, setNewMemberName] = useState('');
-  const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberPassword, setNewMemberPassword] = useState('');
-  const [newMemberPhone, setNewMemberPhone] = useState('');
+  const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [newMemberPassword, setNewMemberPassword] = useState("");
+  const [newMemberPhone, setNewMemberPhone] = useState("");
   const [selectedColor, setSelectedColor] = useState(COLORS[0].value);
 
   // Edit member modal
@@ -37,9 +55,9 @@ export function FamilySettings() {
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   useEffect(() => {
-    fetch('/api/family')
-      .then(res => res.json())
-      .then(data => {
+    apiFetch("/api/family")
+      .then((res) => res.json())
+      .then((data) => {
         setMembers(data);
         setLoading(false);
       })
@@ -48,12 +66,12 @@ export function FamilySettings() {
 
   const addMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMemberName.trim() || !newMemberPassword.trim()) return;
+    if (!newMemberName.trim()) return;
 
     try {
-      const res = await fetch('/api/family', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await apiFetch("/api/family", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newMemberName,
           phone: newMemberPhone,
@@ -64,10 +82,10 @@ export function FamilySettings() {
       });
       const newMember = await res.json();
       setMembers([...members, newMember]);
-      setNewMemberName('');
-      setNewMemberEmail('');
-      setNewMemberPassword('');
-      setNewMemberPhone('');
+      setNewMemberName("");
+      setNewMemberEmail("");
+      setNewMemberPassword("");
+      setNewMemberPhone("");
       setSelectedColor(COLORS[0].value);
     } catch (err) {
       console.error(err);
@@ -82,16 +100,18 @@ export function FamilySettings() {
   const saveEditing = async () => {
     if (!editingMember) return;
     try {
-      await fetch(`/api/family/${editingMember.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      await apiFetch(`/api/family/${editingMember.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: editingMember.name,
           phone: editingMember.phone,
           color: editingMember.color,
         }),
       });
-      setMembers(members.map(m => (m.id === editingMember.id ? editingMember : m)));
+      setMembers(
+        members.map((m) => (m.id === editingMember.id ? editingMember : m)),
+      );
       setIsEditModalOpen(false);
       setEditingMember(null);
     } catch (err) {
@@ -102,13 +122,17 @@ export function FamilySettings() {
   const toggleVisibility = async (member: FamilyMember) => {
     const newVisible = member.visible === false ? true : false;
     try {
-      const res = await fetch(`/api/family/${member.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await apiFetch(`/api/family/${member.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ visible: newVisible }),
       });
       if (res.ok) {
-        setMembers(members.map(m => (m.id === member.id ? { ...m, visible: newVisible } : m)));
+        setMembers(
+          members.map((m) =>
+            m.id === member.id ? { ...m, visible: newVisible } : m,
+          ),
+        );
       }
     } catch (err) {
       console.error(err);
@@ -118,8 +142,8 @@ export function FamilySettings() {
   const confirmDeleteMember = async () => {
     if (!pendingDeleteId) return;
     try {
-      await fetch(`/api/family/${pendingDeleteId}`, { method: 'DELETE' });
-      setMembers(members.filter(m => m.id !== pendingDeleteId));
+      await apiFetch(`/api/family/${pendingDeleteId}`, { method: "DELETE" });
+      setMembers(members.filter((m) => m.id !== pendingDeleteId));
       setPendingDeleteId(null);
       setShowDeleteConfirm(false);
     } catch (err) {
@@ -130,15 +154,17 @@ export function FamilySettings() {
   const handleAvatarUpload = async (id: number, file: File) => {
     if (!file) return;
     const formData = new FormData();
-    formData.append('avatar', file);
+    formData.append("avatar", file);
     try {
-      const res = await fetch(`/api/family/${id}/avatar`, {
-        method: 'POST',
+      const res = await apiFetch(`/api/family/${id}/avatar`, {
+        method: "POST",
         body: formData,
       });
       const data = await res.json();
       if (data.success) {
-        setMembers(members.map(m => (m.id === id ? { ...m, avatar: data.avatar } : m)));
+        setMembers(
+          members.map((m) => (m.id === id ? { ...m, avatar: data.avatar } : m)),
+        );
       }
     } catch (err) {
       console.error(err);
@@ -162,7 +188,12 @@ export function FamilySettings() {
       />
 
       {/* Edit Member Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} size="md">
+      <Modal
+        label="Edit member"
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        size="md"
+      >
         <ModalHeader>
           <ModalTitle>Edit Member</ModalTitle>
         </ModalHeader>
@@ -176,7 +207,9 @@ export function FamilySettings() {
                 <Input
                   type="text"
                   value={editingMember.name}
-                  onChange={e => setEditingMember({ ...editingMember, name: e.target.value })}
+                  onChange={(e) =>
+                    setEditingMember({ ...editingMember, name: e.target.value })
+                  }
                   placeholder="Name"
                 />
               </div>
@@ -186,8 +219,13 @@ export function FamilySettings() {
                 </label>
                 <Input
                   type="tel"
-                  value={editingMember.phone || ''}
-                  onChange={e => setEditingMember({ ...editingMember, phone: e.target.value })}
+                  value={editingMember.phone || ""}
+                  onChange={(e) =>
+                    setEditingMember({
+                      ...editingMember,
+                      phone: e.target.value,
+                    })
+                  }
                   placeholder="Phone (Optional)"
                 />
               </div>
@@ -196,14 +234,16 @@ export function FamilySettings() {
                   Color
                 </label>
                 <div className="flex gap-2">
-                  {COLORS.map(c => (
+                  {COLORS.map((c) => (
                     <button
                       key={c.value}
-                      onClick={() => setEditingMember({ ...editingMember, color: c.value })}
+                      onClick={() =>
+                        setEditingMember({ ...editingMember, color: c.value })
+                      }
                       className={`w-8 h-8 rounded-full ${c.hex} border-2 transition-all ${
                         editingMember.color === c.value
-                          ? 'border-gray-600 dark:border-white scale-110'
-                          : 'border-transparent hover:scale-110'
+                          ? "border-gray-600 dark:border-white scale-110"
+                          : "border-transparent hover:scale-110"
                       }`}
                     />
                   ))}
@@ -236,8 +276,11 @@ export function FamilySettings() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {members.map(member => (
-                <tr key={member.id} className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+              {members.map((member) => (
+                <tr
+                  key={member.id}
+                  className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                >
                   <td className="px-6 py-3">
                     <div className="flex items-center gap-3">
                       <div
@@ -250,12 +293,12 @@ export function FamilySettings() {
                         </div>
                         <input
                           type="file"
-                          ref={el => {
+                          ref={(el) => {
                             fileInputRefs.current[member.id] = el;
                           }}
                           className="hidden"
                           accept="image/*"
-                          onChange={e => {
+                          onChange={(e) => {
                             if (e.target.files?.[0]) {
                               handleAvatarUpload(member.id, e.target.files[0]);
                             }
@@ -265,26 +308,32 @@ export function FamilySettings() {
                       <span
                         className={`font-medium transition-colors ${
                           member.visible === false
-                            ? 'text-gray-400 dark:text-gray-600 line-through decoration-2'
-                            : 'text-gray-900 dark:text-white'
+                            ? "text-gray-400 dark:text-gray-600 line-through decoration-2"
+                            : "text-gray-900 dark:text-white"
                         }`}
                       >
                         {member.name}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-3 text-gray-500 dark:text-gray-400">{member.phone || '-'}</td>
+                  <td className="px-6 py-3 text-gray-500 dark:text-gray-400">
+                    {member.phone || "-"}
+                  </td>
                   <td className="px-6 py-3 text-center">
                     <button
                       onClick={() => toggleVisibility(member)}
                       className={`p-1.5 rounded-md transition-colors ${
                         member.visible !== false
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
                       }`}
-                      title={member.visible !== false ? 'Visible' : 'Hidden'}
+                      title={member.visible !== false ? "Visible" : "Hidden"}
                     >
-                      {member.visible !== false ? <Eye size={16} /> : <EyeOff size={16} />}
+                      {member.visible !== false ? (
+                        <Eye size={16} />
+                      ) : (
+                        <EyeOff size={16} />
+                      )}
                     </button>
                   </td>
                   <td className="px-6 py-3 text-right">
@@ -316,7 +365,10 @@ export function FamilySettings() {
 
         {/* Add Member Form */}
         <CardContent className="bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-800">
-          <form onSubmit={addMember} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <form
+            onSubmit={addMember}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          >
             <div className="space-y-3">
               <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">
                 Basic Info
@@ -324,14 +376,14 @@ export function FamilySettings() {
               <Input
                 type="text"
                 value={newMemberName}
-                onChange={e => setNewMemberName(e.target.value)}
+                onChange={(e) => setNewMemberName(e.target.value)}
                 placeholder="Name"
                 required
               />
               <Input
                 type="tel"
                 value={newMemberPhone}
-                onChange={e => setNewMemberPhone(e.target.value)}
+                onChange={(e) => setNewMemberPhone(e.target.value)}
                 placeholder="Phone (Optional)"
               />
             </div>
@@ -342,16 +394,14 @@ export function FamilySettings() {
               <Input
                 type="email"
                 value={newMemberEmail}
-                onChange={e => setNewMemberEmail(e.target.value)}
-                placeholder="Email"
-                required
+                onChange={(e) => setNewMemberEmail(e.target.value)}
+                placeholder="Email (optional for a child profile)"
               />
               <Input
                 type="password"
                 value={newMemberPassword}
-                onChange={e => setNewMemberPassword(e.target.value)}
-                placeholder="Password"
-                required
+                onChange={(e) => setNewMemberPassword(e.target.value)}
+                placeholder="Password (optional for a child profile)"
               />
             </div>
             <div className="flex flex-col justify-between">
@@ -360,15 +410,15 @@ export function FamilySettings() {
                   Appearance
                 </label>
                 <div className="flex flex-wrap gap-3">
-                  {COLORS.map(c => (
+                  {COLORS.map((c) => (
                     <button
                       key={c.value}
                       type="button"
                       onClick={() => setSelectedColor(c.value)}
                       className={`w-10 h-10 rounded-full ${c.hex} transition-all ${
                         selectedColor === c.value
-                          ? 'ring-2 ring-offset-2 ring-gray-400 scale-110'
-                          : 'hover:scale-110'
+                          ? "ring-2 ring-offset-2 ring-gray-400 scale-110"
+                          : "hover:scale-110"
                       }`}
                       title={c.label}
                     />
