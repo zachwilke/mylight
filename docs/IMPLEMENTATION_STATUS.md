@@ -28,7 +28,9 @@ SQLite contention retry window that was too short under Linux's race detector.
 The follow-up extends bounded lock backoff to 1.175 seconds across at most seven
 attempts, retaining the one-winner/one-conflict assertion. The separate-connection
 race test passed 30 repeated runs; the full race suite and vet pass too. The retry
-review and updated hosted CI remain pending final confirmation.
+review also returned zero findings. Follow-up implementation was pushed as
+`0e76db6`; current hosted results are available on PR #17 and remain separate
+from this local verification record.
 
 ## Calendar conflict protection and explicit series scope — September 5
 
