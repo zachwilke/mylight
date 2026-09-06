@@ -17,6 +17,7 @@ jobs:
         with:
           go-version-file: go-server/go.mod
           cache-dependency-path: go-server/go.sum
+      - run: python3 scripts/test-install.py
       - run: npm ci
       - run: npm run lint
       - run: npm run build

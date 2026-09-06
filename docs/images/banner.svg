@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="440" viewBox="0 0 1600 440" role="img" aria-labelledby="title desc">
+  <title id="title">MyLight — A little more together.</title>
+  <desc id="desc">A warm cream and forest green banner with a growing sprout, introducing a local home for family life.</desc>
+  <rect width="1600" height="440" rx="32" fill="#f7f5ef"/>
+  <circle cx="1395" cy="215" r="260" fill="#e8ecdf"/>
+  <circle cx="1395" cy="215" r="209" fill="none" stroke="#d0d8c3"/>
+  <circle cx="1395" cy="215" r="161" fill="none" stroke="#d0d8c3"/>
+  <g transform="translate(84 65)">
+    <rect width="64" height="64" rx="32" fill="#355b49"/>
+    <g transform="translate(18 17)" fill="none" stroke="#f7f5ef" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M25 2c0 9 3 18-7 23C5 31-2 18 6 12c5-4 12-2 19-10Z"/>
+      <path d="M4 29c3-7 8-10 15-14"/>
+    </g>
+    <text x="83" y="46" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" fill="#27382e">MyLight</text>
+  </g>
+  <text x="84" y="225" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="700" letter-spacing="-3" fill="#27382e">A little more together.</text>
+  <text x="88" y="281" font-family="Arial, Helvetica, sans-serif" font-size="27" fill="#687268">A local home for your family’s everyday life.</text>
+  <text x="88" y="361" font-family="Arial, Helvetica, sans-serif" font-size="16" letter-spacing="4" fill="#355b49">CALENDARS · LITTLE ROUTINES · MEALS · SHARED LISTS</text>
+  <g fill="none" stroke="#355b49" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1295 335h153M1371 333c12-48-22-63-11-112 5-25 23-35 38-42"/>
+    <path d="M1362 261c-50 4-82-23-81-68 50-7 83 14 81 68Z" fill="#b3c39e"/>
+    <path d="M1380 198c-5-44 15-70 65-72 8 48-15 74-65 72Z" fill="#c8d4b7"/>
+  </g>
+</svg>
