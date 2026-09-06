@@ -4,6 +4,32 @@ These are incremental implementations from the approved roadmap, **not full Skyl
 parity**. Work is on `codex/mylight-foundation`. This document records
 implementation evidence, not release approval or deployment to a household server.
 
+## Repeat schedule editor — September 5
+
+- Added accessible repeat controls for daily/weekly/monthly/yearly intervals
+  (1–1000), ending never, after 1–10000 occurrences, or on an inclusive date.
+  Counts include the first occurrence. Client-side validation complements the
+  existing API validation; invalid drafts stay open with a focused error notice.
+- Date-only cutoffs remain civil dates. Timed cutoffs encode the chosen day's
+  local 23:59:59 as UTC, using that day's offset, not the series start's offset.
+  Supported cutoffs convert when toggling between timed and all-day events.
+- Untouched rules are preserved byte-for-byte. Complex selectors, arbitrary
+  timed cutoffs, malformed and legacy rules remain visibly custom instead of
+  being flattened. Choosing a new schedule explicitly replaces custom rules.
+  Series acknowledgements, version checks and pending-save locks are retained.
+- The editor explicitly warns that timed recurrence is still fixed-UTC and can
+  shift local time across DST. This does not complete the shared timezone model,
+  weekday-selection editor, per-occurrence exceptions, future splits or provider sync.
+
+Verification: 61 frontend tests and 50 Go tests pass; production/native builds,
+Go race suite and vet pass. Lint has zero errors and the same 18 existing warnings.
+The repeat card was visually checked at 1280×720 and 390×844. A synthetic
+fortnightly event with COUNT=3 was saved through the UI, displayed on September 5,
+September 19 and October 3, and reopened with interval/count intact. No real
+household or provider data was used. The focused CodeRabbit review covered all
+five changed/new source and test files and returned zero findings.
+All hosted checks for the preceding `521e6a7` checkpoint passed.
+
 ## Publication checkpoint and recurrence validation — September 5
 
 - The implementation checkpoint was committed as `a994a7b`, pushed to

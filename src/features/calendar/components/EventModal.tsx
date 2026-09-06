@@ -6,6 +6,8 @@ import { downloadICS } from "../../../lib/icsUtils";
 import { cn } from "../../../lib/utils";
 import { Event, FamilyMember } from "../../../types";
 import { Modal } from "../../../components/ui/Modal";
+import { readRepeat, writeRepeat } from "../../../lib/recurrenceEditor";
+import { RepeatEditor } from "./RepeatEditor";
 
 interface EventModalProps {
   isOpen: boolean;
@@ -50,7 +52,7 @@ export function EventModal({
   const [isAllDay, setIsAllDay] = useState(false);
 
   const [memberIds, setMemberIds] = useState<number[]>([]);
-  const [recurrence, setRecurrence] = useState("");
+  const [repeat, setRepeat] = useState(() => readRepeat("", false));
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
 
@@ -125,7 +127,12 @@ export function EventModal({
           currentEvent.member_ids ??
             (currentEvent.member_id ? [currentEvent.member_id] : []),
         );
-        setRecurrence(currentEvent.recurrence || currentEvent.rrule || "");
+        setRepeat(
+          readRepeat(
+            currentEvent.recurrence || currentEvent.rrule || "",
+            !!currentEvent.is_all_day,
+          ),
+        );
         setLocation(currentEvent.location || "");
         setDescription(currentEvent.description || "");
         setIsAllDay(!!currentEvent.is_all_day);
@@ -155,7 +162,7 @@ export function EventModal({
         setEndDate(format(now, "yyyy-MM-dd"));
         setEndTime(format(nextHour, "HH:mm"));
 
-        setRecurrence("");
+        setRepeat(readRepeat("", false));
         setLocation("");
         setDescription("");
         setIsAllDay(false);
@@ -174,27 +181,27 @@ export function EventModal({
     )
       return;
 
-    let startIso: string;
-    let endIso: string | undefined;
-
-    if (isAllDay) {
-      // The editor's last day is inclusive; storage/ICS use an exclusive end.
-      startIso = startDate;
-      endIso = format(addDays(parseISO(endDate), 1), "yyyy-MM-dd");
-    } else {
-      startIso = new Date(`${startDate}T${startTime}`).toISOString();
-      endIso = new Date(`${endDate}T${endTime}`).toISOString();
-    }
-
     setSaving(true);
     setSaveError("");
     try {
+      let startIso: string;
+      let endIso: string | undefined;
+
+      if (isAllDay) {
+        // The editor's last day is inclusive; storage/ICS use an exclusive end.
+        startIso = startDate;
+        endIso = format(addDays(parseISO(endDate), 1), "yyyy-MM-dd");
+      } else {
+        startIso = new Date(`${startDate}T${startTime}`).toISOString();
+        endIso = new Date(`${endDate}T${endTime}`).toISOString();
+      }
+
       await onSave({
         title,
         start_date: startIso,
         end_date: endIso,
         member_ids: memberIds,
-        recurrence,
+        recurrence: writeRepeat(repeat, isAllDay, startDate),
         location,
         description,
         is_all_day: isAllDay,
@@ -396,7 +403,16 @@ export function EventModal({
               </div>
               <button
                 type="button"
-                onClick={() => setIsAllDay(!isAllDay)}
+                onClick={() => {
+                  setIsAllDay(!isAllDay);
+                  // Re-encode a supported end date as DATE or UTC as appropriate.
+                  // Complex rules remain untouched and are checked by the API.
+                  if (
+                    repeat.frequency !== "custom" &&
+                    repeat.ending === "until"
+                  )
+                    setRepeat({ ...repeat, original: undefined });
+                }}
                 role="switch"
                 aria-label="All day"
                 aria-checked={isAllDay}
@@ -482,47 +498,12 @@ export function EventModal({
             </div>
 
             {/* Recurrence */}
-            <div>
-              <label
-                htmlFor="event-repeat"
-                className="block text-xs font-bold text-gray-400 uppercase mb-1"
-              >
-                Repeat
-              </label>
-              <select
-                id="event-repeat"
-                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg py-2 px-3 text-sm font-medium dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none"
-                value={recurrence}
-                onChange={(e) => setRecurrence(e.target.value)}
-              >
-                <option value="" className="dark:bg-gray-800">
-                  Does not repeat
-                </option>
-                <option value="FREQ=DAILY" className="dark:bg-gray-800">
-                  Daily
-                </option>
-                <option value="FREQ=WEEKLY" className="dark:bg-gray-800">
-                  Weekly
-                </option>
-                <option value="FREQ=MONTHLY" className="dark:bg-gray-800">
-                  Monthly
-                </option>
-                <option value="FREQ=YEARLY" className="dark:bg-gray-800">
-                  Yearly
-                </option>
-                {recurrence &&
-                  ![
-                    "FREQ=DAILY",
-                    "FREQ=WEEKLY",
-                    "FREQ=MONTHLY",
-                    "FREQ=YEARLY",
-                  ].includes(recurrence) && (
-                    <option value={recurrence}>
-                      Custom recurrence (preserved)
-                    </option>
-                  )}
-              </select>
-            </div>
+            <RepeatEditor
+              value={repeat}
+              onChange={setRepeat}
+              startDate={startDate}
+              allDay={isAllDay}
+            />
 
             <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-4">
               {/* Member / Calendar */}

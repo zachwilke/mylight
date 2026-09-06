@@ -122,6 +122,9 @@ the directory. A guided Docker-volume restore workflow remains on the roadmap.
   explicit acknowledgement. Single-occurrence editing is not implemented yet.
 - Local recurrence writes are validated before saving; unsupported/sub-daily rules
   are rejected instead of adding schedules the current calendar cannot display.
+- Repeat controls support every N days/weeks/months/years, an occurrence count,
+  or an inclusive end date. Existing custom schedules are preserved until explicitly
+  replaced. Timed repeats currently use fixed UTC time; the editor warns about DST.
 - Household-timezone daily chore resets and reconnecting live updates.
 - Raster image validation, backup export/offline restore, health checks, and CI.
 
