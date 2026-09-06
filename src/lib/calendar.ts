@@ -6,6 +6,7 @@ import {
   startOfDay,
 } from "date-fns";
 import type { Event } from "../types";
+import { zonedRepeatDates } from "./eventTimezone";
 
 export interface Occurrence extends Event {
   date: Date;
@@ -30,7 +31,19 @@ export function occurrences(
     const duration = Math.max(0, finish.getTime() - date.getTime());
     const dayCount = Math.max(1, differenceInCalendarDays(finish, date));
     let dates = [date];
-    if (event.recurrence || event.rrule) {
+    if (
+      (event.recurrence || event.rrule) &&
+      event.timezone &&
+      !event.is_all_day
+    ) {
+      dates = zonedRepeatDates(
+        event.recurrence || event.rrule || "",
+        date,
+        event.timezone,
+        new Date(start.getTime() - duration),
+        end,
+      );
+    } else if (event.recurrence || event.rrule) {
       try {
         const options = RRule.parseString(
           event.recurrence || event.rrule || "",
@@ -130,4 +143,17 @@ export function segments(events: Event[], start: Date, end: Date) {
     }
     return pieces;
   });
+}
+
+/** Rendering surfaces must not go blank if the device cannot resolve a zone or
+ * a series exceeds the expansion budget. Never return a partial calendar. */
+export function calendarSegments(events: Event[], start: Date, end: Date) {
+  try {
+    return { events: segments(events, start, end), error: "" };
+  } catch (cause) {
+    return {
+      events: [],
+      error: `Calendar unavailable: ${cause instanceof Error ? cause.message : "could not expand recurring events"}`,
+    };
+  }
 }

@@ -124,7 +124,9 @@ the directory. A guided Docker-volume restore workflow remains on the roadmap.
   are rejected instead of adding schedules the current calendar cannot display.
 - Repeat controls support every N days/weeks/months/years, an occurrence count,
   or an inclusive end date. Existing custom schedules are preserved until explicitly
-  replaced. Timed repeats currently use fixed UTC time; the editor warns about DST.
+  replaced. New timed events record an explicit IANA timezone so repeats retain
+  their wall-clock time across DST. Legacy events stay fixed-UTC until a timezone
+  is explicitly chosen; the editor warns about that distinction.
 - Household-timezone daily chore resets and reconnecting live updates.
 - Raster image validation, backup export/offline restore, health checks, and CI.
 
@@ -133,8 +135,11 @@ the directory. A guided Docker-volume restore workflow remains on the roadmap.
 - Read-only HTTPS/webcal iCalendar subscriptions now work in Settings →
   Integrations. Google/iCloud/Outlook two-way connections are not implemented.
 - New all-day events use date-only values with exclusive ends, including ICS
-  export and DST-safe daily all-day repeats. Timed recurring events still need
-  complete timezone/exception editing and this/future/series operations.
+  export and DST-safe daily all-day repeats. Zoned timed recurrence handles gaps,
+  folds and half-hour transitions; individual exceptions and this/future/series
+  operations remain unfinished. Zoned-series ICS exports include VTIMEZONE and
+  support contemporary schedules beginning in 2026 or later; historical zoned
+  series fail explicitly rather than exporting incorrect historical rules.
 - Restricted wall pairing is available at `/pair`. The older signed-in `/kiosk`
   uses account permissions. Fine-grained child roles and server-side parent
   elevation are unfinished; the existing edit PIN is not a security boundary.

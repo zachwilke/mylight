@@ -188,7 +188,31 @@ func initSchema(db *sql.DB) error {
 	if err := migrateEventMembers(db); err != nil {
 		return err
 	}
-	return migrateEventVersions(db)
+	if err := migrateEventVersions(db); err != nil {
+		return err
+	}
+	return migrateEventTimezones(db)
+}
+
+func migrateEventTimezones(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var applied int
+	if err := tx.QueryRow("SELECT count(*) FROM schema_migrations WHERE version=7").Scan(&applied); err != nil {
+		return err
+	}
+	if applied > 0 {
+		return tx.Commit()
+	}
+	// Empty preserves legacy fixed-UTC recurrence rather than guessing a zone.
+	if _, err := tx.Exec(`ALTER TABLE events ADD COLUMN timezone TEXT NOT NULL DEFAULT '';
+		INSERT INTO schema_migrations(version) VALUES(7);`); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func migrateEventVersions(db *sql.DB) error {

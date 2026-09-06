@@ -4,6 +4,47 @@ These are incremental implementations from the approved roadmap, **not full Skyl
 parity**. Work is on `codex/mylight-foundation`. This document records
 implementation evidence, not release approval or deployment to a household server.
 
+## Zoned timed recurrence — September 5
+
+- Transactional schema 7 adds an explicit event timezone. Existing records stay
+  empty/fixed-UTC rather than guessing their intended timezone. API writes validate
+  IANA region/city names or UTC; an older client omitting the new field cannot erase
+  an existing zone. Event versions still protect concurrent timezone changes.
+- New timed events default to the device timezone. The editor displays and edits
+  clock fields in the event timezone even from another device. Changing the zone
+  intentionally retains the shown wall time. Unchanged times retain their original
+  instant/seconds, including an explicitly stored second fall-back occurrence.
+- The shared UI occurrence engine expands calendar fields independently of the
+  viewer timezone, then resolves them in the series zone. Spring-forward gaps are
+  skipped without spending COUNT; folds choose the first occurrence, except for
+  an explicitly stored second-fold DTSTART. Durations remain elapsed durations.
+  UNTIL is tested against UTC instants; editor date cutoffs use the event zone.
+- ICS export includes bundled VTIMEZONE rules for contemporary zoned series,
+  elapsed DURATION, and EXDATE/RDATE to preserve a second-fold first occurrence.
+  Historical zoned series starting before 2026 fail explicitly: the compact
+  timezone component database is not a complete historical transition database.
+  Legacy fixed-UTC, date-only and non-repeating UTC exports remain supported.
+  UTF-8 lines are folded at 75 octets and all newline forms in text are escaped.
+- Today and paired-display rendering report timezone/expansion failures without
+  crashing or displaying a partial calendar. Temporal is split into a separate
+  build chunk; the initial oversized-main-chunk warning is resolved.
+
+Verification: 77 frontend tests and 52 Go tests pass, including DST, half-hour
+transitions, UTC-date/weekday boundaries, count/end/range fixtures, migration
+restart, backup/restore and editor draft/instant preservation. Go race suite,
+vet, production/native builds pass; lint retains 18 existing warnings and zero
+errors. Production dependency audit reports zero vulnerabilities. Browser tests
+saved a synthetic 9 AM Asia/Tokyo series, verified its previous-day 7 PM Chicago
+display, and reopened it as 9 AM Tokyo. The phone-width editor was visually checked.
+The preview's schema-6 database was backed up before migration. No real household,
+provider or tailnet data was used. CodeRabbit review is temporarily rate-limited;
+this is not a clean-review claim. Full gate B still needs server/provider occurrence
+semantics, historical export, occurrence exceptions/future splits and real sync.
+
+Implementation references: [Temporal timezone disambiguation](https://github.com/tc39/proposal-temporal/blob/main/docs/timezone.md)
+and [bundled iCalendar timezone components](https://github.com/add2cal/timezones-ical-library).
+Pinned dependencies: `@js-temporal/polyfill` 0.5.1 and `timezones-ical-library` 2.3.1.
+
 ## Repeat schedule editor — September 5
 
 - Added accessible repeat controls for daily/weekly/monthly/yearly intervals

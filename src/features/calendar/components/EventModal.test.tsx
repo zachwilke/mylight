@@ -16,6 +16,79 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
+it("edits in the event timezone and preserves a second folded instant on unrelated changes", async () => {
+  vi.mocked(apiFetch).mockResolvedValue(new Response("[]"));
+  const onSave = vi.fn().mockResolvedValue(undefined);
+  await act(async () =>
+    render(
+      <EventModal
+        isOpen
+        onClose={() => {}}
+        onDelete={() => {}}
+        onSave={onSave}
+        currentEvent={{
+          id: 1,
+          title: "Late fold",
+          start_date: "2026-11-01T07:30:15Z",
+          end_date: "2026-11-01T08:30:15Z",
+          timezone: "America/Chicago",
+        }}
+      />,
+    ),
+  );
+  expect((screen.getByLabelText("Start time") as HTMLInputElement).value).toBe(
+    "01:30",
+  );
+  expect(
+    (screen.getByLabelText("Event timezone") as HTMLInputElement).value,
+  ).toBe("America/Chicago");
+  fireEvent.change(screen.getByLabelText("Event title"), {
+    target: { value: "Renamed" },
+  });
+  await act(async () =>
+    fireEvent.submit(screen.getByLabelText("Start date").closest("form")!),
+  );
+  expect(onSave).toHaveBeenCalledWith(
+    expect.objectContaining({
+      start_date: "2026-11-01T07:30:15Z",
+      end_date: "2026-11-01T08:30:15Z",
+      timezone: "America/Chicago",
+    }),
+  );
+});
+
+it("rejects a nonexistent event clock time without discarding the draft", async () => {
+  vi.mocked(apiFetch).mockResolvedValue(new Response("[]"));
+  const onSave = vi.fn().mockResolvedValue(undefined);
+  await act(async () =>
+    render(
+      <EventModal
+        isOpen
+        onClose={() => {}}
+        onDelete={() => {}}
+        onSave={onSave}
+        currentEvent={{
+          id: 1,
+          title: "Gap",
+          start_date: "2026-03-08T09:30:00Z",
+          timezone: "America/Chicago",
+        }}
+      />,
+    ),
+  );
+  fireEvent.change(screen.getByLabelText("Start time"), {
+    target: { value: "02:30" },
+  });
+  await act(async () =>
+    fireEvent.submit(screen.getByLabelText("Start date").closest("form")!),
+  );
+  expect(onSave).not.toHaveBeenCalled();
+  expect(screen.getByRole("alert").textContent).toContain("does not exist");
+  expect((screen.getByLabelText("Start time") as HTMLInputElement).value).toBe(
+    "02:30",
+  );
+});
+
 it("requires explicit acknowledgement before changing an existing recurring series", async () => {
   vi.mocked(apiFetch).mockResolvedValue(new Response("[]"));
   const onSave = vi.fn().mockResolvedValue(undefined);

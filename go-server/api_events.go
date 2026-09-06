@@ -13,19 +13,39 @@ import (
 )
 
 type eventBody struct {
-	Version     *int   `json:"version"`
-	Title       string `json:"title"`
-	Start       string `json:"start_date"`
-	End         string `json:"end_date"`
-	MemberId    int    `json:"member_id"`
-	MemberIDs   []int  `json:"member_ids"`
-	Recurrence  string `json:"recurrence"`
-	Description string `json:"description"`
-	Location    string `json:"location"`
-	AllDay      bool   `json:"is_all_day"`
+	Timezone    *string `json:"timezone"`
+	Version     *int    `json:"version"`
+	Title       string  `json:"title"`
+	Start       string  `json:"start_date"`
+	End         string  `json:"end_date"`
+	MemberId    int     `json:"member_id"`
+	MemberIDs   []int   `json:"member_ids"`
+	Recurrence  string  `json:"recurrence"`
+	Description string  `json:"description"`
+	Location    string  `json:"location"`
+	AllDay      bool    `json:"is_all_day"`
 }
 
 func validateEvent(body *eventBody) error {
+	if body.Timezone != nil && *body.Timezone != "" {
+		zone := *body.Timezone
+		region := strings.Split(zone, "/")[0]
+		allowedRegion := false
+		for _, value := range []string{"Africa", "America", "Antarctica", "Arctic", "Asia", "Atlantic", "Australia", "Europe", "Indian", "Pacific", "Etc"} {
+			if region == value {
+				allowedRegion = true
+			}
+		}
+		if zone != "UTC" && (!allowedRegion || !strings.Contains(zone, "/")) {
+			return fmt.Errorf("choose an IANA region/city timezone or UTC")
+		}
+		if len(zone) > 100 || zone == "Local" || strings.ContainsAny(zone, "\r\n;:\\\"") || strings.Contains(zone, "..") || strings.HasPrefix(zone, "/") {
+			return fmt.Errorf("choose a valid IANA event timezone")
+		}
+		if _, err := time.LoadLocation(zone); err != nil {
+			return fmt.Errorf("choose a valid IANA event timezone")
+		}
+	}
 	body.Title = strings.TrimSpace(body.Title)
 	if body.Title == "" || len(body.Title) > 500 {
 		return fmt.Errorf("enter a title of 1–500 characters")
@@ -56,6 +76,10 @@ func validateEvent(body *eventBody) error {
 }
 
 func eventFromBody(body eventBody) store.Event {
+	zone := ""
+	if body.Timezone != nil {
+		zone = *body.Timezone
+	}
 	var recur *string
 	if body.Recurrence != "" {
 		recur = &body.Recurrence
@@ -69,6 +93,7 @@ func eventFromBody(body eventBody) store.Event {
 		memID = &body.MemberId
 	}
 	return store.Event{
+		Timezone:    zone,
 		Version:     body.Version,
 		Title:       body.Title,
 		StartDate:   body.Start,
@@ -208,6 +233,15 @@ func (app *App) handleEventDetail(w http.ResponseWriter, r *http.Request) {
 	if body.Version == nil || *body.Version <= 0 {
 		jsonError(w, "reload the event and include its version before editing", 428)
 		return
+	}
+	// Older clients must not silently erase a zone they do not understand.
+	if body.Timezone == nil {
+		var zone string
+		if err := app.Store.DB.QueryRow("SELECT timezone FROM events WHERE id=?", id).Scan(&zone); err != nil {
+			eventWriteError(w, err)
+			return
+		}
+		body.Timezone = &zone
 	}
 	if err := app.Store.UpdateEvent(id, eventFromBody(body)); err != nil {
 		eventWriteError(w, err)

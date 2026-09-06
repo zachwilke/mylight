@@ -46,7 +46,7 @@ func (s *Store) GetEvent(id int) (interface{}, error) {
 }
 
 func (s *Store) getEvents(window *CalendarRange, id *int) ([]interface{}, error) {
-	query := `SELECT id, title, start_date, end_date, member_id, recurrence, description, location, is_all_day, version,
+	query := `SELECT id, title, start_date, end_date, member_id, recurrence, description, location, is_all_day, version, timezone,
 		COALESCE((SELECT '[' || group_concat(member_id) || ']' FROM
 			(SELECT member_id FROM event_members WHERE event_id=events.id ORDER BY member_id)),
 			(SELECT '[' || id || ']' FROM family_members WHERE id=events.member_id),'[]') FROM events`
@@ -83,14 +83,14 @@ func (s *Store) getEvents(window *CalendarRange, id *int) ([]interface{}, error)
 	for rows.Next() {
 		var id int
 		var version int
-		var title, startDate string
+		var title, startDate, timezone string
 		var recurrence sql.NullString
 		var endDate, description, location sql.NullString
 		var memberID sql.NullInt64
 		var isAllDay sql.NullBool
 		var memberJSON string
 
-		if err := rows.Scan(&id, &title, &startDate, &endDate, &memberID, &recurrence, &description, &location, &isAllDay, &version, &memberJSON); err != nil {
+		if err := rows.Scan(&id, &title, &startDate, &endDate, &memberID, &recurrence, &description, &location, &isAllDay, &version, &timezone, &memberJSON); err != nil {
 			return nil, fmt.Errorf("scan event row: %w", err)
 		}
 
@@ -99,6 +99,7 @@ func (s *Store) getEvents(window *CalendarRange, id *int) ([]interface{}, error)
 			return nil, err
 		}
 		events = append(events, map[string]interface{}{
+			"timezone":    timezone,
 			"version":     version,
 			"member_ids":  memberIDs,
 			"id":          id,

@@ -3,6 +3,60 @@ import { generateICS } from "./icsUtils";
 import { occurrences } from "./calendar";
 
 describe("all-day calendar contract", () => {
+  it("does not export historical series using contemporary timezone rules", () => {
+    expect(() =>
+      generateICS({
+        id: 1,
+        title: "Historic",
+        start_date: "2000-03-15T15:00:00Z",
+        timezone: "America/Chicago",
+        recurrence: "FREQ=DAILY",
+      }),
+    ).toThrow("Historical timezone-series export");
+  });
+  it("preserves a second folded DTSTART using an explicit first-occurrence override", () => {
+    const ics = generateICS({
+      id: 1,
+      title: "Late fold",
+      start_date: "2026-11-01T07:30:00Z",
+      timezone: "America/Chicago",
+      recurrence: "FREQ=DAILY;COUNT=3",
+    });
+    expect(ics).toContain("EXDATE:20261101T063000Z\r\nRDATE:20261101T073000Z");
+  });
+  it("escapes all newline forms in event text", () => {
+    const ics = generateICS({
+      id: 1,
+      title: "One\rTwo\r\nThree\nFour",
+      start_date: "2026-09-05T09:00:00Z",
+    });
+    expect(ics).toContain("SUMMARY:One\\nTwo\\nThree\\nFour\r\n");
+  });
+  it("exports zoned series with timezone rules and elapsed duration", () => {
+    const ics = generateICS({
+      id: 1,
+      title: "Practice",
+      start_date: "2026-03-07T15:00:00Z",
+      end_date: "2026-03-07T16:00:00Z",
+      timezone: "America/Chicago",
+      recurrence: "FREQ=DAILY;COUNT=3",
+    });
+    expect(ics).toContain("BEGIN:VTIMEZONE\r\nTZID:America/Chicago");
+    expect(ics).toContain(
+      "DTSTART;TZID=America/Chicago:20260307T090000\r\nDURATION:PT3600S",
+    );
+    expect(ics).toContain("RRULE:FREQ=DAILY;COUNT=3");
+  });
+  it("folds UTF-8 lines without splitting multi-byte characters", () => {
+    const title = "🎉".repeat(60);
+    const ics = generateICS({ id: 1, title, start_date: "2026-09-05" });
+    expect(
+      ics
+        .split("\r\n")
+        .every((line) => new TextEncoder().encode(line).length <= 75),
+    ).toBe(true);
+    expect(ics.replace(/\r\n /g, "")).toContain(`SUMMARY:${title}`);
+  });
   it("exports floating dates with an exclusive end", () => {
     const ics = generateICS({
       id: 1,

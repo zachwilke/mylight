@@ -1,5 +1,7 @@
 import type { Event } from "../types";
 import { addDays, format, parseISO, startOfDay } from "date-fns";
+import { clockInstant, eventClock } from "./eventTimezone";
+import { tzlib_get_ical_block } from "timezones-ical-library";
 
 export function generateICS(event: Event) {
   const formatDate = (date: string | Date) => {
@@ -21,12 +23,53 @@ export function generateICS(event: Event) {
   const escape = (value: string) =>
     value
       .replace(/\\/g, "\\\\")
-      .replace(/\r?\n/g, "\\n")
+      .replace(/\r\n|\r|\n/g, "\\n")
       .replace(/;/g, "\\;")
       .replace(/,/g, "\\,");
 
   let startProperty = `DTSTART:${formatDate(start)}`;
   let endProperty = `DTEND:${formatDate(end)}`;
+  let timezoneBlock: string[] = [];
+  const firstOverride: string[] = [];
+  if (
+    !event.is_all_day &&
+    (event.recurrence || event.rrule) &&
+    event.timezone &&
+    event.timezone !== "UTC"
+  ) {
+    // Bundled tzurl-style components describe contemporary rules, not the full
+    // historical transition database. Never rewrite old series with today's rules.
+    if (eventClock(start, event.timezone).year < 2026)
+      throw new Error(
+        "Historical timezone-series export is not supported yet; the bundled timezone rules cover contemporary schedules starting in 2026 or later",
+      );
+    const block = tzlib_get_ical_block(event.timezone);
+    if (
+      !Array.isArray(block) ||
+      !block[0]?.startsWith("BEGIN:VTIMEZONE") ||
+      !block[1]?.startsWith("TZID=")
+    )
+      throw new Error("This event timezone cannot be exported safely");
+    const clock = (value: Date) =>
+      eventClock(value, event.timezone!)
+        .toString({ smallestUnit: "second" })
+        .replace(/[-:]/g, "");
+    startProperty = `DTSTART;${block[1]}:${clock(start)}`;
+    // Exact elapsed duration also preserves ends crossing DST changes.
+    endProperty = `DURATION:PT${Math.max(0, Math.round((+end - +start) / 1000))}S`;
+    timezoneBlock = block[0].split(/\r?\n/);
+    // TZID resolves ambiguous times to the first occurrence. Preserve a stored
+    // second fold explicitly instead of moving it an hour during export.
+    const first = clockInstant(
+      eventClock(start, event.timezone),
+      event.timezone,
+    );
+    if (first && +first !== +start)
+      firstOverride.push(
+        `EXDATE:${formatDate(first)}`,
+        `RDATE:${formatDate(start)}`,
+      );
+  }
   if (event.is_all_day) {
     const day = startOfDay(parseISO(event.start_date));
     let last = event.end_date ? parseISO(event.end_date) : addDays(day, 1);
@@ -45,11 +88,13 @@ export function generateICS(event: Event) {
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//MyLight//NONSGML v1.0//EN",
+    ...timezoneBlock,
     "BEGIN:VEVENT",
     `UID:${event.id || Date.now()}@mylight.app`,
     `DTSTAMP:${formatDate(now)}`,
     startProperty,
     endProperty,
+    ...firstOverride,
     `SUMMARY:${escape(event.title)}`,
     `DESCRIPTION:${escape(event.description || "")}`,
     `LOCATION:${escape(event.location || "")}`,
@@ -70,7 +115,25 @@ export function generateICS(event: Event) {
     );
   }
 
-  return lines.join("\r\n");
+  // RFC 5545's 75-octet limit counts UTF-8 bytes, not JavaScript characters.
+  return (
+    lines
+      .map((line) => {
+        let folded = "",
+          bytes = 0;
+        for (const character of line) {
+          const size = new TextEncoder().encode(character).length;
+          if (bytes + size > 75) {
+            folded += "\r\n ";
+            bytes = 1;
+          }
+          folded += character;
+          bytes += size;
+        }
+        return folded;
+      })
+      .join("\r\n") + "\r\n"
+  );
 }
 
 export function downloadICS(event: Event) {

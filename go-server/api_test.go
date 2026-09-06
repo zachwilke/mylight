@@ -312,7 +312,7 @@ func TestBackupRestore(t *testing.T) {
 	if w := request(h, "POST", "/api/family", map[string]string{"name": "Child"}, cookie); w.Code != 200 {
 		t.Fatal(w.Body.String())
 	}
-	if w := request(h, "POST", "/api/events", map[string]interface{}{"title": "Keep this", "start_date": "2026-09-05T15:00:00Z", "member_ids": []int{1, 2}}, cookie); w.Code != 200 {
+	if w := request(h, "POST", "/api/events", map[string]interface{}{"title": "Keep this", "start_date": "2026-09-05T15:00:00Z", "timezone": "America/Chicago", "member_ids": []int{1, 2}}, cookie); w.Code != 200 {
 		t.Fatal(w.Body.String())
 	}
 	w := request(h, "GET", "/api/backup", nil, cookie)
@@ -338,6 +338,9 @@ func TestBackupRestore(t *testing.T) {
 		t.Fatal(events, err)
 	}
 	ids := events[0].(map[string]interface{})["member_ids"].([]int)
+	if events[0].(map[string]interface{})["timezone"] != "America/Chicago" {
+		t.Fatal("backup lost event timezone")
+	}
 	if len(ids) != 2 || ids[0] != 1 || ids[1] != 2 {
 		t.Fatal("backup lost event participants", ids)
 	}

@@ -11,11 +11,13 @@ export function RepeatEditor({
   onChange,
   startDate,
   allDay,
+  timezone,
 }: {
   value: RepeatDraft;
   onChange: (value: RepeatDraft) => void;
   startDate: string;
   allDay: boolean;
+  timezone?: string;
 }) {
   const update = (patch: Partial<RepeatDraft>) =>
     onChange({ ...value, ...patch, original: undefined });
@@ -133,7 +135,11 @@ export function RepeatEditor({
                 />
                 <p className="text-xs text-stone-600 dark:text-stone-300">
                   Occurrences may start through this date
-                  {allDay ? "." : " in this device’s timezone."}
+                  {allDay
+                    ? "."
+                    : timezone
+                      ? ` in ${timezone}.`
+                      : " in this device’s timezone."}
                 </p>
               </div>
             )}
@@ -152,7 +158,7 @@ export function RepeatEditor({
           </>
         )
       )}
-      {value.frequency && !allDay && (
+      {value.frequency && !allDay && !timezone && (
         <p className="text-xs text-stone-600 dark:text-stone-300">
           Timed repeats currently keep a fixed UTC time. The local time can
           shift when daylight saving time changes.

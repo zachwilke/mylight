@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { occurrences, segments } from "./calendar";
+import { calendarSegments, occurrences, segments } from "./calendar";
 import type { Event } from "../types";
 
 process.env.TZ = "America/Chicago";
@@ -11,6 +11,23 @@ const base: Event = {
   is_all_day: true,
 };
 describe("shared calendar occurrence model", () => {
+  it("reports timezone failures without rendering a partial calendar", () => {
+    const result = calendarSegments(
+      [
+        {
+          id: 1,
+          title: "Broken zone",
+          start_date: "2026-09-05T09:00:00Z",
+          timezone: "Mars/Olympus",
+          recurrence: "FREQ=DAILY",
+        },
+      ],
+      new Date("2026-09-05"),
+      new Date("2026-09-07"),
+    );
+    expect(result.events).toEqual([]);
+    expect(result.error).toContain("Calendar unavailable");
+  });
   it("keeps date-only events on their civil day and uses an exclusive end", () => {
     const days = segments([base], new Date(2026, 2, 1), new Date(2026, 3, 1));
     expect(days.map((e) => e.date.getDate())).toEqual([7, 8, 9]);

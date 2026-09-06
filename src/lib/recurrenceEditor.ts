@@ -1,4 +1,5 @@
 import { format, parseISO } from "date-fns";
+import { eventClock, zoneEndOfDay } from "./eventTimezone";
 
 export type RepeatFrequency =
   "" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" | "custom";
@@ -12,7 +13,11 @@ export interface RepeatDraft {
   original?: string;
 }
 
-export function readRepeat(rule: string, allDay: boolean): RepeatDraft {
+export function readRepeat(
+  rule: string,
+  allDay: boolean,
+  zone?: string,
+): RepeatDraft {
   const draft: RepeatDraft = {
     frequency: "",
     interval: "1",
@@ -58,9 +63,18 @@ export function readRepeat(rule: string, allDay: boolean): RepeatDraft {
     const date = parseISO(iso);
     if (!Number.isFinite(date.getTime())) return custom;
     // Arbitrary imported cutoffs must not silently become end-of-day cutoffs.
-    if (!allDay && format(date, "HHmmss") !== "235959") return custom;
+    if (
+      !allDay &&
+      (zone
+        ? eventClock(date, zone).toPlainTime().toString() !== "23:59:59"
+        : format(date, "HHmmss") !== "235959")
+    )
+      return custom;
     draft.ending = "until";
-    draft.until = format(date, "yyyy-MM-dd");
+    draft.until =
+      !allDay && zone
+        ? eventClock(date, zone).toPlainDate().toString()
+        : format(date, "yyyy-MM-dd");
   }
   return draft;
 }
@@ -73,6 +87,7 @@ export function writeRepeat(
   draft: RepeatDraft,
   allDay: boolean,
   startDate: string,
+  zone?: string,
 ): string {
   if (draft.original !== undefined) return draft.original;
   if (!draft.frequency) return "";
@@ -92,7 +107,7 @@ export function writeRepeat(
       );
     fields.push(`COUNT=${Number(draft.count)}`);
   } else if (draft.ending === "until") {
-    const date = parseISO(draft.until);
+    let date = parseISO(draft.until);
     if (
       !/^\d{4}-\d{2}-\d{2}$/.test(draft.until) ||
       !Number.isFinite(date.getTime()) ||
@@ -105,7 +120,8 @@ export function writeRepeat(
     }
     if (allDay) fields.push(`UNTIL=${draft.until.replace(/-/g, "")}`);
     else {
-      date.setHours(23, 59, 59, 0);
+      if (zone) date = zoneEndOfDay(draft.until, zone);
+      else date.setHours(23, 59, 59, 0);
       fields.push(
         `UNTIL=${date.toISOString().replace(/[-:]/g, "").replace(".000", "")}`,
       );

@@ -26,6 +26,7 @@ export interface Meal {
 }
 
 export interface Event {
+  timezone?: string;
   version?: number;
   id: number | string;
   title: string;

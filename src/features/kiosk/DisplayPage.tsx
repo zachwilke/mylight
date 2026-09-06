@@ -4,7 +4,7 @@ import { addDays, format, startOfDay } from "date-fns";
 import { Check, Leaf, LockKeyhole } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { apiFetch } from "../../lib/api";
-import { segments } from "../../lib/calendar";
+import { calendarSegments } from "../../lib/calendar";
 import { eventMemberLabel } from "../../lib/eventMembers";
 import { calendarEventsURL } from "../../lib/calendarRange";
 import type {
@@ -105,7 +105,7 @@ export function DisplayPage() {
   if (!user) return <Navigate to="/pair" replace />;
   if (user.role !== "display") return <Navigate to="/kiosk" replace />;
   const start = startOfDay(now);
-  const planned = segments(
+  const { events: planned, error: calendarError } = calendarSegments(
     events,
     start,
     addDays(start, view === "week" ? 7 : 1),
@@ -135,12 +135,12 @@ export function DisplayPage() {
           </span>
         </div>
       </header>
-      {error && (
+      {(error || calendarError) && (
         <p
           role="status"
           className="mb-5 rounded-xl p-4 bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-200"
         >
-          {error}
+          {error || calendarError}
         </p>
       )}
       <div className="grid lg:grid-cols-[1.5fr_1fr] gap-6">

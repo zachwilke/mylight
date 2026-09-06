@@ -60,6 +60,7 @@ type Meal struct {
 }
 
 type Event struct {
+	Timezone    string  `json:"timezone"`
 	Version     *int    `json:"version,omitempty"`
 	ID          int     `json:"id"`
 	Title       string  `json:"title"`

@@ -86,7 +86,7 @@ func (s *Store) saveEventAttempt(id int, e Event) (int, error) {
 		primary = ids[0]
 	}
 	if id == 0 {
-		result, err := tx.Exec("INSERT INTO events(title,start_date,end_date,member_id,recurrence,description,location,is_all_day) VALUES(?,?,?,?,?,?,?,?)", e.Title, e.StartDate, e.EndDate, primary, e.Recurrence, e.Description, e.Location, e.IsAllDay)
+		result, err := tx.Exec("INSERT INTO events(title,start_date,end_date,member_id,recurrence,description,location,is_all_day,timezone) VALUES(?,?,?,?,?,?,?,?,?)", e.Title, e.StartDate, e.EndDate, primary, e.Recurrence, e.Description, e.Location, e.IsAllDay, e.Timezone)
 		if err != nil {
 			return 0, err
 		}
@@ -96,8 +96,8 @@ func (s *Store) saveEventAttempt(id int, e Event) (int, error) {
 		}
 		id = int(created)
 	} else {
-		query := "UPDATE events SET title=?,start_date=?,end_date=?,member_id=?,recurrence=?,description=?,location=?,is_all_day=?,version=version+1 WHERE id=?"
-		args := []interface{}{e.Title, e.StartDate, e.EndDate, primary, e.Recurrence, e.Description, e.Location, e.IsAllDay, id}
+		query := "UPDATE events SET title=?,start_date=?,end_date=?,member_id=?,recurrence=?,description=?,location=?,is_all_day=?,timezone=?,version=version+1 WHERE id=?"
+		args := []interface{}{e.Title, e.StartDate, e.EndDate, primary, e.Recurrence, e.Description, e.Location, e.IsAllDay, e.Timezone, id}
 		if e.Version != nil {
 			query += " AND version=?"
 			args = append(args, *e.Version)

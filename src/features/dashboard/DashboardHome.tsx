@@ -11,7 +11,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { apiFetch } from "../../lib/api";
-import { segments } from "../../lib/calendar";
+import { calendarSegments } from "../../lib/calendar";
 import { eventMemberLabel } from "../../lib/eventMembers";
 import { calendarEventsURL } from "../../lib/calendarRange";
 import type {
@@ -79,7 +79,11 @@ export function DashboardHome() {
   }, [load]);
   const today = startOfDay(new Date());
   const days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
-  const expanded = segments(data.events, today, addDays(today, 7));
+  const { events: expanded, error: calendarError } = calendarSegments(
+    data.events,
+    today,
+    addDays(today, 7),
+  );
   const pending = data.chores.filter((c) => !c.completed);
   const todayEvents = expanded.filter((e) => isSameDay(e.date, today));
   const dinner = data.meals.filter(
@@ -135,12 +139,12 @@ export function DashboardHome() {
         />
         <div className="absolute -right-10 -bottom-32 w-80 h-80 rounded-full border border-white/10" />
       </section>
-      {error && (
+      {(error || calendarError) && (
         <div
           role="alert"
           className="rounded-xl bg-red-50 text-red-800 p-4 flex justify-between"
         >
-          <p>{error}</p>
+          <p>{error || calendarError}</p>
           <button onClick={() => void load()} className="underline">
             Retry
           </button>

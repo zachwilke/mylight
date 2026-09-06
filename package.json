@@ -18,6 +18,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/dm-sans": "^5.3.0",
+    "@js-temporal/polyfill": "0.5.1",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "concurrently": "^9.2.1",
@@ -31,7 +32,8 @@
     "react-router-dom": "^7.11.0",
     "recharts": "^3.6.0",
     "rrule": "^2.8.1",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "timezones-ical-library": "2.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

@@ -8,6 +8,7 @@ import { Event, FamilyMember } from "../../../types";
 import { Modal } from "../../../components/ui/Modal";
 import { readRepeat, writeRepeat } from "../../../lib/recurrenceEditor";
 import { RepeatEditor } from "./RepeatEditor";
+import { eventClock, eventInstant } from "../../../lib/eventTimezone";
 
 interface EventModalProps {
   isOpen: boolean;
@@ -50,6 +51,7 @@ export function EventModal({
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [endTime, setEndTime] = useState("13:00");
   const [isAllDay, setIsAllDay] = useState(false);
+  const [timezone, setTimezone] = useState("");
 
   const [memberIds, setMemberIds] = useState<number[]>([]);
   const [repeat, setRepeat] = useState(() => readRepeat("", false));
@@ -105,8 +107,20 @@ export function EventModal({
       if (currentEvent) {
         setTitle(currentEvent.title);
         const start = parseISO(currentEvent.start_date);
-        setStartDate(format(start, "yyyy-MM-dd"));
-        setStartTime(format(start, "HH:mm"));
+        const zone = currentEvent.is_all_day ? "" : currentEvent.timezone || "";
+        setTimezone(zone);
+        const dateText = (value: Date) =>
+          zone
+            ? eventClock(value, zone).toPlainDate().toString()
+            : format(value, "yyyy-MM-dd");
+        const timeText = (value: Date) =>
+          zone
+            ? eventClock(value, zone)
+                .toPlainTime()
+                .toString({ smallestUnit: "minute" })
+            : format(value, "HH:mm");
+        setStartDate(dateText(start));
+        setStartTime(timeText(start));
 
         if (currentEvent.end_date) {
           const parsedEnd = parseISO(currentEvent.end_date);
@@ -114,13 +128,13 @@ export function EventModal({
             currentEvent.is_all_day && currentEvent.end_date.length === 10
               ? addDays(parsedEnd, -1)
               : parsedEnd;
-          setEndDate(format(end, "yyyy-MM-dd"));
-          setEndTime(format(end, "HH:mm"));
+          setEndDate(dateText(end));
+          setEndTime(timeText(end));
         } else {
           // Default end is +1 hour from start
           const end = addHours(start, 1);
-          setEndDate(format(end, "yyyy-MM-dd"));
-          setEndTime(format(end, "HH:mm"));
+          setEndDate(dateText(end));
+          setEndTime(timeText(end));
         }
 
         setMemberIds(
@@ -131,6 +145,7 @@ export function EventModal({
           readRepeat(
             currentEvent.recurrence || currentEvent.rrule || "",
             !!currentEvent.is_all_day,
+            zone || undefined,
           ),
         );
         setLocation(currentEvent.location || "");
@@ -166,6 +181,7 @@ export function EventModal({
         setLocation("");
         setDescription("");
         setIsAllDay(false);
+        setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
       }
     }
   }, [isOpen, currentEvent, initialDate]);
@@ -192,8 +208,31 @@ export function EventModal({
         startIso = startDate;
         endIso = format(addDays(parseISO(endDate), 1), "yyyy-MM-dd");
       } else {
-        startIso = new Date(`${startDate}T${startTime}`).toISOString();
-        endIso = new Date(`${endDate}T${endTime}`).toISOString();
+        const resolve = (day: string, clock: string, original?: string) => {
+          if (original && timezone === (currentEvent?.timezone || "")) {
+            const old = timezone ? eventClock(original, timezone) : null;
+            const oldDate = old
+              ? old.toPlainDate().toString()
+              : format(parseISO(original), "yyyy-MM-dd");
+            const oldTime = old
+              ? old.toPlainTime().toString({ smallestUnit: "minute" })
+              : format(parseISO(original), "HH:mm");
+            if (day === oldDate && clock === oldTime) return original;
+          }
+          return timezone
+            ? eventInstant(day, clock, timezone)
+            : new Date(`${day}T${clock}`).toISOString();
+        };
+        startIso = resolve(
+          startDate,
+          startTime,
+          currentEvent?.is_all_day ? undefined : currentEvent?.start_date,
+        );
+        endIso = resolve(
+          endDate,
+          endTime,
+          currentEvent?.is_all_day ? undefined : currentEvent?.end_date,
+        );
       }
 
       await onSave({
@@ -201,7 +240,13 @@ export function EventModal({
         start_date: startIso,
         end_date: endIso,
         member_ids: memberIds,
-        recurrence: writeRepeat(repeat, isAllDay, startDate),
+        recurrence: writeRepeat(
+          repeat,
+          isAllDay,
+          startDate,
+          timezone || undefined,
+        ),
+        timezone: isAllDay ? "" : timezone,
         location,
         description,
         is_all_day: isAllDay,
@@ -498,11 +543,62 @@ export function EventModal({
             </div>
 
             {/* Recurrence */}
+            {!isAllDay && (
+              <div className="space-y-2">
+                <label
+                  htmlFor="event-timezone"
+                  className="block text-sm font-semibold"
+                >
+                  Event timezone
+                </label>
+                <input
+                  id="event-timezone"
+                  list="event-timezones"
+                  value={timezone}
+                  maxLength={100}
+                  placeholder="Legacy fixed-UTC repeats"
+                  className="min-h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm dark:border-stone-600 dark:bg-stone-800"
+                  onChange={(e) => {
+                    setTimezone(e.target.value);
+                    if (
+                      repeat.frequency !== "custom" &&
+                      repeat.ending === "until"
+                    )
+                      setRepeat({ ...repeat, original: undefined });
+                  }}
+                />
+                <datalist id="event-timezones">
+                  {Array.from(
+                    new Set([
+                      Intl.DateTimeFormat().resolvedOptions().timeZone,
+                      "UTC",
+                      "America/New_York",
+                      "America/Chicago",
+                      "America/Denver",
+                      "America/Los_Angeles",
+                      "Europe/London",
+                      "Europe/Paris",
+                      "Asia/Tokyo",
+                      "Australia/Sydney",
+                    ]),
+                  ).map((zone) => (
+                    <option key={zone} value={zone} />
+                  ))}
+                </datalist>
+                <p className="text-xs text-stone-600 dark:text-stone-300">
+                  Use an IANA name, such as America/Chicago. Changing the zone
+                  keeps the dates and clock times shown here. Repeated fall-back
+                  times use the first occurrence; nonexistent spring-forward
+                  times are skipped in repeats.
+                </p>
+              </div>
+            )}
             <RepeatEditor
               value={repeat}
               onChange={setRepeat}
               startDate={startDate}
               allDay={isAllDay}
+              timezone={timezone}
             />
 
             <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-4">
