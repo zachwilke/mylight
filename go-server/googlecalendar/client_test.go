@@ -135,3 +135,13 @@ func TestWindowRejectsMissingPageEnvelope(t *testing.T) {
 		}
 	}
 }
+
+func TestWindowPreservesZeroDurationTimedAppointments(t *testing.T) {
+	c := client(t, func(*http.Request) (int, string) {
+		return 200, `{"kind":"calendar#events","items":[{"id":"instant","start":{"dateTime":"2026-09-07T12:00:00Z"},"end":{"dateTime":"2026-09-07T12:00:00Z"}}]}`
+	})
+	events, err := c.Window(context.Background(), "primary", time.Now(), time.Now().AddDate(1, 0, 0))
+	if err != nil || len(events) != 1 || events[0].Start != events[0].End {
+		t.Fatal(events, err)
+	}
+}

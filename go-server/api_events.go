@@ -137,6 +137,14 @@ func (app *App) handleEvents(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
+		user, _ := r.Context().Value(userKey{}).(*store.FamilyMemberJSON)
+		if user == nil || user.Role == nil || *user.Role != "admin" {
+			for _, event := range imported {
+				if row, ok := event.(map[string]interface{}); ok {
+					row["google_editable"] = false
+				}
+			}
+		}
 		jsonResponse(w, append(events, imported...))
 		return
 	}

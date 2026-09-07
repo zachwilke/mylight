@@ -16,10 +16,11 @@ import (
 func (app *App) handleGoogle(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/api/google" && r.Method == "GET" {
 		type account struct {
-			ID        int `json:"id"`
-			Calendars int `json:"calendars"`
+			ID           int  `json:"id"`
+			Calendars    int  `json:"calendars"`
+			WriteEnabled bool `json:"write_enabled"`
 		}
-		rows, err := app.Store.DB.Query("SELECT a.id,(SELECT count(*) FROM google_calendars c WHERE c.account_id=a.id) FROM google_accounts a ORDER BY a.id")
+		rows, err := app.Store.DB.Query("SELECT a.id,(SELECT count(*) FROM google_calendars c WHERE c.account_id=a.id)  ,a.write_enabled FROM google_accounts a ORDER BY a.id")
 		if err != nil {
 			jsonError(w, "Could not read Google connections", 500)
 			return
@@ -28,7 +29,7 @@ func (app *App) handleGoogle(w http.ResponseWriter, r *http.Request) {
 		accounts := []account{}
 		for rows.Next() {
 			var a account
-			if rows.Scan(&a.ID, &a.Calendars) != nil {
+			if rows.Scan(&a.ID, &a.Calendars, &a.WriteEnabled) != nil {
 				jsonError(w, "Could not read Google connections", 500)
 				return
 			}
@@ -61,6 +62,10 @@ func (app *App) handleGoogle(w http.ResponseWriter, r *http.Request) {
 	}
 	defer app.calendarSync.Unlock()
 	if len(parts) == 3 && r.Method == "DELETE" {
+		if err := app.Store.CheckGoogleJobs(0, id); err != nil {
+			jsonError(w, err.Error(), 409)
+			return
+		}
 		tx, err := app.Store.DB.Begin()
 		if err != nil {
 			jsonError(w, "Could not disconnect Google", 500)

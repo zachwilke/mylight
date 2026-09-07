@@ -35,6 +35,15 @@ type Date struct {
 	TimeZone string `json:"timeZone,omitempty"`
 }
 type Event struct {
+	Kind               string   `json:"kind"`
+	Recurrence         []string `json:"recurrence"`
+	Locked             bool     `json:"locked"`
+	EventType          string   `json:"eventType"`
+	ExtendedProperties struct {
+		Private map[string]string `json:"private"`
+		Shared  map[string]string `json:"shared"`
+	} `json:"extendedProperties"`
+
 	ID                string `json:"id"`
 	ETag              string `json:"etag"`
 	Status            string `json:"status"`
@@ -66,6 +75,9 @@ func (c Client) get(ctx context.Context, path string, query url.Values, out inte
 	case 429, 500, 502, 503, 504:
 		return ErrBusy
 	case 403:
+		if rateLimited(resp.Body) {
+			return ErrBusy
+		}
 		return errors.New("Google denied calendar access; check permissions or quota, then reconnect if needed")
 	default:
 		return fmt.Errorf("Google calendar request failed (HTTP %d)", resp.StatusCode)
@@ -232,7 +244,7 @@ func (c Client) Window(ctx context.Context, calendar string, start, end time.Tim
 				return nil, err
 			}
 			allDay := e.Start.Date != ""
-			if allDay != (e.End.Date != "") || until <= s {
+			if allDay != (e.End.Date != "") || until < s || (allDay && until == s) {
 				return nil, errors.New("Google returned an invalid event interval")
 			}
 			title := e.Summary

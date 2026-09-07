@@ -6,6 +6,7 @@ import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { apiFetch } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { DayView } from "./components/DayView";
+import { GoogleEventModal } from "./components/GoogleEventModal";
 import { EventModal } from "./components/EventModal";
 import { MonthGrid } from "./components/MonthGrid";
 import { WeekView } from "./components/WeekView";
@@ -20,6 +21,8 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [familySelection, setFamilySelection] = useState<FamilySelection>(null);
 
+  const [googleEvent, setGoogleEvent] = useState<Event | null>(null);
+  const [googleNotice, setGoogleNotice] = useState("");
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
   const [occurrenceEditor, setOccurrenceEditor] =
     useState<OccurrenceEditor | null>(null);
@@ -49,6 +52,14 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
     });
   }
   async function openEvent(event: Event) {
+    if (event.google_event_id && event.google_editable && !kiosk) {
+      ++eventRequest.current;
+      setIsModalOpen(false);
+      setLoadingEvent(false);
+      setOpenError("");
+      setGoogleEvent(event);
+      return;
+    }
     const request = ++eventRequest.current;
     setOpenError("");
     setFailedEvent(null);
@@ -236,6 +247,23 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
           }
         />
       </div>
+      {googleNotice && (
+        <p role="status" className="p-4 text-blue-800 dark:text-blue-200">
+          {googleNotice}
+        </p>
+      )}
+      {googleEvent && (
+        <GoogleEventModal
+          key={googleEvent.id}
+          event={googleEvent}
+          onClose={() => setGoogleEvent(null)}
+          onQueued={() =>
+            setGoogleNotice(
+              "Your edit is queued for Google. Check Settings → Integrations for progress or conflicts.",
+            )
+          }
+        />
+      )}
       {loadingEvent && (
         <p role="status" className="p-4">
           Loading the selected occurrence…

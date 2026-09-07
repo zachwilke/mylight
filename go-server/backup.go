@@ -190,7 +190,7 @@ func restoreBackup(archivePath, dataDir string) error {
 	if err == nil {
 		var version int
 		err = db.QueryRow("SELECT MAX(version) FROM schema_migrations").Scan(&version)
-		if err == nil && version > 9 {
+		if err == nil && version > 10 {
 			err = fmt.Errorf("backup requires a newer MyLight version")
 		}
 	}

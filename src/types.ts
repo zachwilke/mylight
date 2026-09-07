@@ -58,6 +58,8 @@ export interface Event {
   recurrence?: string;
   rrule?: string;
   is_external?: boolean;
+  google_event_id?: string;
+  google_editable?: boolean;
   source_name?: string;
   source_id?: number;
   color?: string;

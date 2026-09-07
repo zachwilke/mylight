@@ -197,7 +197,10 @@ func initSchema(db *sql.DB) error {
 	if err := migrateEventExceptions(db); err != nil {
 		return err
 	}
-	return migrateGoogleCalendars(db)
+	if err := migrateGoogleCalendars(db); err != nil {
+		return err
+	}
+	return migrateGoogleJobs(db)
 }
 
 func migrateEventTimezones(db *sql.DB) error {

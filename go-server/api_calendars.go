@@ -14,6 +14,7 @@ import (
 )
 
 type calendarSource struct {
+	Provider    string `json:"provider"`
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Color       string `json:"color"`
@@ -31,7 +32,7 @@ type calendarSource struct {
 }
 
 func (app *App) calendarSources() ([]calendarSource, error) {
-	rows, err := app.Store.DB.Query("SELECT id,name,color,last_sync,last_attempt,last_error,range_start,range_end,url,json_array_length(events_json),etag,last_modified,cache_timezone FROM calendar_sources ORDER BY id")
+	rows, err := app.Store.DB.Query("SELECT id,name,color,last_sync,last_attempt,last_error,range_start,range_end,url,json_array_length(events_json),etag,last_modified,cache_timezone,CASE WHEN EXISTS(SELECT 1 FROM google_calendars WHERE source_id=calendar_sources.id) THEN 'google' ELSE 'feed' END FROM calendar_sources ORDER BY id")
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +40,7 @@ func (app *App) calendarSources() ([]calendarSource, error) {
 	sources := []calendarSource{}
 	for rows.Next() {
 		var s calendarSource
-		if err := rows.Scan(&s.ID, &s.Name, &s.Color, &s.LastSync, &s.LastAttempt, &s.LastError, &s.RangeStart, &s.RangeEnd, &s.URL, &s.Count, &s.ETag, &s.LastModified, &s.CacheTimezone); err != nil {
+		if err := rows.Scan(&s.ID, &s.Name, &s.Color, &s.LastSync, &s.LastAttempt, &s.LastError, &s.RangeStart, &s.RangeEnd, &s.URL, &s.Count, &s.ETag, &s.LastModified, &s.CacheTimezone, &s.Provider); err != nil {
 			return nil, err
 		}
 		sources = append(sources, s)
@@ -124,6 +125,10 @@ func (app *App) handleCalendars(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(parts) == 3 && r.Method == "DELETE" {
+		if err := app.Store.CheckGoogleJobs(id, 0); err != nil {
+			jsonError(w, err.Error(), 409)
+			return
+		}
 		app.deleteRow(w, "calendar_sources", id)
 		return
 	}
@@ -233,6 +238,7 @@ func (app *App) refreshCalendars() {
 		return
 	}
 	defer app.calendarSync.Unlock()
+	app.processGoogleJobs()
 	sources, err := app.calendarSources()
 	if err != nil {
 		return
@@ -248,7 +254,7 @@ func (app *App) refreshCalendars() {
 }
 
 func (app *App) importedEvents(window *store.CalendarRange, limit int) ([]interface{}, error) {
-	rows, err := app.Store.DB.Query("SELECT id,name,color,events_json FROM calendar_sources")
+	rows, err := app.Store.DB.Query("SELECT id,name,color,events_json,EXISTS(SELECT 1 FROM google_calendars WHERE source_id=calendar_sources.id),COALESCE((SELECT a.write_enabled FROM google_accounts a JOIN google_calendars c ON c.account_id=a.id WHERE c.source_id=calendar_sources.id),0) FROM calendar_sources")
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +263,8 @@ func (app *App) importedEvents(window *store.CalendarRange, limit int) ([]interf
 	for rows.Next() {
 		var id int
 		var name, color, raw string
-		if err := rows.Scan(&id, &name, &color, &raw); err != nil {
+		var google, editable bool
+		if err := rows.Scan(&id, &name, &color, &raw, &google, &editable); err != nil {
 			return nil, err
 		}
 		var events []calendarfeed.Event
@@ -271,7 +278,11 @@ func (app *App) importedEvents(window *store.CalendarRange, limit int) ([]interf
 			if len(result) >= limit {
 				return nil, store.ErrCalendarTooDense
 			}
-			result = append(result, map[string]interface{}{"id": fmt.Sprintf("feed-%d-%s", id, e.Key), "title": e.Title, "start_date": e.Start, "end_date": e.End, "is_all_day": e.AllDay, "is_external": true, "source_name": name, "source_id": id, "color": color, "description": e.Description, "location": e.Location})
+			googleID := ""
+			if google {
+				googleID = e.Key
+			}
+			result = append(result, map[string]interface{}{"google_event_id": googleID, "google_editable": editable && app.Google != nil, "id": fmt.Sprintf("feed-%d-%s", id, e.Key), "title": e.Title, "start_date": e.Start, "end_date": e.End, "is_all_day": e.AllDay, "is_external": true, "source_name": name, "source_id": id, "color": color, "description": e.Description, "location": e.Location})
 		}
 	}
 	return result, rows.Err()

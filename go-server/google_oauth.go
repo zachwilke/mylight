@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"mylight/googlecalendar"
 	"net/http"
 	"net/url"
 	"os"
@@ -92,7 +93,11 @@ func (app *App) googleClient(ctx context.Context, account int) (*http.Client, er
 	}
 	token, err := g.OAuth.TokenSource(g.ctx(ctx), &old).Token()
 	if err != nil {
-		return nil, errors.New("Could not refresh Google access; reconnect if the problem persists")
+		var response *oauth2.RetrieveError
+		if errors.As(err, &response) && ((response.Response != nil && response.Response.StatusCode >= 400 && response.Response.StatusCode < 500 && response.Response.StatusCode != 429) || (response.ErrorCode != "" && response.ErrorCode != "temporarily_unavailable" && response.ErrorCode != "server_error")) {
+			return nil, googlecalendar.ErrPermission
+		}
+		return nil, googlecalendar.ErrBusy
 	}
 	if token.AccessToken != old.AccessToken || token.RefreshToken != old.RefreshToken || !token.Expiry.Equal(old.Expiry) {
 		raw, err = json.Marshal(token)
@@ -117,6 +122,31 @@ func (app *App) startGoogle(w http.ResponseWriter, r *http.Request) {
 	if g == nil {
 		jsonError(w, "Configure Google on this server before connecting", 503)
 		return
+	}
+	var request struct {
+		AllowEditing bool `json:"allow_editing"`
+		AccountID    int  `json:"account_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil && !errors.Is(err, io.EOF) {
+		jsonError(w, "Invalid Google connection request", 400)
+		return
+	}
+	if request.AllowEditing && request.AccountID < 1 {
+		jsonError(w, "Connect the Google account before enabling editing", 400)
+		return
+	}
+	var accountRef interface{}
+	if request.AccountID > 0 {
+		var existing int
+		if err := app.Store.DB.QueryRow("SELECT id FROM google_accounts WHERE id=?", request.AccountID).Scan(&existing); err != nil {
+			jsonError(w, "Google account is no longer connected", 404)
+			return
+		}
+		accountRef = existing
+	}
+	oauthConfig := g.OAuth
+	if request.AllowEditing {
+		oauthConfig.Scopes = []string{"openid", "https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.calendarlist.readonly"}
 	}
 	u, _ := url.Parse(g.OAuth.RedirectURL)
 	if r.Host != u.Host {
@@ -147,7 +177,7 @@ func (app *App) startGoogle(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 	_, err = tx.Exec("DELETE FROM google_oauth_states WHERE expires_at<=? OR session_hash=?", time.Now().Unix(), hashToken(cookie.Value))
 	if err == nil {
-		_, err = tx.Exec("INSERT INTO google_oauth_states(state_hash,session_hash,nonce_hash,verifier,expires_at) VALUES(?,?,?,?,?)", hashToken(state), hashToken(cookie.Value), hashToken(nonce), g.seal([]byte(verifier), "google-state:"+hashToken(state)), time.Now().Add(10*time.Minute).Unix())
+		_, err = tx.Exec("INSERT INTO google_oauth_states(state_hash,session_hash,nonce_hash,verifier,expires_at,allow_editing,account_id) VALUES(?,?,?,?,?,?,?)", hashToken(state), hashToken(cookie.Value), hashToken(nonce), g.seal([]byte(verifier), "google-state:"+hashToken(state)), time.Now().Add(10*time.Minute).Unix(), request.AllowEditing, accountRef)
 	}
 	if err == nil {
 		err = tx.Commit()
@@ -157,7 +187,7 @@ func (app *App) startGoogle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: googleNonceCookie, Value: nonce, Path: googleCallbackPath, MaxAge: 600, HttpOnly: true, Secure: u.Scheme == "https", SameSite: http.SameSiteLaxMode})
-	jsonResponse(w, map[string]string{"url": g.OAuth.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("prompt", "consent"), oauth2.S256ChallengeOption(verifier))})
+	jsonResponse(w, map[string]string{"url": oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("prompt", "consent"), oauth2.S256ChallengeOption(verifier))})
 }
 
 // The ordinary session is SameSite=Strict. A separate short-lived Lax nonce
@@ -194,8 +224,10 @@ func (app *App) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	defer app.calendarSync.Unlock()
 	var sealed, session string
+	var allowEditing bool
+	var expectedAccount sql.NullInt64
 	err = app.Store.DB.QueryRow(`DELETE FROM google_oauth_states WHERE state_hash=? AND nonce_hash=? AND expires_at>? AND session_hash IN
- (SELECT s.token_hash FROM sessions s JOIN family_members f ON f.id=s.member_id WHERE s.expires_at>? AND f.role='admin') RETURNING verifier,session_hash`, hashToken(state), hashToken(nonce.Value), time.Now().Unix(), time.Now().Unix()).Scan(&sealed, &session)
+ (SELECT s.token_hash FROM sessions s JOIN family_members f ON f.id=s.member_id WHERE s.expires_at>? AND f.role='admin') RETURNING verifier,session_hash,allow_editing,account_id`, hashToken(state), hashToken(nonce.Value), time.Now().Unix(), time.Now().Unix()).Scan(&sealed, &session, &allowEditing, &expectedAccount)
 	if err != nil {
 		fail()
 		return
@@ -242,7 +274,11 @@ func (app *App) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	for _, s := range strings.Fields(granted) {
 		scopes[s] = true
 	}
-	if !scopes["https://www.googleapis.com/auth/calendar.events.readonly"] || !scopes["https://www.googleapis.com/auth/calendar.calendarlist.readonly"] {
+	eventScope := "https://www.googleapis.com/auth/calendar.events.readonly"
+	if allowEditing {
+		eventScope = "https://www.googleapis.com/auth/calendar.events"
+	}
+	if (!scopes[eventScope] && !(!allowEditing && scopes["https://www.googleapis.com/auth/calendar.events"])) || !scopes["https://www.googleapis.com/auth/calendar.calendarlist.readonly"] {
 		fail()
 		return
 	}
@@ -263,12 +299,19 @@ func (app *App) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		fail()
 		return
 	}
+	if expectedAccount.Valid {
+		var subject string
+		if err := tx.QueryRow("SELECT subject FROM google_accounts WHERE id=?", expectedAccount.Int64).Scan(&subject); err != nil || subject != info.Sub {
+			fail()
+			return
+		}
+	}
 	err = tx.QueryRow("SELECT count(*) FROM google_accounts WHERE subject!=?", info.Sub).Scan(&count)
 	if err != nil || count >= 5 {
 		fail()
 		return
 	}
-	_, err = tx.Exec("INSERT INTO google_accounts(subject,token) VALUES(?,?) ON CONFLICT(subject) DO UPDATE SET token=excluded.token", info.Sub, g.seal(raw, "google-token:"+info.Sub))
+	_, err = tx.Exec("INSERT INTO google_accounts(subject,token,write_enabled) VALUES(?,?,?) ON CONFLICT(subject) DO UPDATE SET token=excluded.token,write_enabled=excluded.write_enabled", info.Sub, g.seal(raw, "google-token:"+info.Sub), allowEditing)
 	if err == nil {
 		err = tx.Commit()
 	}

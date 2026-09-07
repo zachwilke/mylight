@@ -10,9 +10,11 @@ import { useAuth } from "../../../context/AuthContext";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { apiFetch } from "../../../lib/api";
 
+import { GoogleSyncJobs } from "../GoogleSyncJobs";
 import { GoogleCalendars } from "../GoogleCalendars";
 
 interface Source {
+  provider?: "google" | "feed";
   id: number;
   name: string;
   color: string;
@@ -134,10 +136,11 @@ export function IntegrationsSettings() {
           available when the internet is down.
         </p>
         <p className="mt-4 text-sm text-emerald-100">
-          Read-only · Refreshes every 15 minutes · Last 31 days and next year
+          Automatic refresh · Last 31 days and next year
         </p>
       </section>
       <GoogleCalendars onChange={load} />
+      <GoogleSyncJobs />
       {error && (
         <div role="alert" className="rounded-xl bg-red-50 text-red-800 p-4">
           {error}
@@ -161,7 +164,10 @@ export function IntegrationsSettings() {
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold break-words">{source.name}</h3>
               <p className="text-xs text-stone-500 mt-1">
-                {source.event_count} cached occurrences · Read-only
+                {source.event_count} cached occurrences ·{" "}
+                {source.provider === "google"
+                  ? "Google Calendar"
+                  : "Read-only feed"}
               </p>
             </div>
             <button
@@ -281,9 +287,9 @@ export function IntegrationsSettings() {
           {busy ? "Working…" : "Connect calendar"}
         </button>
         <p className="text-xs text-stone-500">
-          Edit subscribed events in their original calendar. Two-way
-          Google/iCloud editing and Google Chat notifications are not yet
-          available.
+          Edit feed subscriptions in their original calendar. Google editing
+          supports individual appointments; whole-series Google changes, iCloud
+          editing and Google Chat notifications are not yet available.
         </p>
       </form>
       <ConfirmDialog

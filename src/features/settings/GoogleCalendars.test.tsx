@@ -67,7 +67,7 @@ it("retains account controls when calendar discovery fails", async () => {
   );
   expect((await screen.findByRole("alert")).textContent).toContain("reconnect");
   expect(
-    screen.getByRole("button", { name: "Connect or reconnect Google" }),
+    screen.getByRole("button", { name: "Connect another Google account" }),
   ).toBeDefined();
 });
 it("requires confirmation to disconnect and keeps the dialog on failure", async () => {
@@ -115,4 +115,27 @@ it("refreshes account counts after a connected calendar changes elsewhere", asyn
   count = 0;
   fireEvent(window, new Event("system-update"));
   await screen.findByText(/0 connected calendars/);
+});
+
+it("requests editing explicitly for the selected existing account", async () => {
+  vi.mocked(apiFetch).mockImplementation(async (_url, init) => {
+    if (init?.method === "POST")
+      throw new Error("Consent navigation simulated");
+    return response({
+      configured: true,
+      accounts: [{ id: 2, calendars: 1, write_enabled: false }],
+    });
+  });
+  render(<GoogleCalendars onChange={vi.fn()} />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Enable editing" }),
+  );
+  await screen.findByText("Consent navigation simulated");
+  expect(apiFetch).toHaveBeenCalledWith(
+    "/api/google/connect",
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ account_id: 2, allow_editing: true }),
+    }),
+  );
 });

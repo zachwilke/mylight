@@ -1,9 +1,9 @@
 # Connect Google Calendar
 
-Google connections currently bring appointments **from Google into MyLight**.
-Choose calendars in **Settings → Integrations → Google Calendar**. Edit their
-appointments in Google; outgoing writes and two-way conflict resolution are not
-implemented yet. iCalendar subscriptions remain available without Google setup.
+Google connections bring selected calendars into MyLight. Connections start
+read-only. The household owner can enable editing to change individual Google
+appointments, including one occurrence of a repeating event, through a durable
+outgoing queue with version-conflict review. iCalendar feeds remain read-only.
 
 ## One-time server setup
 
@@ -59,7 +59,58 @@ Refresh runs every 15 minutes; each calendar also has a manual refresh button
 with a 30-second cooldown. Cached appointments remain available when the network
 is down. A failed refresh displays an error and the last successful refresh time.
 Google's own expansion supplies moved instances, cancellations, all-day dates and
-recurrence behavior. These imported appointments remain read-only in MyLight.
+recurrence behavior. See below to enable individual appointment editing.
+
+## Enable editing and review outgoing changes
+
+Under the connected Google account, choose **Enable editing** and authorize the
+additional `calendar.events` permission. Select the same Google account: a
+callback for a different account is rejected. Existing read-only connections
+never gain editing permission automatically. **Reconnect with editing** renews
+an enabled account's credentials; Google calendar permissions still apply.
+
+Open a Google appointment in MyLight's calendar. The owner can edit its title,
+dates/times, location and description. The editor fetches the latest Google
+version and supports ordinary appointments and individual recurring instances
+in calendars where the account has owner/writer access. Special Google event
+types and entire recurring masters must be edited in Google. All-day end dates
+are inclusive in the editor; unchanged timed values retain their original
+seconds and repeated-clock instant.
+
+**Queue Google edit** saves a durable request. A background worker checks for
+work every minute, sharing the calendar refresh coordinator. The calendar keeps
+showing the last confirmed Google copy while the edit is waiting. Once Google
+accepts the edit, an incoming refresh updates the display.
+
+In **Settings → Integrations → Outgoing Google changes**:
+
+- **Queued / Sending / Waiting to retry** shows pending work. Network and rate-limit
+  failures retry with backoff from one minute up to an hour.
+- **Needs attention** requires checking permissions or reconnecting the account,
+  then **Check again**. Failed token refreshes caused by temporary network problems
+  retry automatically; revoked access pauses.
+- **Review both versions** shows the saved draft beside Google's latest version.
+  **Apply my draft** requires confirmation against that displayed version. Another
+  intervening Google change causes another conflict. **Keep Google version** stops
+  the queued edit.
+- **Cancel queued edit / Stop retrying** stops future attempts after confirmation.
+  Stopping a retry cannot undo an edit Google already accepted. An in-flight job
+  cannot be stopped until the worker finishes or recovers it.
+
+The worker uses Google's [conditional modification protocol](https://developers.google.com/workspace/calendar/api/guides/version-resources)
+with `If-Match` ETags. A private operation marker identifies an already accepted
+edit after a lost response or process restart. It checks both before every retry.
+Only one active edit is allowed per appointment. Unresolved work must be reviewed
+or stopped before disconnecting its calendar/account.
+
+Current outgoing limits are 1,000 active changes and 10,000 history records per
+household, up to 10 jobs per worker pass, a 45-second job deadline and a 120-second
+recoverable worker lease. Reaching a storage limit rejects additional changes
+visibly. History cleanup is not yet exposed in the UI.
+
+Creating/deleting Google events, publishing local events, Google whole-series or
+future-series edits, attendee management and iCloud CalDAV remain unimplemented.
+This is individual-appointment editing, not full two-way calendar parity.
 
 ## Storage, recovery and limits
 
@@ -69,7 +120,9 @@ errors. Authorization uses state, PKCE and a short-lived browser nonce bound to
 an active owner session. Pending authorization is excluded from backups.
 
 Private backups include encrypted tokens, raw Google event resources, ETags,
-original recurrence identities, sync cursors and the cached display window.
+original recurrence identities, sync cursors, outgoing jobs and the cached display
+window. Jobs retain their operation IDs and version checks after restore, so an
+old backup cannot silently overwrite a newer Google version.
 **Save the encryption key separately:** the backup does not contain it. Restore
 with the same key to retain connections, or reconnect each account with a new
 key. Losing the key does not erase the cached calendar display.
@@ -97,6 +150,7 @@ fetched when resources change or the display date window/timezone changes.
 Automated tests use synthetic Google responses and disposable households. They
 cover consent/state rejection, token refresh persistence, encrypted backup/restore,
 pagination, failed-window rollback, expired cursors, calendar selection and
-account removal. A real OAuth client/account round trip is still required for
-external acceptance. Outgoing edit queues, ETag conflict resolution and iCloud
-CalDAV remain the next stages of two-way sync.
+account removal, competing worker leases, lost write responses, version conflicts,
+explicit resolution and old-backup replay protection. Browser checks use fictional
+Google fixtures. Real OAuth and write acceptance on dedicated Google test calendars
+remain required before claiming provider acceptance.

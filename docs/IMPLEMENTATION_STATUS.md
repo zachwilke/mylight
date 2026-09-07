@@ -4,6 +4,46 @@ These are incremental implementations from the approved roadmap, **not full Skyl
 parity**. This document records
 implementation evidence, not release approval or deployment to a household server.
 
+## Individual Google edits and durable outgoing queue — September 6
+
+- Existing Google connections stay read-only. An owner explicitly enables editing
+  with a new OAuth grant bound to that same Google account. Calendar selection
+  checks owner/writer access before opening the editor. Household users/displays
+  cannot access outgoing edit or conflict-resolution APIs.
+- Individual Google appointments and recurring instances can change title, dates,
+  location and description. The editor fetches a fresh ETag, preserves exact
+  unchanged timed instants, rejects nonexistent local clock values, and shows
+  inclusive all-day end dates. Local calendars and Google series definitions are
+  not automatically published or rewritten.
+- Schema 10 adds persisted jobs with request-ID deduplication, one active edit per
+  appointment, retry scheduling, fenced worker leases, original drafts and remote
+  conflict snapshots. Network calls run outside database transactions. Competing
+  SQLite connections have one claimant; an expired worker cannot commit results.
+- Every attempt fetches Google before writing and uses If-Match. A private operation
+  marker detects an already accepted edit after a lost response or crash. PATCH
+  preserves unrelated fields, private/shared properties and original event zones.
+  Google 412 conflicts stop for review; applying the draft uses the reviewed ETag
+  and cannot silently overwrite another intervening change.
+- Settings shows queued/running/retrying/paused/conflicted jobs, both versions,
+  confirmed resolution and explicit stop controls. Stopping retries does not undo
+  a write Google already accepted. Active jobs protect calendar/account removal
+  at both API and database levels. Confirmed writes or stopped work request a new
+  incoming snapshot without erasing the last successful refresh timestamp.
+- Backups retain job identities and version guards. A restored old queue conflicts
+  with newer Google data instead of overwriting it. Permission failures pause;
+  transient token/network failures retry. Limits and recovery behavior are in
+  [Google Calendar operations](GOOGLE_CALENDAR.md).
+
+Validation: 116 frontend tests, all Go race tests and vet, production builds,
+lint (18 existing warnings), and module verification. Tests cover lost responses,
+late 412s, repeated conflicts, explicit resolution, revoked/temporary token errors,
+concurrent claims, lease recovery, disconnect protection and old-backup replay.
+Production Chromium with fictional Google API fixtures verifies calendar selection
+into the editor, queuing and version-bound conflict confirmation at desktop and
+390px phone widths. No real Google account was modified. Real-provider acceptance,
+Google create/delete/full-series writes, local-event publishing and iCloud remain
+open; this is not full two-way calendar parity.
+
 ## Google account connection and incoming sync — September 6
 
 - Owner-only Settings controls connect/reconnect Google, select readable calendars,

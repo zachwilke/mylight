@@ -3,7 +3,7 @@ import { CalendarDays, Link2, Plus, Unplug } from "lucide-react";
 import { apiFetch } from "../../lib/api";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 
-type Account = { id: number; calendars: number };
+type Account = { id: number; calendars: number; write_enabled?: boolean };
 type Calendar = {
   id: string;
   summary: string;
@@ -75,8 +75,12 @@ export function GoogleCalendars({
       setBusy(false);
     }
   }
-  async function connect() {
-    const response = await apiFetch("/api/google/connect", { method: "POST" });
+  async function connect(account?: Account, editing = false) {
+    const response = await apiFetch("/api/google/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ account_id: account?.id, allow_editing: editing }),
+    });
     const { url } = await response.json();
     const destination = new URL(url);
     if (destination.origin !== "https://accounts.google.com")
@@ -144,8 +148,8 @@ export function GoogleCalendars({
       </div>
       <p className="text-sm text-stone-600 dark:text-stone-300">
         Connect your account and choose calendars to display. Changes from
-        Google appear here automatically; edit these appointments in Google for
-        now.
+        Google appear here automatically. Enable editing on an account to change
+        individual appointments from MyLight.
       </p>
       {notice && (
         <p
@@ -196,6 +200,20 @@ export function GoogleCalendars({
               Choose calendars
             </button>
             <button
+              disabled={busy || !status.configured}
+              onClick={() => void run(() => connect(account, true))}
+              className="min-h-11 px-4 rounded-xl border border-stone-300 disabled:opacity-50"
+            >
+              {account.write_enabled
+                ? "Reconnect with editing"
+                : "Enable editing"}
+            </button>
+            <p className="text-xs text-stone-500 w-full">
+              {account.write_enabled
+                ? "Individual appointment editing enabled. Outgoing changes appear below."
+                : "Read-only. Enabling editing asks Google for additional permission."}
+            </p>
+            <button
               disabled={busy}
               onClick={() => setRemoving(account)}
               className="min-h-11 px-4 rounded-xl flex items-center gap-2 text-stone-500 disabled:opacity-50"
@@ -237,20 +255,20 @@ export function GoogleCalendars({
       {status?.configured && (
         <button
           disabled={busy}
-          onClick={() => void run(connect)}
+          onClick={() => void run(() => connect())}
           className="min-h-11 px-5 py-3 rounded-xl bg-[#355B48] text-white font-medium flex items-center gap-2 disabled:opacity-50"
         >
           <Link2 size={18} />
           {busy
             ? "Working…"
             : status.accounts.length
-              ? "Connect or reconnect Google"
+              ? "Connect another Google account"
               : "Connect Google"}
         </button>
       )}
       <p className="text-xs text-stone-500">
-        Read-only · Refreshes every 15 minutes · Only selected calendars are
-        saved to MyLight
+        Incoming refresh every 15 minutes · Only selected calendars are saved to
+        MyLight
       </p>
       <ConfirmDialog
         isOpen={!!removing}
