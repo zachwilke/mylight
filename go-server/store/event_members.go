@@ -44,6 +44,19 @@ func (s *Store) saveEventAttempt(id int, e Event) (int, error) {
 	}
 	defer tx.Rollback()
 	if id != 0 {
+		if err := protectSeriesWrite(tx, id, e); err != nil {
+			return 0, err
+		}
+	}
+	saved, err := saveEventTx(tx, id, e)
+	if err != nil {
+		return 0, err
+	}
+	return saved, tx.Commit()
+}
+
+func saveEventTx(tx *sql.Tx, id int, e Event) (int, error) {
+	if id != 0 {
 		var version int
 		if err := tx.QueryRow("SELECT version FROM events WHERE id=?", id).Scan(&version); err != nil {
 			return 0, err
@@ -122,5 +135,5 @@ func (s *Store) saveEventAttempt(id int, e Event) (int, error) {
 			return 0, err
 		}
 	}
-	return id, tx.Commit()
+	return id, nil
 }

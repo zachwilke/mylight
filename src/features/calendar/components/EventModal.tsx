@@ -4,7 +4,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { apiFetch } from "../../../lib/api";
 import { downloadICS } from "../../../lib/icsUtils";
 import { cn } from "../../../lib/utils";
-import { Event, FamilyMember } from "../../../types";
+import {
+  Event,
+  EventScope,
+  OccurrenceEditor,
+  FamilyMember,
+} from "../../../types";
 import { Modal } from "../../../components/ui/Modal";
 import { readRepeat, writeRepeat } from "../../../lib/recurrenceEditor";
 import { RepeatEditor } from "./RepeatEditor";
@@ -15,6 +20,10 @@ import {
 } from "../../../lib/eventTimezone";
 
 interface EventModalProps {
+  occurrenceEditor?: OccurrenceEditor | null;
+  scope?: EventScope;
+  onScopeChange?: (scope: EventScope) => void;
+  onRestore?: (key: string) => Promise<void>;
   isOpen: boolean;
   onClose: () => void;
   onSave: (event: Partial<Event>) => Promise<void>;
@@ -34,6 +43,10 @@ export function EventModal({
   initialDate,
   onReload,
   externalError = "",
+  occurrenceEditor,
+  scope = "series",
+  onScopeChange,
+  onRestore,
 }: EventModalProps) {
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
@@ -41,7 +54,9 @@ export function EventModal({
   const errorNotice = useRef<HTMLDivElement>(null);
   const [reloading, setReloading] = useState(false);
   const [seriesConfirmed, setSeriesConfirmed] = useState(false);
-  const editingSeries = !!(currentEvent?.recurrence || currentEvent?.rrule);
+  const editingSeries =
+    (!!occurrenceEditor && scope !== "occurrence") ||
+    !!(currentEvent?.recurrence || currentEvent?.rrule);
   useEffect(() => {
     if (saveError) {
       errorNotice.current?.scrollIntoView?.({ block: "center" });
@@ -243,6 +258,7 @@ export function EventModal({
 
       await onSave({
         title,
+        reset_exceptions: editingSeries && seriesConfirmed,
         start_date: startIso,
         end_date: endIso,
         member_ids: memberIds,
@@ -329,9 +345,25 @@ export function EventModal({
             {currentEvent && (
               <button
                 disabled={saving || reloading}
-                onClick={() => {
+                onClick={async () => {
+                  setReloading(true);
                   try {
-                    downloadICS(currentEvent);
+                    const exported =
+                      occurrenceEditor && scope === "occurrence"
+                        ? {
+                            ...currentEvent,
+                            id: `${occurrenceEditor.series.id}-${occurrenceEditor.key}`,
+                            exdates: [],
+                            overrides: [],
+                          }
+                        : occurrenceEditor ||
+                            currentEvent.recurrence ||
+                            currentEvent.rrule
+                          ? await apiFetch(
+                              `/api/events/${occurrenceEditor?.series.id || currentEvent.id}?export=1`,
+                            ).then((r) => r.json())
+                          : currentEvent;
+                    downloadICS(exported);
                   } catch (cause) {
                     window.dispatchEvent(
                       new CustomEvent("api-error", {
@@ -341,10 +373,18 @@ export function EventModal({
                             : "Could not export this event.",
                       }),
                     );
+                  } finally {
+                    setReloading(false);
                   }
                 }}
                 className="p-2 text-sky-500 hover:text-sky-600 hover:bg-sky-50 rounded-full transition-colors"
-                title="Download Invite (ICS)"
+                title={
+                  occurrenceEditor && scope === "occurrence"
+                    ? "Download this occurrence (ICS)"
+                    : occurrenceEditor
+                      ? "Download saved series (ICS)"
+                      : "Download Invite (ICS)"
+                }
               >
                 <Share size={20} />
               </button>
@@ -397,27 +437,121 @@ export function EventModal({
               )}
             </div>
           )}
-          {editingSeries && (
+          {(occurrenceEditor || editingSeries) && (
             <div className="rounded-xl bg-stone-100 dark:bg-stone-900 p-4 text-sm space-y-3">
-              <p className="font-semibold">
-                Editing the entire recurring series
-              </p>
-              <p>
-                The dates below describe the first occurrence in the series, not
-                necessarily the occurrence you clicked. Changes affect past and
-                future occurrences. Single-occurrence and “this and future”
-                editing are not available yet.
-              </p>
-              <label className="flex items-center gap-3 min-h-11">
-                <input
-                  type="checkbox"
-                  checked={seriesConfirmed}
-                  disabled={saving || reloading}
-                  onChange={(e) => setSeriesConfirmed(e.target.checked)}
-                  className="h-4 w-4 accent-emerald-700"
-                />
-                Apply my changes to the entire series
-              </label>
+              {occurrenceEditor && onScopeChange ? (
+                <>
+                  <label
+                    className="block font-semibold"
+                    htmlFor="event-edit-scope"
+                  >
+                    Apply changes to
+                  </label>
+                  <select
+                    id="event-edit-scope"
+                    value={scope}
+                    disabled={saving || reloading}
+                    onChange={(e) =>
+                      onScopeChange(e.target.value as EventScope)
+                    }
+                    className="w-full min-h-11 rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800 px-3"
+                  >
+                    <option value="occurrence">Only this occurrence</option>
+                    <option value="future">This and future occurrences</option>
+                    <option value="series">Entire series</option>
+                  </select>
+                  <p>
+                    {scope === "occurrence"
+                      ? "Change this date without changing the rest of the series."
+                      : scope === "future"
+                        ? "Saving starts a separate series on these dates. Earlier occurrences stay in their original series."
+                        : "These dates describe the first occurrence. Changes apply across the series."}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    Choose a scope before editing. Switching scope reloads saved
+                    values and discards unsaved changes.
+                  </p>
+                  {occurrenceEditor.cancelled && (
+                    <p>
+                      This occurrence is cancelled. Saving it restores it with
+                      these details.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="font-semibold">
+                  Editing the entire recurring series
+                </p>
+              )}
+              {editingSeries && (
+                <>
+                  <p>
+                    {scope === "future"
+                      ? "Saving replaces individual edits and cancellations from this occurrence forward."
+                      : "Changing the repeat schedule, dates, or timezone resets individual edits and cancellations. Changes to other details preserve them."}
+                  </p>
+                  <label className="flex items-center gap-3 min-h-11">
+                    <input
+                      type="checkbox"
+                      checked={seriesConfirmed}
+                      disabled={saving || reloading}
+                      onChange={(e) => setSeriesConfirmed(e.target.checked)}
+                      className="h-4 w-4 accent-emerald-700"
+                    />
+                    {scope === "future"
+                      ? "Apply my changes to this and future occurrences"
+                      : "Apply my changes to the entire series"}
+                  </label>
+                </>
+              )}
+              {occurrenceEditor &&
+                scope === "series" &&
+                occurrenceEditor.exdates.length > 0 &&
+                onRestore && (
+                  <details>
+                    <summary className="cursor-pointer min-h-11 py-3 font-medium">
+                      Individual changes and cancellations (
+                      {occurrenceEditor.exdates.length})
+                    </summary>
+                    <p className="mb-2">
+                      Resetting a date removes its individual edit or
+                      cancellation and uses the series details again.
+                    </p>
+                    <ul className="max-h-48 overflow-y-auto space-y-2">
+                      {occurrenceEditor.exdates.map((key) => (
+                        <li key={key}>
+                          <button
+                            type="button"
+                            disabled={saving || reloading}
+                            className="min-h-11 rounded-lg border border-stone-300 dark:border-stone-600 px-3 text-left"
+                            onClick={async () => {
+                              setReloading(true);
+                              setSaveError("");
+                              try {
+                                await onRestore(key);
+                              } catch (cause) {
+                                setSaveError(
+                                  cause instanceof Error
+                                    ? cause.message
+                                    : "Could not reset occurrence",
+                                );
+                              } finally {
+                                setReloading(false);
+                              }
+                            }}
+                          >
+                            Reset{" "}
+                            {format(
+                              parseISO(key),
+                              key.length === 10 ? "PPP" : "PPP · p",
+                            )}{" "}
+                            to series
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
             </div>
           )}
           <fieldset
@@ -599,13 +733,15 @@ export function EventModal({
                 </p>
               </div>
             )}
-            <RepeatEditor
-              value={repeat}
-              onChange={setRepeat}
-              startDate={startDate}
-              allDay={isAllDay}
-              timezone={timezone}
-            />
+            {(!occurrenceEditor || scope !== "occurrence") && (
+              <RepeatEditor
+                value={repeat}
+                onChange={setRepeat}
+                startDate={startDate}
+                allDay={isAllDay}
+                timezone={timezone}
+              />
+            )}
 
             <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-4">
               {/* Member / Calendar */}
@@ -743,7 +879,9 @@ export function EventModal({
                 {saving
                   ? "Saving…"
                   : editingSeries
-                    ? "Save entire series"
+                    ? scope === "future"
+                      ? "Save future occurrences"
+                      : "Save entire series"
                     : currentEvent
                       ? "Save Changes"
                       : "Save Event"}

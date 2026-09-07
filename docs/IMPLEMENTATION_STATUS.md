@@ -1,8 +1,37 @@
-# Implementation status — September 5, 2026
+# Implementation status — September 6, 2026
 
 These are incremental implementations from the approved roadmap, **not full Skylight
-parity**. Work is on `codex/mylight-foundation`. This document records
+parity**. This document records
 implementation evidence, not release approval or deployment to a household server.
+
+## Local recurring-event exceptions and future edits — September 6
+
+- Schema 8 stores original recurrence identities and detached overrides. Editing
+  or cancelling one occurrence excludes its original date; moved appointments
+  are discovered by their actual date even outside the parent series range.
+- Calendar selection loads the selected occurrence and current parent version.
+  Single/future/entire-series controls carry that version through transactional
+  writes. Stale or repeated requests cannot silently overwrite newer changes.
+- Future edits truncate the old series and create a new series with the remaining
+  count. Earlier exceptions remain intact. Confirmed future changes replace later
+  exceptions; schedule changes to an entire series reset its exceptions, while
+  title/location/participant changes preserve them. Individual resets restore the
+  original generated appointment. Direct writes to detached children are blocked.
+- Shared Go/browser fixtures cover DST gaps, both folds, half-hour transitions,
+  UTC cutoffs, date-only all-day ranges, monthly skips and custom weekly schedules.
+  Tests also cover concurrent SQLite connections, rollback, scoped API validation,
+  stale drafts/reloads, restoration and schema-8 backup/restore.
+- Full-series ICS export carries cancelled EXDATEs and detached VEVENTs with stable
+  UID/RECURRENCE-ID. An individually changed second-fold original is rejected
+  explicitly for zoned series export; single-occurrence export remains available.
+  This work implements local editing, not Google/iCloud reconciliation.
+
+Checks: 102 frontend tests pass; all Go tests, the Go race suite and vet pass.
+Production frontend and embedded server builds pass. Lint retains 18 existing
+warnings. A production Chromium check in a disposable household verified an
+individual edit, original recurrence identity in export, and a confirmed future
+split on a 390px phone viewport; desktop/mobile editors were visually inspected.
+See OPERATIONS for scope behavior, conversion requirements and limits.
 
 ## Task identity and calendar review follow-ups — September 5
 

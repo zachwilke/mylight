@@ -118,7 +118,9 @@ the directory. A guided Docker-volume restore workflow remains on the roadmap.
   wall views and filters that match any participant without duplicating the event.
 - Version-checked calendar saves/deletes prevent stale editors from overwriting
   newer changes. Failed saves retain the draft, and series-wide changes require
-  explicit acknowledgement. Single-occurrence editing is not implemented yet.
+  explicit acknowledgement. Recurring events support editing/cancelling one
+  occurrence, this and future occurrences, or the entire series. Individual
+  edits and cancellations can be reset from the entire-series editor.
 - Local recurrence writes are validated before saving; unsupported/sub-daily rules
   are rejected instead of adding schedules the current calendar cannot display.
 - Repeat controls support every N days/weeks/months/years, an occurrence count,
@@ -130,14 +132,37 @@ the directory. A guided Docker-volume restore workflow remains on the roadmap.
 - ID-based task columns and star totals keep people with identical names separate.
 - Raster image validation, backup export/offline restore, health checks, and CI.
 
+## Editing recurring events
+
+Open an appointment and choose **Apply changes to**. The default changes only
+that occurrence. Switching scope reloads saved values and discards the current
+unsaved draft. Future edits create a separate series with the remaining repeat
+count; earlier dates stay in the original series. Confirming a future edit
+replaces individual changes and cancellations from the selected date forward.
+
+Entire-series detail changes preserve individual overrides. Changing its dates,
+timezone or repeat schedule resets those overrides after acknowledgement.
+To undo an individual edit or cancellation, choose **Entire series**, expand
+**Individual changes and cancellations**, and reset its original date.
+Concurrent changes return a conflict and preserve your draft for review/reload.
+
+ICS export from the single-occurrence editor downloads that appointment alone.
+Export from the entire-series or future editor downloads the saved complete
+series, including cancellations and moved appointments. A modified occurrence
+at an explicitly chosen second fall-back clock instant cannot be exported
+unambiguously as a zoned series; export that occurrence separately instead.
+Legacy timestamp-based all-day series need conversion in the entire-series
+editor before individual edits. Local series allow up to 1,000 exceptions;
+individual selection is bounded to 20,000 generated dates and 200 years.
+
 ## Current limitations
 
 - Read-only HTTPS/webcal iCalendar subscriptions now work in Settings →
   Integrations. Google/iCloud/Outlook two-way connections are not implemented.
 - New all-day events use date-only values with exclusive ends, including ICS
   export and DST-safe daily all-day repeats. Zoned timed recurrence handles gaps,
-  folds and half-hour transitions; individual exceptions and this/future/series
-  operations remain unfinished. Zoned-series ICS exports include VTIMEZONE and
+  folds and half-hour transitions. Local edits preserve the original occurrence
+  identity when an appointment moves. Zoned-series ICS exports include VTIMEZONE and
   support contemporary schedules beginning in 2026 or later; historical zoned
   series fail explicitly rather than exporting incorrect historical rules.
 - Restricted wall pairing is available at `/pair`. The older signed-in `/kiosk`

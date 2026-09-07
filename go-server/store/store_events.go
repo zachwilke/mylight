@@ -47,6 +47,9 @@ func (s *Store) GetEvent(id int) (interface{}, error) {
 
 func (s *Store) getEvents(window *CalendarRange, id *int) ([]interface{}, error) {
 	query := `SELECT id, title, start_date, end_date, member_id, recurrence, description, location, is_all_day, version, timezone,
+        (SELECT json_group_array(recurrence_id) FROM event_exceptions WHERE series_id=events.id),
+        COALESCE((SELECT series_id FROM event_exceptions WHERE override_event_id=events.id),0),
+        COALESCE((SELECT recurrence_id FROM event_exceptions WHERE override_event_id=events.id),''),
 		COALESCE((SELECT '[' || group_concat(member_id) || ']' FROM
 			(SELECT member_id FROM event_members WHERE event_id=events.id ORDER BY member_id)),
 			(SELECT '[' || id || ']' FROM family_members WHERE id=events.member_id),'[]') FROM events`
@@ -80,6 +83,7 @@ func (s *Store) getEvents(window *CalendarRange, id *int) ([]interface{}, error)
 	defer rows.Close()
 
 	events := []interface{}{}
+	exceptionCount := 0
 	for rows.Next() {
 		var id int
 		var version int
@@ -88,9 +92,10 @@ func (s *Store) getEvents(window *CalendarRange, id *int) ([]interface{}, error)
 		var endDate, description, location sql.NullString
 		var memberID sql.NullInt64
 		var isAllDay sql.NullBool
-		var memberJSON string
+		var memberJSON, exclusions, recurrenceID string
+		var seriesID int
 
-		if err := rows.Scan(&id, &title, &startDate, &endDate, &memberID, &recurrence, &description, &location, &isAllDay, &version, &timezone, &memberJSON); err != nil {
+		if err := rows.Scan(&id, &title, &startDate, &endDate, &memberID, &recurrence, &description, &location, &isAllDay, &version, &timezone, &exclusions, &seriesID, &recurrenceID, &memberJSON); err != nil {
 			return nil, fmt.Errorf("scan event row: %w", err)
 		}
 
@@ -98,19 +103,30 @@ func (s *Store) getEvents(window *CalendarRange, id *int) ([]interface{}, error)
 		if err := json.Unmarshal([]byte(memberJSON), &memberIDs); err != nil {
 			return nil, err
 		}
+		exdates := []string{}
+		if err := json.Unmarshal([]byte(exclusions), &exdates); err != nil {
+			return nil, err
+		}
+		exceptionCount += len(exdates)
+		if exceptionCount > MaxCalendarEvents {
+			return nil, ErrCalendarTooDense
+		}
 		events = append(events, map[string]interface{}{
-			"timezone":    timezone,
-			"version":     version,
-			"member_ids":  memberIDs,
-			"id":          id,
-			"title":       title,
-			"start_date":  startDate,
-			"end_date":    endDate.String,
-			"member_id":   memberID.Int64,
-			"recurrence":  recurrence.String,
-			"description": description.String,
-			"location":    location.String,
-			"is_all_day":  isAllDay.Bool,
+			"exdates":       exdates,
+			"series_id":     seriesID,
+			"recurrence_id": recurrenceID,
+			"timezone":      timezone,
+			"version":       version,
+			"member_ids":    memberIDs,
+			"id":            id,
+			"title":         title,
+			"start_date":    startDate,
+			"end_date":      endDate.String,
+			"member_id":     memberID.Int64,
+			"recurrence":    recurrence.String,
+			"description":   description.String,
+			"location":      location.String,
+			"is_all_day":    isAllDay.Bool,
 		})
 		if len(events) > MaxCalendarEvents {
 			return nil, ErrCalendarTooDense
@@ -129,8 +145,21 @@ func (s *Store) UpdateEvent(id int, e Event) error {
 }
 
 func (s *Store) DeleteEvent(id int) error {
-	_, err := s.DB.Exec("DELETE FROM events WHERE id = ?", id)
-	return err
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := rejectDetachedWrite(tx, id); err != nil {
+		return err
+	}
+	if err := removeExceptions(tx, id, ""); err != nil {
+		return err
+	}
+	if _, err := tx.Exec("DELETE FROM events WHERE id=?", id); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *Store) DeleteEventVersion(id, version int) error {
@@ -149,6 +178,12 @@ func (s *Store) deleteEventVersionAttempt(id, version int) error {
 	}
 	if current != version {
 		return ErrEventConflict
+	}
+	if err := rejectDetachedWrite(tx, id); err != nil {
+		return err
+	}
+	if err := removeExceptions(tx, id, ""); err != nil {
+		return err
 	}
 	result, err := tx.Exec("DELETE FROM events WHERE id=? AND version=?", id, version)
 	if err != nil {

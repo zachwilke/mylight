@@ -159,7 +159,7 @@ func (s *Store) DeleteFamilyMember(id int) error {
 		return err
 	}
 	defer tx.Rollback()
-	if _, err := tx.Exec("UPDATE events SET version=version+1 WHERE member_id=? OR id IN (SELECT event_id FROM event_members WHERE member_id=?)", id, id); err != nil {
+	if _, err := tx.Exec("UPDATE events SET version=version+1 WHERE member_id=? OR id IN (SELECT event_id FROM event_members WHERE member_id=?) OR id IN (SELECT series_id FROM event_exceptions WHERE override_event_id IN (SELECT event_id FROM event_members WHERE member_id=?))", id, id, id); err != nil {
 		return err
 	}
 	for _, q := range []string{"DELETE FROM chore_completions WHERE member_id=?", "DELETE FROM chores WHERE member_id=?", "DELETE FROM event_members WHERE member_id=?", "UPDATE events SET member_id=(SELECT MIN(member_id) FROM event_members WHERE event_id=events.id) WHERE member_id=?", "DELETE FROM family_members WHERE id=?"} {

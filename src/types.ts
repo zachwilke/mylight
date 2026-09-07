@@ -25,7 +25,28 @@ export interface Meal {
   color: string;
 }
 
+export type EventScope = "occurrence" | "future" | "series";
+export interface OccurrenceEditor {
+  series: Event;
+  occurrence: Event;
+  key: string;
+  future_recurrence: string;
+  exdates: string[];
+  cancelled: boolean;
+}
+
 export interface Event {
+  exdates?: string[];
+  overrides?: (Event & { recurrence_id: string })[];
+  series_id?: number;
+  recurrence_id?: string;
+  occurrence_key?: string;
+  occurrence_start?: string;
+  occurrence_end?: string;
+  scope?: EventScope;
+  occurrence?: string;
+  reset_exceptions?: boolean;
+
   timezone?: string;
   version?: number;
   id: number | string;

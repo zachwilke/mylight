@@ -115,6 +115,48 @@ export function generateICS(event: Event) {
     );
   }
 
+  const exceptionLines = (event.exdates || []).map((key) =>
+    event.is_all_day
+      ? `EXDATE;VALUE=DATE:${key.replace(/-/g, "")}`
+      : `EXDATE:${formatDate(key)}`,
+  );
+  lines.splice(lines.length - 2, 0, ...exceptionLines);
+  for (const override of event.overrides || []) {
+    const key = override.recurrence_id;
+    let identity = event.is_all_day
+      ? `RECURRENCE-ID;VALUE=DATE:${key.replace(/-/g, "")}`
+      : `RECURRENCE-ID:${formatDate(key)}`;
+    if (!event.is_all_day && event.timezone && event.timezone !== "UTC") {
+      const clock = eventClock(key, event.timezone);
+      const earlier = clockInstant(clock, event.timezone);
+      if (earlier && earlier.getTime() !== new Date(key).getTime()) {
+        throw new Error(
+          "Cannot safely export an individually changed second-fold occurrence yet. Export the individual event instead.",
+        );
+      }
+      identity = `RECURRENCE-ID;TZID=${event.timezone}:${clock.toString({ smallestUnit: "second" }).replace(/[-:]/g, "")}`;
+    }
+    const component = generateICS({
+      ...override,
+      id: event.id,
+      recurrence: "",
+      rrule: "",
+      overrides: [],
+      exdates: [],
+    });
+    const content = component
+      .split("BEGIN:VEVENT\r\n")[1]
+      .split("END:VEVENT\r\n")[0];
+    lines.splice(
+      lines.length - 1,
+      0,
+      "BEGIN:VEVENT",
+      identity,
+      ...content.trimEnd().split("\r\n"),
+      "END:VEVENT",
+    );
+  }
+
   // RFC 5545's 75-octet limit counts UTF-8 bytes, not JavaScript characters.
   return (
     lines

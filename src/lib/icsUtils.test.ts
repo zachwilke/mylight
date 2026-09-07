@@ -124,3 +124,60 @@ describe("all-day calendar contract", () => {
     }
   });
 });
+
+it("exports cancellations and moved instances with the same UID and original recurrence identity", () => {
+  const content = generateICS({
+    id: 12,
+    title: "Weekly class",
+    start_date: "2026-09-07T14:00:00Z",
+    end_date: "2026-09-07T15:00:00Z",
+    timezone: "America/Chicago",
+    recurrence: "FREQ=WEEKLY;COUNT=4",
+    exdates: ["2026-09-14T14:00:00.000Z"],
+    overrides: [
+      {
+        id: 13,
+        title: "Moved class",
+        start_date: "2026-10-01T16:00:00Z",
+        end_date: "2026-10-01T17:00:00Z",
+        recurrence_id: "2026-09-21T14:00:00.000Z",
+      },
+    ],
+  });
+  expect(content.match(/BEGIN:VEVENT/g)).toHaveLength(2);
+  expect(content.match(/UID:12@mylight.app/g)).toHaveLength(2);
+  expect(content).toContain("EXDATE:20260914T140000Z");
+  expect(content).toContain(
+    "RECURRENCE-ID;TZID=America/Chicago:20260921T090000",
+  );
+  expect(content).toContain("DTSTART:20261001T160000Z");
+  expect(
+    content
+      .split("BEGIN:VEVENT")
+      .slice(1)
+      .join("")
+      .match(/RRULE:/g),
+  ).toHaveLength(1);
+});
+it("exports all-day exceptions as dates", () => {
+  const content = generateICS({
+    id: 1,
+    title: "Trip",
+    start_date: "2026-09-07",
+    is_all_day: true,
+    recurrence: "FREQ=DAILY;COUNT=3",
+    exdates: ["2026-09-08"],
+    overrides: [
+      {
+        id: 2,
+        title: "Moved trip",
+        start_date: "2026-09-15",
+        is_all_day: true,
+        recurrence_id: "2026-09-09",
+      },
+    ],
+  });
+  expect(content).toContain("EXDATE;VALUE=DATE:20260908");
+  expect(content).toContain("RECURRENCE-ID;VALUE=DATE:20260909");
+  expect(content).toContain("DTSTART;VALUE=DATE:20260915");
+});

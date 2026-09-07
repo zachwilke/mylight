@@ -13,17 +13,20 @@ import (
 )
 
 type eventBody struct {
-	Timezone    *string `json:"timezone"`
-	Version     *int    `json:"version"`
-	Title       string  `json:"title"`
-	Start       string  `json:"start_date"`
-	End         string  `json:"end_date"`
-	MemberId    int     `json:"member_id"`
-	MemberIDs   []int   `json:"member_ids"`
-	Recurrence  string  `json:"recurrence"`
-	Description string  `json:"description"`
-	Location    string  `json:"location"`
-	AllDay      bool    `json:"is_all_day"`
+	Scope           string  `json:"scope"`
+	Occurrence      string  `json:"occurrence"`
+	ResetExceptions bool    `json:"reset_exceptions"`
+	Timezone        *string `json:"timezone"`
+	Version         *int    `json:"version"`
+	Title           string  `json:"title"`
+	Start           string  `json:"start_date"`
+	End             string  `json:"end_date"`
+	MemberId        int     `json:"member_id"`
+	MemberIDs       []int   `json:"member_ids"`
+	Recurrence      string  `json:"recurrence"`
+	Description     string  `json:"description"`
+	Location        string  `json:"location"`
+	AllDay          bool    `json:"is_all_day"`
 }
 
 func validateEvent(body *eventBody) error {
@@ -93,17 +96,18 @@ func eventFromBody(body eventBody) store.Event {
 		memID = &body.MemberId
 	}
 	return store.Event{
-		Timezone:    zone,
-		Version:     body.Version,
-		Title:       body.Title,
-		StartDate:   body.Start,
-		EndDate:     end,
-		MemberID:    memID,
-		MemberIDs:   body.MemberIDs,
-		Recurrence:  recur,
-		Description: body.Description,
-		Location:    body.Location,
-		IsAllDay:    body.AllDay,
+		ResetExceptions: body.ResetExceptions,
+		Timezone:        zone,
+		Version:         body.Version,
+		Title:           body.Title,
+		StartDate:       body.Start,
+		EndDate:         end,
+		MemberID:        memID,
+		MemberIDs:       body.MemberIDs,
+		Recurrence:      recur,
+		Description:     body.Description,
+		Location:        body.Location,
+		IsAllDay:        body.AllDay,
 	}
 }
 
@@ -152,6 +156,10 @@ func (app *App) handleEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if body.Scope != "" || body.Occurrence != "" {
+		jsonError(w, "occurrence scope requires an existing series", 400)
+		return
+	}
 	id, err := app.Store.CreateEvent(eventFromBody(body))
 	if err != nil {
 		eventWriteError(w, err)
@@ -191,6 +199,29 @@ func (app *App) handleEventDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "GET" {
+		if r.URL.Query().Has("occurrence") {
+			values := r.URL.Query()["occurrence"]
+			if len(values) != 1 || values[0] == "" {
+				jsonError(w, "provide exactly one occurrence", 400)
+				return
+			}
+			event, err := app.Store.GetOccurrence(id, values[0])
+			if err != nil {
+				eventWriteError(w, err)
+				return
+			}
+			jsonResponse(w, event)
+			return
+		}
+		if r.URL.Query().Get("export") == "1" {
+			event, err := app.Store.GetSeriesExport(id)
+			if err != nil {
+				eventWriteError(w, err)
+				return
+			}
+			jsonResponse(w, event)
+			return
+		}
 		event, err := app.Store.GetEvent(id)
 		if err != nil {
 			eventWriteError(w, err)
@@ -206,7 +237,17 @@ func (app *App) handleEventDetail(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, "reload the event and include its version before deleting", 428)
 			return
 		}
-		if err := app.Store.DeleteEventVersion(id, version); err != nil {
+		scope, key := r.URL.Query().Get("scope"), r.URL.Query().Get("occurrence")
+		if len(r.URL.Query()["scope"]) > 1 || len(r.URL.Query()["occurrence"]) > 1 || (scope != "" && scope != "series" && scope != "occurrence" && scope != "future" && scope != "restore") || ((scope == "" || scope == "series") && key != "") {
+			jsonError(w, "invalid deletion scope", 400)
+			return
+		}
+		if scope == "occurrence" || scope == "future" || scope == "restore" {
+			_, err = app.Store.MutateOccurrence(id, version, key, scope, nil, false)
+		} else {
+			err = app.Store.DeleteEventVersion(id, version)
+		}
+		if err != nil {
 			eventWriteError(w, err)
 			return
 		}
@@ -234,6 +275,31 @@ func (app *App) handleEventDetail(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "reload the event and include its version before editing", 428)
 		return
 	}
+	if body.Scope != "" && body.Scope != "series" && body.Scope != "occurrence" && body.Scope != "future" {
+		jsonError(w, "invalid editing scope", 400)
+		return
+	}
+	if body.Scope == "occurrence" || body.Scope == "future" {
+		// Scoped writes are complete snapshots; do not guess an omitted timezone
+		// or participants from a detached occurrence's parent.
+		if body.Timezone == nil || body.MemberIDs == nil {
+			jsonError(w, "reload with a current client before editing an occurrence", 400)
+			return
+		}
+		e := eventFromBody(body)
+		saved, err := app.Store.MutateOccurrence(id, *body.Version, body.Occurrence, body.Scope, &e, body.ResetExceptions)
+		if err != nil {
+			eventWriteError(w, err)
+			return
+		}
+		app.Broker.Notify("update")
+		jsonResponse(w, map[string]interface{}{"success": true, "id": saved})
+		return
+	}
+	if body.Occurrence != "" {
+		jsonError(w, "occurrence needs an explicit occurrence or future scope", 400)
+		return
+	}
 	// Older clients must not silently erase a zone they do not understand.
 	if body.Timezone == nil {
 		var zone string
@@ -253,6 +319,12 @@ func (app *App) handleEventDetail(w http.ResponseWriter, r *http.Request) {
 
 func eventWriteError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, store.ErrInvalidOccurrence):
+		jsonError(w, err.Error(), 400)
+	case errors.Is(err, store.ErrCalendarTooDense):
+		jsonError(w, err.Error(), 422)
+	case errors.Is(err, store.ErrExceptionResetRequired), errors.Is(err, store.ErrDetachedEvent):
+		jsonError(w, err.Error(), 409)
 	case errors.Is(err, store.ErrEventConflict):
 		jsonError(w, err.Error(), 409)
 	case errors.Is(err, store.ErrInvalidEventMembers):

@@ -1,7 +1,7 @@
 import { addDays, addMonths, format, subMonths } from "date-fns";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { apiFetch } from "../../lib/api";
 import { cn } from "../../lib/utils";
@@ -10,7 +10,7 @@ import { EventModal } from "./components/EventModal";
 import { MonthGrid } from "./components/MonthGrid";
 import { WeekView } from "./components/WeekView";
 
-import { Event } from "../../types";
+import { Event, EventScope, OccurrenceEditor } from "../../types";
 import type { FamilySelection } from "../../lib/calendarFilters";
 
 export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
@@ -21,6 +21,72 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
   const [familySelection, setFamilySelection] = useState<FamilySelection>(null);
 
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
+  const [occurrenceEditor, setOccurrenceEditor] =
+    useState<OccurrenceEditor | null>(null);
+  const [scope, setScope] = useState<EventScope>("occurrence");
+  const [loadingEvent, setLoadingEvent] = useState(false);
+  const [openError, setOpenError] = useState("");
+  const [failedEvent, setFailedEvent] = useState<Event | null>(null);
+  const eventRequest = useRef(0);
+  const [pendingDeleteScope, setPendingDeleteScope] =
+    useState<EventScope>("series");
+
+  function selectScope(next: EventScope, editor = occurrenceEditor) {
+    if (!editor) return;
+    setScope(next);
+    const selected = next === "series" ? editor.series : editor.occurrence;
+    setCurrentEvent({
+      ...selected,
+      id: editor.series.id,
+      version: editor.series.version,
+      recurrence:
+        next === "occurrence"
+          ? ""
+          : next === "future"
+            ? editor.future_recurrence
+            : editor.series.recurrence,
+      exdates: next === "series" ? editor.exdates : [],
+    });
+  }
+  async function openEvent(event: Event) {
+    const request = ++eventRequest.current;
+    setOpenError("");
+    setFailedEvent(null);
+    setOccurrenceEditor(null);
+    setDeleteError("");
+    if (
+      !event.is_external &&
+      (event.series_id || event.recurrence || event.rrule)
+    ) {
+      setLoadingEvent(true);
+      try {
+        const key =
+          event.recurrence_id || event.occurrence_key || event.start_date;
+        const editor: OccurrenceEditor = await apiFetch(
+          `/api/events/${event.series_id || event.id}?occurrence=${encodeURIComponent(key)}`,
+        ).then((r) => r.json());
+        if (request !== eventRequest.current) return;
+        setOccurrenceEditor(editor);
+        selectScope("occurrence", editor);
+        setIsModalOpen(true);
+      } catch (cause) {
+        if (request === eventRequest.current) {
+          setFailedEvent(event);
+          setOpenError(
+            cause instanceof Error
+              ? cause.message
+              : "Could not load occurrence",
+          );
+        }
+      } finally {
+        if (request === eventRequest.current) setLoadingEvent(false);
+      }
+    } else {
+      setLoadingEvent(false);
+      setCurrentEvent(event);
+      setIsModalOpen(true);
+    }
+  }
   const [initialDate, setInitialDate] = useState<Date | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -62,10 +128,19 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
       body: JSON.stringify({
         ...eventData,
         ...(currentEvent ? { version: currentEvent.version } : {}),
+        ...(occurrenceEditor
+          ? {
+              scope,
+              ...(scope !== "series"
+                ? { occurrence: occurrenceEditor.key }
+                : {}),
+            }
+          : {}),
       }),
     });
 
     setIsModalOpen(false);
+    setOccurrenceEditor(null);
     setDeleteError("");
     setCurrentEvent(null);
     setInitialDate(null);
@@ -74,10 +149,18 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
 
   const reloadCurrentEvent = async () => {
     if (!currentEvent) return;
-    const latest = await apiFetch(
-      `/api/events/${encodeURIComponent(String(currentEvent.id))}`,
-    ).then((response) => response.json());
-    setCurrentEvent(latest);
+    if (occurrenceEditor) {
+      const editor: OccurrenceEditor = await apiFetch(
+        `/api/events/${occurrenceEditor.series.id}?occurrence=${encodeURIComponent(occurrenceEditor.key)}`,
+      ).then((r) => r.json());
+      setOccurrenceEditor(editor);
+      selectScope(scope, editor);
+    } else {
+      const latest = await apiFetch(
+        `/api/events/${encodeURIComponent(String(currentEvent.id))}`,
+      ).then((r) => r.json());
+      setCurrentEvent(latest);
+    }
     setDeleteError("");
     triggerRefresh();
   };
@@ -86,15 +169,19 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
     if (!pendingDeleteId) return;
     try {
       const version = currentEvent?.version;
-      const query =
-        version === undefined
-          ? ""
-          : `?version=${encodeURIComponent(String(version))}`;
+      const params = new URLSearchParams();
+      if (version !== undefined) params.set("version", String(version));
+      if (occurrenceEditor && pendingDeleteScope !== "series") {
+        params.set("scope", pendingDeleteScope);
+        params.set("occurrence", occurrenceEditor.key);
+      }
+      const query = `?${params}`;
       await apiFetch(
         `/api/events/${encodeURIComponent(String(pendingDeleteId))}${query}`,
         { method: "DELETE" },
       );
       setCurrentEvent(null);
+      setOccurrenceEditor(null);
       setDeleteError("");
       setIsModalOpen(false);
       setRefreshTrigger((prev) => prev + 1);
@@ -111,6 +198,7 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
   const handleDeleteEvent = (id: number | string) => {
     setDeleteError("");
     setPendingDeleteId(id);
+    setPendingDeleteScope(occurrenceEditor ? scope : "series");
     setShowDeleteConfirm(true);
   };
 
@@ -122,26 +210,96 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
           onClose={() => setShowDeleteConfirm(false)}
           onConfirm={confirmDelete}
           title={
-            currentEvent?.recurrence || currentEvent?.rrule
-              ? "Delete entire series"
-              : "Delete Event"
+            occurrenceEditor
+              ? pendingDeleteScope === "occurrence"
+                ? "Cancel this occurrence"
+                : pendingDeleteScope === "future"
+                  ? "Delete this and future events"
+                  : "Delete entire series"
+              : currentEvent?.recurrence || currentEvent?.rrule
+                ? "Delete entire series"
+                : "Delete Event"
           }
           confirmText={
-            currentEvent?.recurrence || currentEvent?.rrule
-              ? "Delete series"
+            occurrenceEditor && pendingDeleteScope === "occurrence"
+              ? "Cancel occurrence"
               : "Delete"
           }
           message={
-            currentEvent?.recurrence || currentEvent?.rrule
-              ? "This deletes every occurrence in this recurring series, including past and future dates. This action cannot be undone."
-              : "Are you sure you want to delete this event? This action cannot be undone."
+            occurrenceEditor && pendingDeleteScope === "occurrence"
+              ? "Only this occurrence will be removed. Other dates stay unchanged. You can reset this date from the series editor later."
+              : occurrenceEditor && pendingDeleteScope === "future"
+                ? "This removes this occurrence and all later occurrences, including individual changes belonging to those dates. Earlier occurrences stay unchanged. This cannot be undone."
+                : currentEvent?.recurrence || currentEvent?.rrule
+                  ? "This deletes every occurrence in this recurring series, including past and future dates and individual changes. This action cannot be undone."
+                  : "Are you sure you want to delete this event? This action cannot be undone."
           }
         />
       </div>
+      {loadingEvent && (
+        <p role="status" className="p-4">
+          Loading the selected occurrence…
+        </p>
+      )}
+      {openError && (
+        <p role="alert" className="p-4 text-amber-800 dark:text-amber-200">
+          {openError}. Select the event again to retry.
+          {failedEvent && (
+            <button
+              type="button"
+              className="ml-3 min-h-11 underline"
+              onClick={async () => {
+                const request = ++eventRequest.current;
+                setLoadingEvent(true);
+                try {
+                  const series: Event = await apiFetch(
+                    `/api/events/${failedEvent.series_id || failedEvent.id}`,
+                  ).then((r) => r.json());
+                  if (request !== eventRequest.current) return;
+                  setOccurrenceEditor(null);
+                  setScope("series");
+                  setCurrentEvent(series);
+                  setOpenError("");
+                  setIsModalOpen(true);
+                } catch (cause) {
+                  if (request === eventRequest.current)
+                    setOpenError(
+                      cause instanceof Error
+                        ? cause.message
+                        : "Could not load series",
+                    );
+                } finally {
+                  if (request === eventRequest.current) setLoadingEvent(false);
+                }
+              }}
+            >
+              Open entire series instead
+            </button>
+          )}
+        </p>
+      )}
       <EventModal
+        occurrenceEditor={occurrenceEditor}
+        scope={scope}
+        onScopeChange={selectScope}
+        onRestore={async (key) => {
+          if (!occurrenceEditor) return;
+          const params = new URLSearchParams({
+            version: String(occurrenceEditor.series.version),
+            scope: "restore",
+            occurrence: key,
+          });
+          await apiFetch(
+            `/api/events/${occurrenceEditor.series.id}?${params}`,
+            { method: "DELETE" },
+          );
+          await reloadCurrentEvent();
+        }}
         isOpen={isModalOpen}
         onClose={() => {
+          ++eventRequest.current;
           setIsModalOpen(false);
+          setOccurrenceEditor(null);
           setCurrentEvent(null);
           setInitialDate(null);
           setDeleteError("");
@@ -205,7 +363,13 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
             </div>
 
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                ++eventRequest.current;
+                setLoadingEvent(false);
+                setOccurrenceEditor(null);
+                setCurrentEvent(null);
+                setIsModalOpen(true);
+              }}
               className="flex items-center gap-2 bg-charcoal dark:bg-gray-100 text-white dark:text-charcoal px-4 md:px-5 py-2 md:py-2.5 rounded-xl hover:bg-gray-800 dark:hover:bg-white transition-colors shadow-lg shadow-gray-200 dark:shadow-none whitespace-nowrap"
             >
               <Plus size={18} />
@@ -267,11 +431,12 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
             currentDate={currentDate}
             key={refreshTrigger}
             refreshTrigger={refreshTrigger}
-            onEventClick={(evt) => {
-              setCurrentEvent(evt);
-              setIsModalOpen(true);
-            }}
+            onEventClick={(evt) => void openEvent(evt)}
             onDayDoubleClick={(date) => {
+              ++eventRequest.current;
+              setLoadingEvent(false);
+              setOccurrenceEditor(null);
+              setCurrentEvent(null);
               setInitialDate(date);
               setIsModalOpen(true);
             }}
@@ -283,10 +448,7 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
             onFamilySelectionChange={setFamilySelection}
             currentDate={currentDate}
             refreshTrigger={refreshTrigger}
-            onEventClick={(evt) => {
-              setCurrentEvent(evt);
-              setIsModalOpen(true);
-            }}
+            onEventClick={(evt) => void openEvent(evt)}
           />
         )}
         {view === "day" && (
@@ -295,10 +457,7 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
             onFamilySelectionChange={setFamilySelection}
             currentDate={currentDate}
             refreshTrigger={refreshTrigger}
-            onEventClick={(evt) => {
-              setCurrentEvent(evt);
-              setIsModalOpen(true);
-            }}
+            onEventClick={(evt) => void openEvent(evt)}
           />
         )}
       </div>

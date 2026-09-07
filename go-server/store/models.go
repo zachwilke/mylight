@@ -60,20 +60,21 @@ type Meal struct {
 }
 
 type Event struct {
-	Timezone    string  `json:"timezone"`
-	Version     *int    `json:"version,omitempty"`
-	ID          int     `json:"id"`
-	Title       string  `json:"title"`
-	StartDate   string  `json:"start_date"`
-	EndDate     *string `json:"end_date"`
-	MemberID    *int    `json:"member_id"`
-	MemberIDs   []int   `json:"member_ids"`
-	Recurrence  *string `json:"recurrence"`
-	Color       string  `json:"color,omitempty"`
-	IsExternal  bool    `json:"is_external,omitempty"`
-	Description string  `json:"description,omitempty"`
-	Location    string  `json:"location,omitempty"`
-	IsAllDay    bool    `json:"is_all_day"`
+	ResetExceptions bool    `json:"reset_exceptions,omitempty"`
+	Timezone        string  `json:"timezone"`
+	Version         *int    `json:"version,omitempty"`
+	ID              int     `json:"id"`
+	Title           string  `json:"title"`
+	StartDate       string  `json:"start_date"`
+	EndDate         *string `json:"end_date"`
+	MemberID        *int    `json:"member_id"`
+	MemberIDs       []int   `json:"member_ids"`
+	Recurrence      *string `json:"recurrence"`
+	Color           string  `json:"color,omitempty"`
+	IsExternal      bool    `json:"is_external,omitempty"`
+	Description     string  `json:"description,omitempty"`
+	Location        string  `json:"location,omitempty"`
+	IsAllDay        bool    `json:"is_all_day"`
 }
 
 type List struct {

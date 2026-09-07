@@ -2,6 +2,7 @@ import { RRule } from "rrule";
 import {
   addDays,
   differenceInCalendarDays,
+  format,
   parseISO,
   startOfDay,
 } from "date-fns";
@@ -87,7 +88,18 @@ export function occurrences(
         dates = [date];
       }
     }
+    const keyFor = (value: Date) =>
+      event.is_all_day && event.start_date.length === 10
+        ? format(value, "yyyy-MM-dd")
+        : value.toISOString();
+    const excluded = new Set(
+      (event.exdates || []).map((key) =>
+        key.length === 10 ? key : new Date(key).toISOString(),
+      ),
+    );
     for (const date of dates) {
+      const key = keyFor(date);
+      if (excluded.has(key)) continue;
       const finish =
         event.is_all_day && event.start_date.length === 10
           ? addDays(date, dayCount)
@@ -102,6 +114,9 @@ export function occurrences(
           date,
           end: finish,
           occurrenceId: `${event.id}-${date.toISOString()}`,
+          occurrence_key: event.recurrence_id || key,
+          occurrence_start: key,
+          occurrence_end: keyFor(finish),
         });
     }
   }

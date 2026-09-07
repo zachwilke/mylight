@@ -191,7 +191,10 @@ func initSchema(db *sql.DB) error {
 	if err := migrateEventVersions(db); err != nil {
 		return err
 	}
-	return migrateEventTimezones(db)
+	if err := migrateEventTimezones(db); err != nil {
+		return err
+	}
+	return migrateEventExceptions(db)
 }
 
 func migrateEventTimezones(db *sql.DB) error {
@@ -336,6 +339,33 @@ func migrateCalendarSources(db *sql.DB) error {
 	);
 	INSERT OR IGNORE INTO calendar_sources(url,name,color) SELECT url,'Calendar',COALESCE(color,'bg-blue-100 text-blue-800') FROM calendar_subscriptions;
 	INSERT INTO schema_migrations(version) VALUES(2);`)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func migrateEventExceptions(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var applied int
+	if err := tx.QueryRow("SELECT count(*) FROM schema_migrations WHERE version=8").Scan(&applied); err != nil {
+		return err
+	}
+	if applied > 0 {
+		return tx.Commit()
+	}
+	_, err = tx.Exec(`CREATE TABLE event_exceptions (
+  series_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  recurrence_id TEXT NOT NULL,
+  override_event_id INTEGER UNIQUE REFERENCES events(id) ON DELETE SET NULL,
+  PRIMARY KEY(series_id,recurrence_id),
+  CHECK(series_id != override_event_id)
+ );
+ INSERT INTO schema_migrations(version) VALUES(8);`)
 	if err != nil {
 		return err
 	}
