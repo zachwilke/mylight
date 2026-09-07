@@ -138,7 +138,7 @@ func (app *App) security(next http.Handler) http.Handler {
 					jsonError(w, "This display does not have permission for that action", 403)
 					return
 				}
-				adminOnly := strings.HasPrefix(r.URL.Path, "/api/devices") || r.URL.Path == "/api/remote-access" || strings.HasPrefix(r.URL.Path, "/api/backup") || strings.HasPrefix(r.URL.Path, "/api/calendars") || (r.Method != "GET" && (strings.HasPrefix(r.URL.Path, "/api/family") || r.URL.Path == "/api/settings"))
+				adminOnly := strings.HasPrefix(r.URL.Path, "/api/google") || strings.HasPrefix(r.URL.Path, "/api/devices") || r.URL.Path == "/api/remote-access" || strings.HasPrefix(r.URL.Path, "/api/backup") || strings.HasPrefix(r.URL.Path, "/api/calendars") || (r.Method != "GET" && (strings.HasPrefix(r.URL.Path, "/api/family") || r.URL.Path == "/api/settings"))
 				if adminOnly && (user.Role == nil || *user.Role != "admin") {
 					jsonError(w, "An adult account is required", 403)
 					return

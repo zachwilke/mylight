@@ -68,6 +68,7 @@ type App struct {
 	loginLimits  authLimiter
 	calendarSync sync.Mutex
 	Remote       *remoteAccess
+	Google       *googleConnection
 }
 
 // Broker manages SSE connections
@@ -227,6 +228,11 @@ func run() error {
 		Config: cfg,
 	}
 
+	app.Google, err = loadGoogleConnection()
+	if err != nil {
+		return err
+	}
+
 	// 3. Start Scheduler
 	app.Cron.Start()
 	defer app.Cron.Stop()
@@ -300,6 +306,9 @@ func (app *App) routes() http.Handler {
 	mux.HandleFunc("/api/chores/reset", app.handleChoreReset)
 	mux.HandleFunc("/api/history", app.handleHistory)
 	mux.HandleFunc("/api/events", app.handleEvents)
+	mux.HandleFunc("/api/google", app.handleGoogle)
+	mux.HandleFunc("/api/google/", app.handleGoogle)
+	mux.HandleFunc(googleCallbackPath, app.handleGoogleCallback)
 	mux.HandleFunc("/api/calendars", app.handleCalendars)
 	mux.HandleFunc("/api/calendars/", app.handleCalendars)
 	mux.HandleFunc("/api/events/", app.handleEventDetail)

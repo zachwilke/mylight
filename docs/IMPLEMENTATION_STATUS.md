@@ -4,6 +4,44 @@ These are incremental implementations from the approved roadmap, **not full Skyl
 parity**. This document records
 implementation evidence, not release approval or deployment to a household server.
 
+## Google account connection and incoming sync — September 6
+
+- Owner-only Settings controls connect/reconnect Google, select readable calendars,
+  show already selected calendars and disconnect an account with confirmation.
+  Google appointments use the existing read-only imported-calendar display.
+  This is incoming sync, not two-way editing or full calendar parity.
+- Bring-your-own Web OAuth credentials and a fixed redirect origin are configured
+  on the server. State, PKCE and a short-lived Lax nonce bind the callback to an
+  active owner session without weakening the normal Strict session cookie.
+  Expired/replayed states, missing browser binding and partial consent fail.
+- Schema 9 stores encrypted Google credentials, selected calendars, raw resources
+  and cursors. AES-GCM binds token ciphertext to stable account identity. Refresh
+  token rotation is persisted before Calendar requests. Secrets/provider error
+  bodies are excluded from public status responses; network redirects are blocked.
+- Paginated incoming changes retain ETags, original recurrence identities and
+  cancellation tombstones. An expired cursor restarts full reconciliation once.
+  Resources, cursor and display snapshot commit atomically. Page failures,
+  malformed envelopes or failed expansion preserve the last good copy.
+- Google supplies expanded instances for the bounded display window, including
+  moved instances and all-day events; MyLight does not flatten provider-specific
+  recurrence into its local recurrence model. Unchanged resources reuse the
+  display cache until its date window or household timezone changes.
+- Backups retain encrypted credentials and sync state, omit pending OAuth states,
+  and require the separately saved encryption key after restore. Disconnect removes
+  local credentials/caches and leaves Google events unchanged. See
+  [Google setup and limits](GOOGLE_CALENDAR.md).
+
+Validation includes 108 frontend tests, all Go tests with the race detector,
+vet, production frontend/embedded-server builds and lint (18 existing warnings).
+Module checksums verify. govulncheck reports no vulnerable imported packages or
+reachable symbols; it notes GO-2026-5932 in the unused x/crypto/openpgp package.
+Production Chromium checks exercise the real authorization-start endpoint with
+fictional credentials and intercept Google's consent page. Mocked provider UI
+checks cover selection, adding, duplicate prevention and confirmed disconnect at
+desktop and 390px phone widths. No real Google account was connected: actual OAuth
+and provider acceptance remain pending, along with outgoing jobs/ETag conflicts
+and iCloud CalDAV.
+
 ## Local recurring-event exceptions and future edits — September 6
 
 - Schema 8 stores original recurrence identities and detached overrides. Editing

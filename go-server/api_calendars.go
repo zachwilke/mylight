@@ -144,7 +144,7 @@ func (app *App) handleCalendars(w http.ResponseWriter, r *http.Request) {
 					jsonError(w, "Wait 30 seconds between refresh attempts", 429)
 					return
 				}
-				if err := app.syncCalendarConditional(r.Context(), s, calendarfeed.FetchConditional); err != nil {
+				if err := app.syncConnectedCalendar(r.Context(), s); err != nil {
 					jsonError(w, "Could not save the calendar refresh", 500)
 					return
 				}
@@ -241,7 +241,7 @@ func (app *App) refreshCalendars() {
 		if last, err := time.Parse(time.RFC3339, source.LastAttempt); err == nil && time.Since(last) < 15*time.Minute {
 			continue
 		}
-		if err := app.syncCalendarConditional(context.Background(), source, calendarfeed.FetchConditional); err != nil {
+		if err := app.syncConnectedCalendar(context.Background(), source); err != nil {
 			log.Printf("Could not persist calendar %d refresh", source.ID)
 		}
 	}

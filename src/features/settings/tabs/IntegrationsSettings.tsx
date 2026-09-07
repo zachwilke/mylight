@@ -10,6 +10,8 @@ import { useAuth } from "../../../context/AuthContext";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { apiFetch } from "../../../lib/api";
 
+import { GoogleCalendars } from "../GoogleCalendars";
+
 interface Source {
   id: number;
   name: string;
@@ -127,14 +129,15 @@ export function IntegrationsSettings() {
         <CalendarDays size={30} className="mb-4 text-emerald-200" />
         <h2 className="text-2xl font-semibold">Bring your calendars home.</h2>
         <p className="mt-3 max-w-xl text-emerald-50/85">
-          Subscribe to an iCalendar feed from your calendar provider, school, or
-          club. Plans appear alongside your family calendar and stay available
-          when the internet is down.
+          Connect Google or subscribe to a calendar feed from your provider,
+          school, or club. Plans appear alongside your family calendar and stay
+          available when the internet is down.
         </p>
         <p className="mt-4 text-sm text-emerald-100">
           Read-only · Refreshes every 15 minutes · Last 31 days and next year
         </p>
       </section>
+      <GoogleCalendars onChange={load} />
       {error && (
         <div role="alert" className="rounded-xl bg-red-50 text-red-800 p-4">
           {error}
@@ -143,7 +146,7 @@ export function IntegrationsSettings() {
       {loading && <p role="status">Loading your calendars…</p>}
       {!loading && sources.length === 0 && (
         <p className="text-stone-500">
-          No connected calendars yet. Add your first feed below.
+          Choose a Google calendar above or add your first feed below.
         </p>
       )}
       {sources.map((source) => (
@@ -214,7 +217,7 @@ export function IntegrationsSettings() {
         onSubmit={add}
         className="rounded-3xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-6 space-y-4"
       >
-        <h3 className="text-lg font-semibold">Connect a calendar</h3>
+        <h3 className="text-lg font-semibold">Connect a calendar feed</h3>
         <label className="block text-sm font-medium">
           Calendar name
           <input
@@ -279,14 +282,14 @@ export function IntegrationsSettings() {
         </button>
         <p className="text-xs text-stone-500">
           Edit subscribed events in their original calendar. Two-way
-          Google/iCloud connections and Google Chat notifications are not yet
+          Google/iCloud editing and Google Chat notifications are not yet
           available.
         </p>
       </form>
       <ConfirmDialog
         isOpen={!!removing}
         title="Remove connected calendar?"
-        message={`Remove ${removing?.name || "this calendar"} and its cached events from MyLight? The original calendar will not change. Reconnect the feed to restore it.`}
+        message={`Remove ${removing?.name || "this calendar"} and its cached events from MyLight? The original calendar will not change. Reconnect the calendar to restore it.`}
         onClose={() => setRemoving(null)}
         onConfirm={remove}
         confirmText={busy ? "Removing…" : "Remove calendar"}

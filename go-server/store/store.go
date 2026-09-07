@@ -194,7 +194,10 @@ func initSchema(db *sql.DB) error {
 	if err := migrateEventTimezones(db); err != nil {
 		return err
 	}
-	return migrateEventExceptions(db)
+	if err := migrateEventExceptions(db); err != nil {
+		return err
+	}
+	return migrateGoogleCalendars(db)
 }
 
 func migrateEventTimezones(db *sql.DB) error {
@@ -366,6 +369,39 @@ func migrateEventExceptions(db *sql.DB) error {
   CHECK(series_id != override_event_id)
  );
  INSERT INTO schema_migrations(version) VALUES(8);`)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func migrateGoogleCalendars(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var applied int
+	if err := tx.QueryRow("SELECT count(*) FROM schema_migrations WHERE version=9").Scan(&applied); err != nil {
+		return err
+	}
+	if applied > 0 {
+		return tx.Commit()
+	}
+	_, err = tx.Exec(`CREATE TABLE google_accounts (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT NOT NULL UNIQUE, token TEXT NOT NULL
+ );
+ CREATE TABLE google_calendars (
+ source_id INTEGER PRIMARY KEY REFERENCES calendar_sources(id) ON DELETE CASCADE,
+ account_id INTEGER NOT NULL REFERENCES google_accounts(id), calendar_id TEXT NOT NULL,
+ sync_token TEXT NOT NULL DEFAULT '', resources_json TEXT NOT NULL DEFAULT '{}',
+ UNIQUE(account_id,calendar_id)
+ );
+ CREATE TABLE google_oauth_states (
+ state_hash TEXT PRIMARY KEY, session_hash TEXT NOT NULL REFERENCES sessions(token_hash) ON DELETE CASCADE,
+ nonce_hash TEXT NOT NULL, verifier TEXT NOT NULL, expires_at INTEGER NOT NULL
+ );
+ INSERT INTO schema_migrations(version) VALUES(9);`)
 	if err != nil {
 		return err
 	}

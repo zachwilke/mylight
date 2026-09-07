@@ -37,7 +37,7 @@ func (app *App) handleBackup(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "Could not prepare snapshot", 500)
 		return
 	}
-	_, err = db.Exec("DELETE FROM sessions; DELETE FROM pairing_requests; DELETE FROM paired_devices;")
+	_, err = db.Exec("DELETE FROM google_oauth_states; DELETE FROM sessions; DELETE FROM pairing_requests; DELETE FROM paired_devices;")
 	db.Close()
 	if err != nil {
 		jsonError(w, "Could not clear snapshot sessions", 500)
@@ -190,8 +190,15 @@ func restoreBackup(archivePath, dataDir string) error {
 	if err == nil {
 		var version int
 		err = db.QueryRow("SELECT MAX(version) FROM schema_migrations").Scan(&version)
-		if err == nil && version > 8 {
+		if err == nil && version > 9 {
 			err = fmt.Errorf("backup requires a newer MyLight version")
+		}
+	}
+	if err == nil {
+		var present int
+		err = db.QueryRow("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='google_oauth_states'").Scan(&present)
+		if err == nil && present > 0 {
+			_, err = db.Exec("DELETE FROM google_oauth_states")
 		}
 	}
 	if err == nil {

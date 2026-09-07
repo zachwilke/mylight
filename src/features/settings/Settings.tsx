@@ -34,7 +34,14 @@ export function Settings() {
           </p>
         </div>
 
-        <Tabs defaultValue="general">
+        <Tabs
+          defaultValue={
+            new URLSearchParams(window.location.search).get("tab") ===
+            "integrations"
+              ? "integrations"
+              : "general"
+          }
+        >
           <TabList className="mb-6">
             <TabTrigger value="general">General</TabTrigger>
             <TabTrigger value="family">Family</TabTrigger>

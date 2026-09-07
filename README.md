@@ -118,6 +118,8 @@ Download a backup in **Settings → Backup** before updating, and keep a copy of
 
 Backups contain private household information and aren’t encrypted. Restore with a compatible build; don’t run older code against an upgraded database. [Backup, restore & recovery →](docs/OPERATIONS.md#backup-and-restore)
 
+**Google Calendar.** Bring selected Google calendars into MyLight with your own OAuth client. Incoming sync is read-only. [Connection setup →](docs/GOOGLE_CALENDAR.md)
+
 **Still growing.** MyLight is under active development. Calendar subscriptions are read-only; two-way Google/iCloud/Outlook sync, advanced child permissions, rewards catalogs, AI imports, offline edits, and mobile push notifications are unfinished. Weather and maps need network access. [Detailed status →](docs/IMPLEMENTATION_STATUS.md)
 
 ## Build something lovely
