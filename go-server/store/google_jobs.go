@@ -13,6 +13,7 @@ var ErrGoogleWritesDisabled = errors.New("enable Google editing in Settings → 
 var ErrGoogleJobsPending = errors.New("review or stop outgoing Google changes before removing this calendar or account")
 
 type GoogleJob struct {
+	Operation   string          `json:"operation"`
 	SourceName  string          `json:"source_name"`
 	ID          string          `json:"id"`
 	SourceID    int             `json:"source_id"`
@@ -29,12 +30,12 @@ type GoogleJob struct {
 	LeaseUntil  int64           `json:"-"`
 }
 
-const jobColumns = "id,source_id,event_id,base_etag,draft,state,version,attempts,next_attempt,message,remote_json,lease_token,lease_until,(SELECT name FROM calendar_sources WHERE id=google_jobs.source_id)"
+const jobColumns = "operation,id,source_id,event_id,base_etag,draft,state,version,attempts,next_attempt,message,remote_json,lease_token,lease_until,(SELECT name FROM calendar_sources WHERE id=google_jobs.source_id)"
 
 func scanGoogleJob(row interface{ Scan(...interface{}) error }) (GoogleJob, error) {
 	var j GoogleJob
 	var draft, remote string
-	err := row.Scan(&j.ID, &j.SourceID, &j.EventID, &j.BaseETag, &draft, &j.State, &j.Version, &j.Attempts, &j.NextAttempt, &j.Message, &remote, &j.LeaseToken, &j.LeaseUntil, &j.SourceName)
+	err := row.Scan(&j.Operation, &j.ID, &j.SourceID, &j.EventID, &j.BaseETag, &draft, &j.State, &j.Version, &j.Attempts, &j.NextAttempt, &j.Message, &remote, &j.LeaseToken, &j.LeaseUntil, &j.SourceName)
 	j.Draft = json.RawMessage(draft)
 	j.Remote = json.RawMessage(remote)
 	return j, err
@@ -59,6 +60,12 @@ func (s *Store) GoogleJob(id string) (GoogleJob, error) {
 	return scanGoogleJob(s.DB.QueryRow("SELECT "+jobColumns+" FROM google_jobs WHERE id=?", id))
 }
 func (s *Store) QueueGoogleJob(j GoogleJob) (GoogleJob, error) {
+	if j.Operation == "" {
+		j.Operation = "update"
+	}
+	if j.Operation != "update" && j.Operation != "create" && j.Operation != "delete" {
+		return GoogleJob{}, ErrGoogleJobConflict
+	}
 	var result GoogleJob
 	err := retryEventWrite(func() error {
 		tx, err := s.DB.Begin()
@@ -68,7 +75,7 @@ func (s *Store) QueueGoogleJob(j GoogleJob) (GoogleJob, error) {
 		defer tx.Rollback()
 		existing, err := scanGoogleJob(tx.QueryRow("SELECT "+jobColumns+" FROM google_jobs WHERE id=?", j.ID))
 		if err == nil {
-			if existing.SourceID != j.SourceID || existing.EventID != j.EventID || string(existing.Draft) != string(j.Draft) || existing.BaseETag != j.BaseETag {
+			if existing.Operation != j.Operation || existing.SourceID != j.SourceID || existing.EventID != j.EventID || string(existing.Draft) != string(j.Draft) || existing.BaseETag != j.BaseETag {
 				return ErrGoogleJobConflict
 			}
 			result = existing
@@ -102,7 +109,7 @@ func (s *Store) QueueGoogleJob(j GoogleJob) (GoogleJob, error) {
 		if count >= 1000 {
 			return errors.New("review outgoing changes before queuing more")
 		}
-		_, err = tx.Exec("INSERT INTO google_jobs(id,source_id,event_id,base_etag,draft,created_at) VALUES(?,?,?,?,?,?)", j.ID, j.SourceID, j.EventID, j.BaseETag, string(j.Draft), time.Now().Unix())
+		_, err = tx.Exec("INSERT INTO google_jobs(operation,id,source_id,event_id,base_etag,draft,created_at) VALUES(?,?,?,?,?,?,?)", j.Operation, j.ID, j.SourceID, j.EventID, j.BaseETag, string(j.Draft), time.Now().Unix())
 		if err != nil {
 			return err
 		}
@@ -176,7 +183,7 @@ func (s *Store) ResolveGoogleJob(id string, version int, action, etag string) er
 				ETag     string `json:"etag"`
 				Editable bool   `json:"editable"`
 			}
-			if j.State != "conflict" || json.Unmarshal(j.Remote, &remote) != nil || !remote.Editable || etag == "" || remote.ETag != etag {
+			if j.Operation == "create" || j.State != "conflict" || json.Unmarshal(j.Remote, &remote) != nil || !remote.Editable || etag == "" || remote.ETag != etag {
 				return ErrGoogleJobConflict
 			}
 			_, err = tx.Exec("UPDATE google_jobs SET state='pending',base_etag=?,next_attempt=0,message='',version=version+1 WHERE id=?", etag, id)
@@ -236,6 +243,25 @@ func migrateGoogleJobs(db *sql.DB) error {
  INSERT INTO schema_migrations(version) VALUES(10);`)
 	if err != nil {
 		return err
+	}
+	return tx.Commit()
+}
+
+func migrateGoogleJobOperations(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var applied int
+	if err = tx.QueryRow("SELECT count(*) FROM schema_migrations WHERE version=11").Scan(&applied); err != nil {
+		return err
+	}
+	if applied == 0 {
+		_, err = tx.Exec(`ALTER TABLE google_jobs ADD COLUMN operation TEXT NOT NULL DEFAULT 'update' CHECK(operation IN ('update','create','delete')); INSERT INTO schema_migrations(version) VALUES(11);`)
+		if err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }

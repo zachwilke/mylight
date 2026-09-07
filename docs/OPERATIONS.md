@@ -160,7 +160,7 @@ individual selection is bounded to 20,000 generated dates and 200 years.
 - Read-only HTTPS/webcal iCalendar subscriptions now work in Settings →
   Integrations. Google account connections support incoming sync and optional owner-enabled
   edits to individual appointments, with a durable queue and ETag conflict review;
-  see [Google setup](GOOGLE_CALENDAR.md). Creating/deleting Google events, whole-
+  see [Google setup](GOOGLE_CALENDAR.md). Whole-
   series Google writes and iCloud/Outlook two-way sync remain unimplemented.
 - New all-day events use date-only values with exclusive ends, including ICS
   export and DST-safe daily all-day repeats. Zoned timed recurrence handles gaps,

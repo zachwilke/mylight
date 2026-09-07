@@ -10,6 +10,7 @@ import (
 	"net/url"
 )
 
+var ErrExists = errors.New("this Google appointment ID is already in use")
 var ErrVersion = errors.New("this appointment changed in Google; review both versions")
 var ErrGone = errors.New("this appointment was removed from Google")
 var ErrPermission = errors.New("Google editing permission is unavailable; reconnect with editing or check calendar access")
@@ -66,6 +67,8 @@ func (c Client) eventRequest(req *http.Request, id string) (Event, error) {
 	case 200:
 	case 404, 410:
 		return Event{}, ErrGone
+	case 409:
+		return Event{}, ErrExists
 	case 412:
 		return Event{}, ErrVersion
 	case 401:
@@ -85,7 +88,7 @@ func (c Client) eventRequest(req *http.Request, id string) (Event, error) {
 		return Event{}, ErrBusy
 	}
 	var e Event
-	if json.Unmarshal(raw, &e) != nil || e.Kind != "calendar#event" || e.ID != id || e.ETag == "" {
+	if json.Unmarshal(raw, &e) != nil || e.Kind != "calendar#event" || e.ID != id || (e.ETag == "" && !(req.Method == "GET" && e.Status == "cancelled")) {
 		return Event{}, ErrBusy
 	}
 	return e, nil
@@ -150,4 +153,60 @@ func rateLimited(body io.Reader) bool {
 		}
 	}
 	return false
+}
+
+// A caller-generated event ID makes an ambiguous insert retry address the same
+// resource. Never choose a new ID when a request may already have succeeded.
+func (c Client) InsertEvent(ctx context.Context, calendar, id string, draft Draft, operation string) (Event, error) {
+	if operation == "" || id == "" {
+		return Event{}, ErrRejected
+	}
+	date := func(value string) map[string]string {
+		if draft.AllDay {
+			return map[string]string{"date": value}
+		}
+		return map[string]string{"dateTime": value}
+	}
+	raw, _ := json.Marshal(map[string]interface{}{"id": id, "summary": draft.Title, "start": date(draft.Start), "end": date(draft.End), "description": draft.Description, "location": draft.Location, "extendedProperties": map[string]interface{}{"private": map[string]string{OperationProperty: operation}}})
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://www.googleapis.com/calendar/v3/calendars/"+url.PathEscape(calendar)+"/events?sendUpdates=none", bytes.NewReader(raw))
+	if err != nil {
+		return Event{}, ErrRejected
+	}
+	req.Header.Set("Content-Type", "application/json")
+	return c.eventRequest(req, id)
+}
+func (c Client) DeleteEvent(ctx context.Context, calendar string, base Event) error {
+	if !base.Editable() || base.ETag == "" {
+		return ErrRejected
+	}
+	req, err := http.NewRequestWithContext(ctx, "DELETE", "https://www.googleapis.com/calendar/v3/calendars/"+url.PathEscape(calendar)+"/events/"+url.PathEscape(base.ID)+"?sendUpdates=none", nil)
+	if err != nil {
+		return ErrRejected
+	}
+	req.Header.Set("If-Match", base.ETag)
+	// Reuse error classification while accepting Google's empty success response.
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return ErrBusy
+	}
+	defer resp.Body.Close()
+	switch resp.StatusCode {
+	case 204:
+		return nil
+	case 404, 410:
+		return ErrGone
+	case 412:
+		return ErrVersion
+	case 401:
+		return ErrPermission
+	case 403:
+		if rateLimited(resp.Body) {
+			return ErrBusy
+		}
+		return ErrPermission
+	case 429, 500, 502, 503, 504:
+		return ErrBusy
+	default:
+		return ErrRejected
+	}
 }

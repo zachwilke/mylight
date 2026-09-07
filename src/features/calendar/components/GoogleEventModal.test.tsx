@@ -110,3 +110,64 @@ it("shows inclusive all-day end dates and sends Google's exclusive end", async (
   fireEvent.click(screen.getByRole("button", { name: "Queue Google edit" }));
   await waitFor(() => expect(submitted.end_date).toBe("2026-09-10"));
 });
+
+it("creates an all-day appointment on the selected Google calendar without fetching an existing event", async () => {
+  const queued = vi.fn();
+  vi.mocked(apiFetch).mockResolvedValue(new Response("{}"));
+  render(
+    <GoogleEventModal
+      create
+      event={{ source_id: 7, source_name: "Family" }}
+      onClose={vi.fn()}
+      onQueued={queued}
+    />,
+  );
+  fireEvent.change(await screen.findByLabelText("Title"), {
+    target: { value: "Picnic" },
+  });
+  fireEvent.click(screen.getByLabelText("All day"));
+  fireEvent.change(screen.getByLabelText("Starts"), {
+    target: { value: "2026-09-12" },
+  });
+  fireEvent.change(screen.getByLabelText("Ends"), {
+    target: { value: "2026-09-12" },
+  });
+  expect(apiFetch).not.toHaveBeenCalled();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Queue Google appointment" }),
+  );
+  await waitFor(() => expect(queued).toHaveBeenCalledOnce());
+  const [url, init] = vi.mocked(apiFetch).mock.calls[0];
+  expect(url).toBe("/api/google-events/7/");
+  expect(JSON.parse(String(init?.body))).toMatchObject({
+    operation: "create",
+    title: "Picnic",
+    start_date: "2026-09-12",
+    end_date: "2026-09-13",
+    etag: "",
+    is_all_day: true,
+  });
+});
+
+it("requires confirmation to delete and preserves the loaded version instead of unsaved edits", async () => {
+  const queued = vi.fn();
+  vi.mocked(apiFetch).mockImplementation(
+    async (_url, init) => new Response(init ? "{}" : JSON.stringify(view)),
+  );
+  render(
+    <GoogleEventModal event={event} onClose={vi.fn()} onQueued={queued} />,
+  );
+  fireEvent.change(await screen.findByLabelText("Title"), {
+    target: { value: "Unsaved title" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Delete Google appointment" }),
+  );
+  expect(apiFetch).toHaveBeenCalledTimes(1);
+  expect(screen.getByText(/Only this occurrence will be removed/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Queue deletion" }));
+  await waitFor(() => expect(queued).toHaveBeenCalledOnce());
+  expect(
+    JSON.parse(String(vi.mocked(apiFetch).mock.calls[1][1]?.body)),
+  ).toMatchObject({ operation: "delete", title: "Class", etag: '"v1"' });
+});

@@ -200,7 +200,10 @@ func initSchema(db *sql.DB) error {
 	if err := migrateGoogleCalendars(db); err != nil {
 		return err
 	}
-	return migrateGoogleJobs(db)
+	if err := migrateGoogleJobs(db); err != nil {
+		return err
+	}
+	return migrateGoogleJobOperations(db)
 }
 
 func migrateEventTimezones(db *sql.DB) error {

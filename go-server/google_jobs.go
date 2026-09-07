@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"mylight/googlecalendar"
 	"mylight/store"
 	"net/http"
@@ -22,16 +24,19 @@ func (app *App) googleTarget(source int) (account int, calendar string, enabled 
 }
 func (app *App) handleGoogleEvent(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) != 4 {
+	if len(parts) != 3 && len(parts) != 4 {
 		jsonError(w, "Not found", 404)
 		return
 	}
 	source, err := googleID(parts[2])
-	if err != nil || !googleEventIdentity.MatchString(parts[3]) {
+	if err != nil || (len(parts) == 4 && !googleEventIdentity.MatchString(parts[3])) {
 		jsonError(w, "Invalid Google appointment", 400)
 		return
 	}
-	id := parts[3]
+	id := ""
+	if len(parts) == 4 {
+		id = parts[3]
+	}
 	account, calendar, enabled, err := app.googleTarget(source)
 	if err != nil {
 		jsonError(w, "Google calendar is not connected", 404)
@@ -41,7 +46,7 @@ func (app *App) handleGoogleEvent(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, store.ErrGoogleWritesDisabled.Error(), 403)
 		return
 	}
-	if r.Method == "GET" {
+	if r.Method == "GET" && id != "" {
 		if !app.calendarSync.TryLock() {
 			jsonError(w, "A calendar operation is running. Try again shortly.", 409)
 			return
@@ -92,12 +97,25 @@ func (app *App) handleGoogleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	var body struct {
 		googlecalendar.Draft
+		Operation string `json:"operation"`
 		ETag      string `json:"etag"`
 		RequestID string `json:"request_id"`
 	}
-	if json.NewDecoder(r.Body).Decode(&body) != nil || !googleJobIdentity.MatchString(body.RequestID) || body.ETag == "" || len(body.ETag) > 500 || strings.ContainsAny(body.ETag, "\r\n") {
+	if json.NewDecoder(r.Body).Decode(&body) != nil || !googleJobIdentity.MatchString(body.RequestID) || len(body.ETag) > 500 || strings.ContainsAny(body.ETag, "\r\n") {
 		jsonError(w, "Reload the appointment before saving", 400)
 		return
+	}
+	if body.Operation == "" {
+		body.Operation = "update"
+	}
+	if (body.Operation != "create" && body.Operation != "delete" && body.Operation != "update") ||
+		(body.Operation == "create" && (id != "" || body.ETag != "")) ||
+		(body.Operation != "create" && (id == "" || body.ETag == "")) {
+		jsonError(w, "Invalid appointment operation; reload before continuing", 400)
+		return
+	}
+	if body.Operation == "create" {
+		id = fmt.Sprintf("ml%x", sha256.Sum256([]byte(body.RequestID)))
 	}
 	validation := eventBody{Title: body.Title, Start: body.Start, End: body.End, AllDay: body.AllDay, Description: body.Description, Location: body.Location}
 	if err := validateEvent(&validation); err != nil {
@@ -114,7 +132,7 @@ func (app *App) handleGoogleEvent(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "Could not queue change", 500)
 		return
 	}
-	job, err := app.Store.QueueGoogleJob(store.GoogleJob{ID: body.RequestID, SourceID: source, EventID: id, BaseETag: body.ETag, Draft: raw})
+	job, err := app.Store.QueueGoogleJob(store.GoogleJob{Operation: body.Operation, ID: body.RequestID, SourceID: source, EventID: id, BaseETag: body.ETag, Draft: raw})
 	if err != nil {
 		jsonError(w, err.Error(), 409)
 		return
@@ -214,12 +232,74 @@ func (app *App) processGoogleJob(job store.GoogleJob) {
 		return
 	}
 	google := googlecalendar.Client{HTTP: client}
+	// Check access before interpreting a missing event: Google also returns 404
+	// for inaccessible resources. A removed calendar must not look like a deletion.
+	if job.Operation == "create" || job.Operation == "delete" {
+		calendars, accessErr := google.Calendars(ctx)
+		if accessErr != nil {
+			handleError(accessErr)
+			return
+		}
+		writable := false
+		for _, candidate := range calendars {
+			if candidate.ID == calendar && (candidate.AccessRole == "owner" || candidate.AccessRole == "writer") {
+				writable = true
+			}
+		}
+		if !writable {
+			handleError(googlecalendar.ErrPermission)
+			return
+		}
+	}
 	current, err := google.GetEvent(ctx, calendar, job.EventID)
+	if job.Operation == "create" {
+		if err == nil {
+			if current.Operation() == job.ID {
+				finish("done", "Google accepted this creation", nil, 0)
+			} else {
+				view, viewErr := current.View()
+				var details interface{}
+				if viewErr == nil {
+					details = view
+				}
+				finish("conflict", "This ID already belongs to a Google appointment. Keep Google's version and start a new appointment.", details, 0)
+			}
+			return
+		}
+		if !errors.Is(err, googlecalendar.ErrGone) {
+			handleError(err)
+			return
+		}
+		var draft googlecalendar.Draft
+		if json.Unmarshal(job.Draft, &draft) != nil {
+			finish("paused", "The saved draft could not be read", nil, 0)
+			return
+		}
+		created, insertErr := google.InsertEvent(ctx, calendar, job.EventID, draft, job.ID)
+		if errors.Is(insertErr, googlecalendar.ErrExists) {
+			retry("Checking the existing Google appointment before continuing")
+			return
+		}
+		if insertErr != nil {
+			handleError(insertErr)
+			return
+		}
+		if created.Operation() != job.ID {
+			retry("Checking whether Google accepted the creation")
+			return
+		}
+		finish("done", "Google accepted this creation", nil, 0)
+		return
+	}
+	if job.Operation == "delete" && (errors.Is(err, googlecalendar.ErrGone) || (err == nil && current.Status == "cancelled")) {
+		finish("done", "This appointment is no longer in Google", nil, 0)
+		return
+	}
 	if err != nil {
 		handleError(err)
 		return
 	}
-	if current.Operation() == job.ID {
+	if job.Operation != "delete" && current.Operation() == job.ID {
 		finish("done", "Google accepted this change", nil, 0)
 		return
 	}
@@ -237,15 +317,32 @@ func (app *App) processGoogleJob(job store.GoogleJob) {
 		finish("paused", "The saved draft could not be read", nil, 0)
 		return
 	}
-	updated, err := google.PatchEvent(ctx, calendar, current, draft, job.ID)
+	var updated googlecalendar.Event
+	if job.Operation == "delete" {
+		err = google.DeleteEvent(ctx, calendar, current)
+		if err == nil {
+			finish("done", "Google accepted this deletion", nil, 0)
+			return
+		}
+		if errors.Is(err, googlecalendar.ErrGone) {
+			retry("Checking whether the appointment is still in Google")
+			return
+		}
+	} else {
+		updated, err = google.PatchEvent(ctx, calendar, current, draft, job.ID)
+	}
 	if errors.Is(err, googlecalendar.ErrVersion) {
 		latest, fetchErr := google.GetEvent(ctx, calendar, job.EventID)
 		if fetchErr != nil {
 			handleError(fetchErr)
 			return
 		}
-		if latest.Operation() == job.ID {
+		if job.Operation != "delete" && latest.Operation() == job.ID {
 			finish("done", "Google accepted this change", nil, 0)
+			return
+		}
+		if job.Operation == "delete" && latest.Status == "cancelled" {
+			finish("done", "This appointment is no longer in Google", nil, 0)
 			return
 		}
 		latestView, fetchErr := latest.View()

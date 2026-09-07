@@ -259,7 +259,7 @@ export function CalendarView({ kiosk = false }: { kiosk?: boolean }) {
           onClose={() => setGoogleEvent(null)}
           onQueued={() =>
             setGoogleNotice(
-              "Your edit is queued for Google. Check Settings → Integrations for progress or conflicts.",
+              "Your change is queued for Google. Check Settings → Integrations for progress or conflicts.",
             )
           }
         />

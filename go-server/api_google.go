@@ -104,18 +104,19 @@ func (app *App) handleGoogle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == "GET" {
-		rows, err := app.Store.DB.Query("SELECT calendar_id FROM google_calendars WHERE account_id=?", id)
+		rows, err := app.Store.DB.Query("SELECT calendar_id,source_id FROM google_calendars WHERE account_id=?", id)
 		if err != nil {
 			jsonError(w, "Could not read selected calendars", 500)
 			return
 		}
-		connected := map[string]bool{}
+		connected := map[string]int{}
 		for rows.Next() {
 			var calendar string
-			if err = rows.Scan(&calendar); err != nil {
+			var source int
+			if err = rows.Scan(&calendar, &source); err != nil {
 				break
 			}
-			connected[calendar] = true
+			connected[calendar] = source
 		}
 		if err == nil {
 			err = rows.Err()
@@ -128,10 +129,11 @@ func (app *App) handleGoogle(w http.ResponseWriter, r *http.Request) {
 		type choice struct {
 			googlecalendar.Calendar
 			Connected bool `json:"connected"`
+			SourceID  int  `json:"source_id,omitempty"`
 		}
 		choices := []choice{}
 		for _, calendar := range calendars {
-			choices = append(choices, choice{calendar, connected[calendar.ID]})
+			choices = append(choices, choice{calendar, connected[calendar.ID] > 0, connected[calendar.ID]})
 		}
 		jsonResponse(w, choices)
 		return

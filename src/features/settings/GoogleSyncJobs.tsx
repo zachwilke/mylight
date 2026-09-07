@@ -7,6 +7,7 @@ import type {
   GoogleEventView,
 } from "../calendar/components/GoogleEventModal";
 interface Job {
+  operation?: "update" | "create" | "delete";
   id: string;
   state: string;
   source_name?: string;
@@ -118,8 +119,8 @@ export function GoogleSyncJobs() {
     <section className="rounded-3xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-6 space-y-4">
       <h3 className="text-lg font-semibold">Outgoing Google changes</h3>
       <p className="text-sm text-stone-500">
-        Edits are saved here until Google accepts them. A version conflict waits
-        for your choice.
+        Changes are saved here until Google accepts them. A version conflict
+        waits for your choice.
       </p>
       {error && (
         <p role="alert" className="rounded-xl bg-amber-50 text-amber-900 p-4">
@@ -148,6 +149,11 @@ export function GoogleSyncJobs() {
               {job.source_name || "Google Calendar"}
             </p>
             <p className="text-sm text-blue-700 dark:text-blue-300">
+              {job.operation === "delete"
+                ? "Delete · "
+                : job.operation === "create"
+                  ? "Create · "
+                  : ""}
               {labels[job.state] || job.state}
             </p>
           </div>
@@ -167,7 +173,11 @@ export function GoogleSyncJobs() {
             </summary>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl bg-blue-50 dark:bg-blue-950 p-4">
-                <h5 className="font-semibold mb-3">My draft</h5>
+                <h5 className="font-semibold mb-3">
+                  {job.operation === "delete"
+                    ? "Appointment to delete"
+                    : "My draft"}
+                </h5>
                 <DraftDetails draft={job.draft} />
               </div>
               {job.remote && (
@@ -179,15 +189,19 @@ export function GoogleSyncJobs() {
             </div>
           </details>
           <div className="flex flex-wrap gap-2">
-            {job.state === "conflict" && job.remote?.editable && (
-              <button
-                disabled={busy}
-                onClick={() => setConfirm({ job, action: "apply" })}
-                className="min-h-11 px-4 rounded-xl bg-[#355B48] text-white"
-              >
-                Apply my draft
-              </button>
-            )}
+            {job.state === "conflict" &&
+              job.operation !== "create" &&
+              job.remote?.editable && (
+                <button
+                  disabled={busy}
+                  onClick={() => setConfirm({ job, action: "apply" })}
+                  className="min-h-11 px-4 rounded-xl bg-[#355B48] text-white"
+                >
+                  {job.operation === "delete"
+                    ? "Delete Google version"
+                    : "Apply my draft"}
+                </button>
+              )}
             {["retry", "paused"].includes(job.state) && (
               <button
                 disabled={busy}
@@ -206,7 +220,7 @@ export function GoogleSyncJobs() {
                 {job.state === "conflict"
                   ? "Keep Google version"
                   : job.attempts === 0
-                    ? "Cancel queued edit"
+                    ? "Cancel queued change"
                     : "Stop retrying"}
               </button>
             )}
@@ -217,21 +231,27 @@ export function GoogleSyncJobs() {
         isOpen={!!confirm}
         title={
           confirm?.action === "apply"
-            ? "Apply your draft to Google?"
+            ? confirm.job.operation === "delete"
+              ? "Delete this Google version?"
+              : "Apply your draft to Google?"
             : confirm?.action === "retry"
               ? "Check this change again?"
               : "Stop this outgoing change?"
         }
         message={
           confirm?.action === "apply"
-            ? "Replace this appointment's title, dates, location and description with your draft shown above? Other dates in a repeating series stay unchanged. If Google changed again, another review will be required."
+            ? confirm.job.operation === "delete"
+              ? "Delete the Google version shown above? Only this appointment or occurrence will be removed. If it changed again, another review will be required."
+              : "Replace this appointment's title, dates, location and description with your draft shown above? Other dates in a repeating series stay unchanged. If Google changed again, another review will be required."
             : confirm?.action === "retry"
-              ? "MyLight will check Google's latest version before retrying this saved edit."
-              : "Stop sending this edit? This does not undo a change Google may already have accepted. The appointment will show Google's version on the next refresh."
+              ? "MyLight will check Google's latest version before retrying this saved change."
+              : "Stop sending this change? This does not undo a change Google may already have accepted. The appointment will show Google's version on the next refresh."
         }
         confirmText={
           confirm?.action === "apply"
-            ? "Apply draft"
+            ? confirm.job.operation === "delete"
+              ? "Delete reviewed version"
+              : "Apply draft"
             : confirm?.action === "retry"
               ? "Check again"
               : "Stop outgoing change"

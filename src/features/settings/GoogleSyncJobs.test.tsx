@@ -97,3 +97,39 @@ it("prevents changes to a running job and cannot apply a draft to a deleted appo
     screen.getAllByRole("button", { name: "Keep Google version" }),
   ).toHaveLength(1);
 });
+
+it("confirms deletion against the displayed Google version and forbids applying a creation collision", async () => {
+  vi.mocked(apiFetch).mockImplementation(
+    async (_url, init) =>
+      new Response(
+        JSON.stringify(
+          init
+            ? {}
+            : [
+                { ...job, operation: "delete" },
+                { ...job, id: "create-collision", operation: "create" },
+              ],
+        ),
+      ),
+  );
+  render(<GoogleSyncJobs />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Delete Google version" }),
+  );
+  expect(screen.queryByRole("button", { name: "Apply my draft" })).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Delete reviewed version" }),
+  );
+  await waitFor(() =>
+    expect(apiFetch).toHaveBeenCalledWith(
+      "/api/google-jobs/outgoing-operation",
+      expect.objectContaining({
+        body: JSON.stringify({
+          action: "apply",
+          version: 3,
+          etag: '"remote-v2"',
+        }),
+      }),
+    ),
+  );
+});

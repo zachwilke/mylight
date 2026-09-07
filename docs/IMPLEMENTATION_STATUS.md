@@ -4,6 +4,30 @@ These are incremental implementations from the approved roadmap, **not full Skyl
 parity**. This document records
 implementation evidence, not release approval or deployment to a household server.
 
+## Google appointment creation and deletion — September 6
+
+- Schema 11 adds explicit create/update/delete operations to the durable queue;
+  existing jobs migrate as updates. Backups retain operation kinds and IDs.
+- Owners create timed or all-day appointments from a selected writable Google
+  calendar in Settings. Inclusive all-day end dates are converted for Google.
+  Each request has a stable Google-compatible event ID; retries inspect the same
+  resource and recognize an accepted insert by its private operation marker.
+  ID collisions never overwrite an existing Google appointment.
+- The appointment editor offers confirmed deletion of a single appointment or
+  recurring instance. Deletions check the loaded ETag, retain the original details
+  for review and use If-Match. Conflicts offer an explicit, version-bound deletion
+  of the displayed Google version. Lost responses reconcile missing/cancelled
+  events; a lost calendar permission pauses instead of claiming success.
+- Existing authorization, leases, retry scheduling and disconnect protection also
+  apply to these operations. Whole-series writes, local-event publishing, iCloud
+  and real Google provider acceptance remain unfinished.
+
+Validation: 119 frontend tests, Go race tests and vet, production build and lint
+(18 existing warnings). Synthetic provider tests cover creation replay, ambiguous
+create/delete responses, changed ETags, late conflicts, cancelled tombstones,
+permission loss and refusal to overwrite creation collisions. Chromium checks
+use disposable households and mocked Google APIs; no real account is modified.
+
 ## Individual Google edits and durable outgoing queue — September 6
 
 - Existing Google connections stay read-only. An owner explicitly enables editing

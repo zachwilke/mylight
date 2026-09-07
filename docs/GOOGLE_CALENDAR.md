@@ -1,8 +1,8 @@
 # Connect Google Calendar
 
 Google connections bring selected calendars into MyLight. Connections start
-read-only. The household owner can enable editing to change individual Google
-appointments, including one occurrence of a repeating event, through a durable
+read-only. The household owner can enable editing to create, change and delete
+individual Google appointments, including edits/deletions of one recurring occurrence, through a durable
 outgoing queue with version-conflict review. iCalendar feeds remain read-only.
 
 ## One-time server setup
@@ -77,10 +77,20 @@ types and entire recurring masters must be edited in Google. All-day end dates
 are inclusive in the editor; unchanged timed values retain their original
 seconds and repeated-clock instant.
 
-**Queue Google edit** saves a durable request. A background worker checks for
+To create an appointment, open **Settings → Integrations → Choose calendars**
+and select **New appointment** beside a connected writable calendar. Choose timed
+or all-day dates and **Queue Google appointment**. This creates an ordinary single
+appointment; recurrence and guests are not added by this form.
+
+To delete, open an appointment in the calendar, choose **Delete Google appointment**
+and confirm **Queue deletion**. For repeating events, only that occurrence is
+removed. Deletion uses the version loaded into the editor; unsaved form edits are
+not applied. A changed Google version requires another explicit review.
+
+**Queue Google edit**, creation and confirmed deletion save durable requests. A background worker checks for
 work every minute, sharing the calendar refresh coordinator. The calendar keeps
-showing the last confirmed Google copy while the edit is waiting. Once Google
-accepts the edit, an incoming refresh updates the display.
+showing the last confirmed Google copy while the change is waiting. Once Google
+accepts the change, an incoming refresh updates the display.
 
 In **Settings → Integrations → Outgoing Google changes**:
 
@@ -92,8 +102,10 @@ In **Settings → Integrations → Outgoing Google changes**:
 - **Review both versions** shows the saved draft beside Google's latest version.
   **Apply my draft** requires confirmation against that displayed version. Another
   intervening Google change causes another conflict. **Keep Google version** stops
-  the queued edit.
-- **Cancel queued edit / Stop retrying** stops future attempts after confirmation.
+  the queued change. A deletion conflict offers **Delete Google version**, with
+  confirmation against that exact version. Creation ID conflicts cannot overwrite
+  an existing appointment; keep Google's version and start a new appointment.
+- **Cancel queued change / Stop retrying** stops future attempts after confirmation.
   Stopping a retry cannot undo an edit Google already accepted. An in-flight job
   cannot be stopped until the worker finishes or recovers it.
 
@@ -108,9 +120,15 @@ household, up to 10 jobs per worker pass, a 45-second job deadline and a 120-sec
 recoverable worker lease. Reaching a storage limit rejects additional changes
 visibly. History cleanup is not yet exposed in the UI.
 
-Creating/deleting Google events, publishing local events, Google whole-series or
-future-series edits, attendee management and iCloud CalDAV remain unimplemented.
-This is individual-appointment editing, not full two-way calendar parity.
+Creation uses a stable caller-generated event ID and private operation marker,
+following Google's [insert API](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert).
+Retries inspect that same ID before inserting again. Deletion uses a conditional
+[delete request](https://developers.google.com/workspace/calendar/api/v3/reference/events/delete)
+and checks calendar access before treating a missing/cancelled event as complete.
+A lost response cannot cause a retry to delete a newly changed version without review.
+
+Publishing local events, Google whole-series or future-series writes, attendee
+management and iCloud CalDAV remain unimplemented. Full calendar parity remains open.
 
 ## Storage, recovery and limits
 

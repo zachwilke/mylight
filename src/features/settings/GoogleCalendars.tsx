@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CalendarDays, Link2, Plus, Unplug } from "lucide-react";
+import { GoogleEventModal } from "../calendar/components/GoogleEventModal";
 import { apiFetch } from "../../lib/api";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 
@@ -9,6 +10,7 @@ type Calendar = {
   summary: string;
   accessRole: string;
   connected?: boolean;
+  source_id?: number;
 };
 type Status = { configured: boolean; accounts: Account[] };
 
@@ -17,6 +19,7 @@ export function GoogleCalendars({
 }: {
   onChange: () => Promise<void>;
 }) {
+  const [creating, setCreating] = useState<Calendar | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [calendars, setCalendars] = useState<Calendar[]>([]);
@@ -237,6 +240,17 @@ export function GoogleCalendars({
                   <span className="min-w-0 break-words">
                     {calendar.summary || "Untitled calendar"}
                   </span>
+                  {account.write_enabled &&
+                    calendar.source_id &&
+                    ["owner", "writer"].includes(calendar.accessRole) && (
+                      <button
+                        disabled={busy}
+                        onClick={() => setCreating(calendar)}
+                        className="min-h-11 px-3 rounded-xl text-blue-700"
+                      >
+                        New appointment
+                      </button>
+                    )}
                   <button
                     disabled={busy || calendar.connected}
                     aria-label={`${calendar.connected ? "Added" : "Add"} ${calendar.summary || "calendar"}`}
@@ -270,6 +284,22 @@ export function GoogleCalendars({
         Incoming refresh every 15 minutes · Only selected calendars are saved to
         MyLight
       </p>
+      {creating && (
+        <GoogleEventModal
+          create
+          event={{
+            source_id: creating.source_id,
+            source_name: creating.summary,
+          }}
+          onClose={() => setCreating(null)}
+          onQueued={() => {
+            setNotice(
+              "Appointment queued. Follow its progress in Outgoing Google changes.",
+            );
+            window.dispatchEvent(new Event("system-update"));
+          }}
+        />
+      )}
       <ConfirmDialog
         isOpen={!!removing}
         title="Disconnect Google account?"

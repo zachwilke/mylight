@@ -377,3 +377,224 @@ func TestGoogleOutgoingBackupRestoreDoesNotReplayOverNewerGoogleVersion(t *testi
 		t.Fatal(saved, err)
 	}
 }
+
+func TestGoogleCreateAndDeleteRecoverLostResponses(t *testing.T) {
+	for _, operation := range []string{"create", "delete"} {
+		t.Run(operation, func(t *testing.T) {
+			app, _ := testApp(t)
+			remote := outgoingEvent()
+			exists := operation == "delete"
+			writes := 0
+			configureGoogle(t, app, func(r *http.Request) (int, string) {
+				if strings.HasSuffix(r.URL.Path, "calendarList") {
+					return 200, `{"kind":"calendar#calendarList","items":[{"id":"primary","accessRole":"owner"}]}`
+				}
+				if r.Method == "POST" {
+					writes++
+					var payload googlecalendar.Event
+					if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+						t.Fatal(err)
+					}
+					if payload.ID != remote.ID || payload.Operation() == "" || payload.Start.Date != "2026-09-07" || payload.End.Date != "2026-09-08" {
+						t.Fatal(payload)
+					}
+					remote = payload
+					remote.Kind = "calendar#event"
+					remote.ETag = `"v2"`
+					exists = true
+					return 200, "lost response"
+				}
+				if r.Method == "DELETE" {
+					writes++
+					if r.Header.Get("If-Match") != `"v1"` || !strings.HasSuffix(r.URL.Path, remote.ID) {
+						t.Fatal(r.Header, r.URL)
+					}
+					exists = false
+					return 503, "lost response"
+				}
+				if !exists {
+					return 404, ""
+				}
+				raw, _ := json.Marshal(remote)
+				return 200, string(raw)
+			})
+			account := googleAccount(t, app, false)
+			app.Store.DB.Exec("UPDATE google_accounts SET write_enabled=1 WHERE id=?", account)
+			source := googleSource(t, app, account)
+			raw, _ := json.Marshal(outgoingDraft())
+			job, err := app.Store.QueueGoogleJob(store.GoogleJob{Operation: operation, ID: "operation-create-delete", SourceID: source.ID, EventID: remote.ID, BaseETag: `"v1"`, Draft: raw})
+			if err != nil {
+				t.Fatal(err)
+			}
+			app.processGoogleJobs()
+			saved, _ := app.Store.GoogleJob(job.ID)
+			if saved.State != "retry" || writes != 1 {
+				t.Fatal(saved, writes)
+			}
+			app.Store.DB.Exec("UPDATE google_jobs SET next_attempt=0 WHERE id=?", job.ID)
+			app.processGoogleJobs()
+			saved, _ = app.Store.GoogleJob(job.ID)
+			if saved.State != "done" || writes != 1 {
+				t.Fatal(saved, writes)
+			}
+		})
+	}
+}
+
+func TestGoogleCreationAPIStableIdentityAndAuthorization(t *testing.T) {
+	app, h := testApp(t)
+	configureGoogle(t, app, func(r *http.Request) (int, string) { t.Fatal("enqueue contacted Google"); return 500, "" })
+	cookie := owner(t, h)
+	account := googleAccount(t, app, false)
+	app.Store.DB.Exec("UPDATE google_accounts SET write_enabled=1 WHERE id=?", account)
+	source := googleSource(t, app, account)
+	body := map[string]interface{}{"operation": "create", "request_id": "creation-request-one", "title": "Lunch", "start_date": "2026-09-07", "end_date": "2026-09-08", "is_all_day": true}
+	path := fmt.Sprintf("/api/google-events/%d/", source.ID)
+	if w := request(h, "POST", path, body, nil); w.Code != 401 {
+		t.Fatal(w.Code)
+	}
+	w := request(h, "POST", path, body, cookie)
+	if w.Code != 202 {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	var first store.GoogleJob
+	json.Unmarshal(w.Body.Bytes(), &first)
+	if first.Operation != "create" || len(first.EventID) != 66 || strings.ContainsAny(first.EventID, "wxyz_-") {
+		t.Fatal(first)
+	}
+	w = request(h, "POST", path, body, cookie)
+	if w.Code != 202 {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	var second store.GoogleJob
+	json.Unmarshal(w.Body.Bytes(), &second)
+	if second.ID != first.ID || second.EventID != first.EventID {
+		t.Fatal(second)
+	}
+	body["operation"] = "delete"
+	if w = request(h, "POST", path, body, cookie); w.Code != 400 {
+		t.Fatal(w.Code)
+	}
+}
+
+func TestGoogleDeleteConflictsAndCreationNeverOverwrites(t *testing.T) {
+	for _, operation := range []string{"create", "delete"} {
+		t.Run(operation, func(t *testing.T) {
+			app, _ := testApp(t)
+			remote := outgoingEvent()
+			remote.ETag = `"changed"`
+			writes := 0
+			configureGoogle(t, app, func(r *http.Request) (int, string) {
+				if strings.HasSuffix(r.URL.Path, "calendarList") {
+					return 200, `{"kind":"calendar#calendarList","items":[{"id":"primary","accessRole":"writer"}]}`
+				}
+				if r.Method != "GET" {
+					writes++
+					if r.Header.Get("If-Match") != remote.ETag {
+						t.Fatal("deleted an unreviewed version")
+					}
+					return 204, ""
+				}
+				raw, _ := json.Marshal(remote)
+				return 200, string(raw)
+			})
+			account := googleAccount(t, app, false)
+			app.Store.DB.Exec("UPDATE google_accounts SET write_enabled=1 WHERE id=?", account)
+			source := googleSource(t, app, account)
+			raw, _ := json.Marshal(outgoingDraft())
+			job, err := app.Store.QueueGoogleJob(store.GoogleJob{Operation: operation, ID: "conflicting-operation", SourceID: source.ID, EventID: remote.ID, BaseETag: `"v1"`, Draft: raw})
+			if err != nil {
+				t.Fatal(err)
+			}
+			app.processGoogleJobs()
+			saved, _ := app.Store.GoogleJob(job.ID)
+			if saved.State != "conflict" || writes != 0 {
+				t.Fatal(saved, writes)
+			}
+			err = app.Store.ResolveGoogleJob(job.ID, saved.Version, "apply", remote.ETag)
+			if operation == "create" {
+				if err == nil {
+					t.Fatal("creation collision can overwrite")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			app.processGoogleJobs()
+			saved, _ = app.Store.GoogleJob(job.ID)
+			if saved.State != "done" || writes != 1 {
+				t.Fatal(saved, writes)
+			}
+		})
+	}
+}
+
+func TestGoogleDeleteDoesNotMistakeLostCalendarAccessForSuccess(t *testing.T) {
+	app, _ := testApp(t)
+	configureGoogle(t, app, func(r *http.Request) (int, string) {
+		if strings.HasSuffix(r.URL.Path, "calendarList") {
+			return 200, `{"kind":"calendar#calendarList","items":[]}`
+		}
+		t.Fatal("contacted inaccessible calendar")
+		return 404, ""
+	})
+	account := googleAccount(t, app, false)
+	app.Store.DB.Exec("UPDATE google_accounts SET write_enabled=1 WHERE id=?", account)
+	source := googleSource(t, app, account)
+	raw, _ := json.Marshal(outgoingDraft())
+	job, err := app.Store.QueueGoogleJob(store.GoogleJob{Operation: "delete", ID: "delete-lost-access", SourceID: source.ID, EventID: outgoingEvent().ID, BaseETag: `"v1"`, Draft: raw})
+	if err != nil {
+		t.Fatal(err)
+	}
+	app.processGoogleJobs()
+	saved, _ := app.Store.GoogleJob(job.ID)
+	if saved.State != "paused" {
+		t.Fatal(saved)
+	}
+}
+
+func TestGoogleDeleteLateConflictAndCancelledTombstone(t *testing.T) {
+	app, _ := testApp(t)
+	remote := outgoingEvent()
+	deletes := 0
+	cancelled := false
+	configureGoogle(t, app, func(r *http.Request) (int, string) {
+		if strings.HasSuffix(r.URL.Path, "calendarList") {
+			return 200, `{"kind":"calendar#calendarList","items":[{"id":"primary","accessRole":"owner"}]}`
+		}
+		if r.Method == "DELETE" {
+			deletes++
+			remote.ETag = `"v2"`
+			remote.Summary = "Changed elsewhere"
+			return 412, ""
+		}
+		if cancelled {
+			return 200, fmt.Sprintf(`{"kind":"calendar#event","id":%q,"status":"cancelled"}`, remote.ID)
+		}
+		raw, _ := json.Marshal(remote)
+		return 200, string(raw)
+	})
+	account := googleAccount(t, app, false)
+	app.Store.DB.Exec("UPDATE google_accounts SET write_enabled=1 WHERE id=?", account)
+	source := googleSource(t, app, account)
+	raw, _ := json.Marshal(outgoingDraft())
+	job, err := app.Store.QueueGoogleJob(store.GoogleJob{Operation: "delete", ID: "delete-late-conflict", SourceID: source.ID, EventID: remote.ID, BaseETag: `"v1"`, Draft: raw})
+	if err != nil {
+		t.Fatal(err)
+	}
+	app.processGoogleJobs()
+	saved, _ := app.Store.GoogleJob(job.ID)
+	if saved.State != "conflict" || deletes != 1 || !strings.Contains(string(saved.Remote), "Changed elsewhere") {
+		t.Fatal(saved, deletes)
+	}
+	if err = app.Store.ResolveGoogleJob(job.ID, saved.Version, "apply", remote.ETag); err != nil {
+		t.Fatal(err)
+	}
+	cancelled = true
+	app.processGoogleJobs()
+	saved, _ = app.Store.GoogleJob(job.ID)
+	if saved.State != "done" || deletes != 1 {
+		t.Fatal(saved, deletes)
+	}
+}
